@@ -23,17 +23,13 @@ class TelemetryLogReader:
                  msg_types: list[str],
                  max_msgs: int,
                  max_rows: int,
-                 verbose: bool,
-                 filter_armed: bool,
-                 vehicle_modes: list[int] | None):
+                 verbose: bool):
         self.tlog_filename = tlog_filename
         self.prefix = tlog_filename.split('.')[0]
         self.msg_types = msg_types
         self.max_msgs = max_msgs
         self.max_rows = max_rows
         self.verbose = verbose
-        self.filter_armed = filter_armed
-        self.vehicle_modes = vehicle_modes
         self.tables = None
 
     def read_tlog(self):
@@ -45,10 +41,7 @@ class TelemetryLogReader:
         mlog = mavutil.mavlink_connection(self.tlog_filename, robust_parsing=False, dialect='ardupilotmega')
 
         print('Parsing messages')
-        vehicle_armed = False
-        vehicle_mode = None
         msg_count = 0
-        drop_count = 0
         while (msg := mlog.recv_match(blocking=False, type=self.msg_types)) is not None:
             # Only consider messages from ArduSub
             if msg.get_srcSystem() != 1 or msg.get_srcComponent() != 1:
@@ -64,22 +57,6 @@ class TelemetryLogReader:
                 if key != 'mavpackettype':
                     clean_data[f'{msg_type}.{key}'] = raw_data[key]
 
-            if self.filter_armed:
-                if msg_type == 'HEARTBEAT' and table_types.HeartbeatTable.is_armed(clean_data) != vehicle_armed:
-                    vehicle_armed = not vehicle_armed
-
-                if not vehicle_armed:
-                    drop_count += 1
-                    continue
-
-            if self.vehicle_modes:
-                if msg_type == 'HEARTBEAT' and clean_data['HEARTBEAT.custom_mode'] != vehicle_mode:
-                    vehicle_mode = clean_data['HEARTBEAT.custom_mode']
-
-                if vehicle_mode not in self.vehicle_modes:
-                    drop_count += 1
-                    continue
-
             self.tables[msg_type].append(clean_data)
 
             msg_count += 1
@@ -89,10 +66,7 @@ class TelemetryLogReader:
             if self.verbose and msg_count % 20000 == 0:
                 print(f'{msg_count} messages')
 
-        if self.filter_armed or self.vehicle_modes:
-            print(f'Included {msg_count} messages, dropped {drop_count} messages')
-        else:
-            print(f'{msg_count} messages')
+        print(f'{msg_count} messages')
 
     def write_msg_csv_files(self):
         print('Writing csv files')
@@ -130,28 +104,26 @@ class TelemetryLogReader:
 
 
 def main():
-    # TODO bug in armed and modes: I'm leaving big time gaps. (A) rebase timestamp, (B) split into segments
     # TODO the prefix method isn't working now
-    # TODO filter by system
-    # TODO filter by component
     # TODO param time granularity
-    # TODO align timestamps to some quantum?
-    # TODO can I write xml files that launch plotjuggler?
     # TODO TIMESYNC?
     # TODO SYSTEM_TIME?
 
     parser = ArgumentParser(description=__doc__)
-    parser.add_argument('-r', '--recurse', help='enter directories looking for tlog files', action='store_true')
-    parser.add_argument('-v', '--verbose', help='print a lot more information', action='store_true')
-    parser.add_argument('--explode', help='write a csv file for each message type', action='store_true')
-    parser.add_argument('--no-merge', help='do not merge tables, useful if you also select --explode', action='store_true')
-    parser.add_argument('--types', default=None, help='comma separated list of message types, the default is a set of useful types')
-    parser.add_argument('--max-msgs', type=int, default=500000, help='stop after processing this number of messages (default 500K)')
-    parser.add_argument('--max-rows', type=int, default=500000, help='stop if the merged table exceeds this number of rows (default 500K)')
-    parser.add_argument('--armed', help="track HEARTBEAT.base_mode state, drop messages when vehicle is disarmed", action='store_true')
-    parser.add_argument('--modes', default=None, help="track HEARTBEAT.custom_mode state, drop messages when vehicle is not in this list of modes")
-    # parser.add_argument('--source-system', type=int, default=1, help='filter by source system ID, 0 for none')
-    # parser.add_argument('--source-component', type=int, default=1, help='filter by source component ID, 0 for none')
+    parser.add_argument('-r', '--recurse', action='store_true',
+                        help='enter directories looking for tlog files')
+    parser.add_argument('-v', '--verbose', action='store_true',
+                        help='print a lot more information')
+    parser.add_argument('--explode', action='store_true',
+                        help='write a csv file for each message type')
+    parser.add_argument('--no-merge', action='store_true',
+                        help='do not merge tables, useful if you also select --explode')
+    parser.add_argument('--types', default=None,
+                        help='comma separated list of message types, the default is a set of useful types')
+    parser.add_argument('--max-msgs', type=int, default=500000,
+                        help='stop after processing this number of messages (default 500K)')
+    parser.add_argument('--max-rows', type=int, default=500000,
+                        help='stop if the merged table exceeds this number of rows (default 500K)')
     parser.add_argument('paths', nargs='+')
     args = parser.parse_args()
     files = tlog_util.expand_path(args.paths, args.recurse)
@@ -208,14 +180,9 @@ def main():
             'VIBRATION',
         ]
 
-    if args.modes:
-        vehicle_modes = [int(i) for i in args.modes.split(',')]
-    else:
-        vehicle_modes = None
-
     for file in files:
         print('===================')
-        tlog_reader = TelemetryLogReader(file, msg_types, args.max_msgs, args.max_rows, args.verbose, args.armed, vehicle_modes)
+        tlog_reader = TelemetryLogReader(file, msg_types, args.max_msgs, args.max_rows, args.verbose)
         tlog_reader.read_tlog()
         if args.explode:
             tlog_reader.write_msg_csv_files()
