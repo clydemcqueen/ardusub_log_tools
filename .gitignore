@@ -1,3 +1,4 @@
+*.BIN
 *.csv
 *.tlog
 .idea/
