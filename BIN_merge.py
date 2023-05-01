@@ -211,8 +211,6 @@ class DataflashLogReader:
 
 
 def main():
-    # TODO the prefix method isn't working now
-
     parser = ArgumentParser(description=__doc__)
     parser.add_argument('-r', '--recurse', action='store_true',
                         help='enter directories looking for BIN files')
