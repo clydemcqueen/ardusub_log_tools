@@ -1,6 +1,6 @@
-## [ArduSub](https://www.ardusub.com/) Log Tools
+## ArduSub Log Tools
 
-Everything is ArduSub-savvy, e.g., we look at ArduSub-specific flight modes.
+This is a collection of log analysis tools for working with [ArduSub](https://www.ardusub.com/) vehicles.
 
 All tools have a `--help` option.
 
@@ -32,6 +32,12 @@ Read MAVLink PARAM_VALUE messages from a tlog file (telemetry log) and use these
 
 Read MAVLink messages from a tlog file (telemetry log) and report on any pymavlink crashes.
 
+### BIN_merge.py
+
+Read ArduSub dataflash messages from a BIN file and merge the messages into a single, wide csv file. The merge
+operation does a forward-fill (data is copied from the previous row), so the resulting merged csv file may be
+substantially larger than the sum of the per-type csv files.
+
 ### map_maker.py
 
 Read csv or tlog files and build Leaflet (interactive HTML) maps from GPS coordinates.
@@ -50,3 +56,11 @@ References:
 There are quite a few TODOs in the code.
 
 There are a lot of small tools. Some of these may be combined.
+
+Possible future tools or capabilities:
+* Combine multiple telementry (tlog) files to produce a single telemetry log for a dive
+* Combine multiple dataflash (.BIN) files to produce a single dataflash log for a dive
+* Open Ping Sonar log (.bin) files
+* Join telemetry, dataflash and ping sonar log files together
+* Clip log files to 'interesting' segments based on timestamps or other markers
+* Add 'theory of operation' documents describing important subsystems, e.g. WL UGPS
