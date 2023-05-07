@@ -21,6 +21,10 @@ substantially larger than the sum of the per-message csv files.
 
 Read MAVLink PARAM_VALUE messages from a tlog file (telemetry log) and use these to reconstruct the parameter state of a vehicle.
 
+### tlog_scan.py
+
+Read MAVLink messages from a tlog file (telemetry log) and report on any pymavlink crashes.
+
 ## Timestamps
 
 For a QGC-generated tlog file, `msg._timestamp` is the UNIX system time when the message was logged, to the nearest ms.
