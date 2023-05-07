@@ -23,13 +23,15 @@ class TelemetryLogReader:
                  msg_types: list[str],
                  max_msgs: int,
                  max_rows: int,
-                 verbose: bool):
+                 verbose: bool,
+                 all: bool):
         self.tlog_filename = tlog_filename
         self.prefix = tlog_filename.split('.')[0]
         self.msg_types = msg_types
         self.max_msgs = max_msgs
         self.max_rows = max_rows
         self.verbose = verbose
+        self.all = all
         self.tables = None
 
     def read_tlog(self):
@@ -38,13 +40,13 @@ class TelemetryLogReader:
             self.tables[msg_type] = table_types.Table.create_table(msg_type)
 
         print(f'Reading {self.tlog_filename}')
-        mlog = mavutil.mavlink_connection(self.tlog_filename, robust_parsing=False, dialect='ardupilotmega')
+        mlog = mavutil.mavlink_connection(self.tlog_filename, robust_parsing=True, dialect='ardupilotmega')
 
         print('Parsing messages')
         msg_count = 0
         while (msg := mlog.recv_match(blocking=False, type=self.msg_types)) is not None:
             # Only consider messages from ArduSub
-            if msg.get_srcSystem() != 1 or msg.get_srcComponent() != 1:
+            if not self.all and (msg.get_srcSystem() != 1 or msg.get_srcComponent() != 1):
                 continue
 
             msg_type = msg.get_type()
@@ -98,9 +100,13 @@ class TelemetryLogReader:
                     if len(merged_df) > self.max_rows:
                         print('Merged dataframe is too big, stopping')
                         break
-        filename = f'{self.prefix}.csv'
-        print(f'Writing {len(merged_df)} rows to {filename}')
-        merged_df.to_csv(filename)
+
+        if merged_df is None:
+            print(f'Nothing to write')
+        else:
+            filename = f'{self.prefix}.csv'
+            print(f'Writing {len(merged_df)} rows to {filename}')
+            merged_df.to_csv(filename)
 
 
 def main():
@@ -114,6 +120,8 @@ def main():
                         help='enter directories looking for tlog files')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='print a lot more information')
+    parser.add_argument('--all', action='store_true',
+                        help='include all sources')
     parser.add_argument('--explode', action='store_true',
                         help='write a csv file for each message type')
     parser.add_argument('--no-merge', action='store_true',
@@ -182,7 +190,7 @@ def main():
 
     for file in files:
         print('===================')
-        tlog_reader = TelemetryLogReader(file, msg_types, args.max_msgs, args.max_rows, args.verbose)
+        tlog_reader = TelemetryLogReader(file, msg_types, args.max_msgs, args.max_rows, args.verbose, args.all)
         tlog_reader.read_tlog()
         if args.explode:
             tlog_reader.write_msg_csv_files()
