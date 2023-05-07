@@ -1,5 +1,3 @@
-*.BIN
-*.csv
-*.tlog
 .idea/
 __pycache__/
+.pytest_cache/
