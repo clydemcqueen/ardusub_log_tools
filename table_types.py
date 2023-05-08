@@ -10,6 +10,11 @@ class Table:
             return BatteryStatusTable()
         elif msg_type == 'HEARTBEAT':
             return HeartbeatTable()
+        elif msg_type == 'GLOBAL_POSITION_INT' or \
+                msg_type == 'GPS_INPUT' or \
+                msg_type == 'GPS_RAW_INT' or \
+                msg_type == 'GPS2_RAW':
+            return GPSTable(msg_type)
         elif msg_type == 'NAMED_VALUE_FLOAT':
             return NamedValueFloatTable()
         else:
@@ -76,6 +81,17 @@ class HeartbeatTable(Table):
 
     def append(self, row: dict):
         row['HEARTBEAT.mode'] = HeartbeatTable.get_mode(row)
+        super().append(row)
+
+
+class GPSTable(Table):
+    def __init__(self, msg_type: str):
+        super().__init__(msg_type)
+
+    def append(self, row: dict):
+        # Convert degE7 to float
+        row[f'{self._msg_type}.lat_deg'] = row[f'{self._msg_type}.lat'] / 1.0e7
+        row[f'{self._msg_type}.lon_deg'] = row[f'{self._msg_type}.lon'] / 1.0e7
         super().append(row)
 
 
