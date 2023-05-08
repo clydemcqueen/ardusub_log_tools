@@ -2,6 +2,17 @@
 
 """
 Read csv or tlog files and build Leaflet (interactive HTML) maps from GPS coordinates.
+
+For csv files:
+    Latitude column header should be 'gps.lat' or 'lat'
+    Longitude column header should be 'gps.lon' or 'lon'
+
+For tlog files, these messages are read:
+    GLOBAL_POSITION_INT -- the filtered position estimate, will appear as a blue line
+    GPS_INPUT -- sensor data sent to ArduSub, not filtered, green line
+    GPS_RAW_INT -- sensor data sent from ArduSub to QGC, not filtered, brown line
+    GPS2_RAW -- sensor_data from a 2nd GPS system, sent from ArduSub to QGC, not filtered, red line
+
 """
 
 import argparse
@@ -109,9 +120,9 @@ def build_map_from_tlog(infile, outfile, verbose, center, zoom):
             if msg_type == 'GLOBAL_POSITION_INT':
                 mm.add_df(df, 'GLOBAL_POSITION_INT.lat_deg', 'GLOBAL_POSITION_INT.lon_deg', 'DodgerBlue')
             elif msg_type == 'GPS_INPUT':
-                mm.add_df(df, 'GPS_INPUT.lat_deg', 'GPS_INPUT.lon_deg', 'Chocolate')
+                mm.add_df(df, 'GPS_INPUT.lat_deg', 'GPS_INPUT.lon_deg', 'LimeGreen')
             elif msg_type == 'GPS_RAW_INT':
-                mm.add_df(df, 'GPS_RAW_INT.lat_deg', 'GPS_RAW_INT.lon_deg', 'LimeGreen')
+                mm.add_df(df, 'GPS_RAW_INT.lat_deg', 'GPS_RAW_INT.lon_deg', 'Chocolate')
             else:
                 mm.add_df(df, 'GPS2_RAW.lat_deg', 'GPS2_RAW.lon_deg', 'Crimson')
         else:
@@ -145,7 +156,7 @@ def float_or_none(x):
 # TODO reject outliers; if we do this then auto-center will work a lot better
 
 def main():
-    parser = ArgumentParser(description=__doc__)
+    parser = ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=__doc__)
     parser.add_argument('-r', '--recurse', action='store_true',
                         help='enter directories looking for tlog and csv files')
     parser.add_argument('-v', '--verbose', action='store_true',
@@ -155,7 +166,7 @@ def main():
     parser.add_argument('--lon', default=None, type=float_or_none,
                         help='center the map at this longitude, default is mean of all points')
     parser.add_argument('--zoom', default=18, type=int,
-                        help='initial zoom, defaults to 18')
+                        help='initial zoom, default is 18')
     parser.add_argument('paths', nargs='+')
     args = parser.parse_args()
     files = util.expand_path(args.paths, args.recurse, ['.csv', '.tlog'])

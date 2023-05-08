@@ -7,7 +7,7 @@ Read MAVLink PARAM_VALUE messages from a tlog file (telemetry log) and use these
 from argparse import ArgumentParser
 import os
 from pymavlink import mavutil
-import tlog_util
+import util
 
 # Use MAVLink2
 os.environ['MAVLINK20'] = '1'
@@ -40,7 +40,7 @@ def main():
     parser.add_argument('-r', '--recurse', help='enter directories looking for tlog files', action='store_true')
     parser.add_argument('paths', nargs='+')
     args = parser.parse_args()
-    files = tlog_util.expand_path(args.paths, args.recurse)
+    files = util.expand_path(args.paths, args.recurse, '.tlog')
     print(f'Processing {len(files)} files')
 
     for file in files:
