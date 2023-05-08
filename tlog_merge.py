@@ -70,13 +70,19 @@ class TelemetryLogReader:
 
         print(f'{msg_count} messages')
 
+    def outfile(self, suffix: str = '', ext: str = '.csv'):
+        dirname, basename = os.path.split(self.tlog_filename)
+        root, _ = os.path.splitext(basename)
+        return os.path.join(dirname, root + suffix + ext)
+
     def write_msg_csv_files(self):
         print('Writing csv files')
         for msg_type in self.msg_types:
             df = self.tables[msg_type].get_dataframe(self.verbose)
-            filename = f'{self.prefix}_{msg_type}.csv'
-            df.to_csv(filename)
-            print(f'Writing {len(df)} rows to {filename}')
+            if len(df):
+                filename = self.outfile(suffix=f'_{msg_type}')
+                print(f'Writing {len(df)} rows to {filename}')
+                df.to_csv(filename)
 
     def write_merged_csv_file(self):
         merged_df = None
@@ -104,13 +110,12 @@ class TelemetryLogReader:
         if merged_df is None:
             print(f'Nothing to write')
         else:
-            filename = f'{self.prefix}.csv'
+            filename = self.outfile()
             print(f'Writing {len(merged_df)} rows to {filename}')
             merged_df.to_csv(filename)
 
 
 def main():
-    # TODO the prefix method isn't working now
     # TODO param time granularity
     # TODO TIMESYNC?
     # TODO SYSTEM_TIME?
