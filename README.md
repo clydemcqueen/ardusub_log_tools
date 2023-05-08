@@ -139,10 +139,9 @@ For csv files:
     Longitude column header should be 'gps.lon' or 'lon'
 
 For tlog files, these messages are read:
-    GLOBAL_POSITION_INT -- the filtered position estimate, will appear as a blue line
-    GPS_INPUT -- sensor data sent to ArduSub, not filtered, green line
-    GPS_RAW_INT -- sensor data sent from ArduSub to QGC, not filtered, brown line
-    GPS2_RAW -- sensor_data from a 2nd GPS system, sent from ArduSub to QGC, not filtered, red line
+    GPS_RAW_INT -- sensor data sent from ArduSub to QGC, will appear as a blue line, should be close to the csv file
+    GLOBAL_POSITION_INT -- the filtered position estimate, green line
+    GPS_INPUT -- sensor data sent from ugps-extension to ArduSub, not filtered, red line
 
 positional arguments:
   paths

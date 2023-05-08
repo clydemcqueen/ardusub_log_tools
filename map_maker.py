@@ -8,10 +8,9 @@ For csv files:
     Longitude column header should be 'gps.lon' or 'lon'
 
 For tlog files, these messages are read:
-    GLOBAL_POSITION_INT -- the filtered position estimate, will appear as a blue line
-    GPS_INPUT -- sensor data sent to ArduSub, not filtered, green line
-    GPS_RAW_INT -- sensor data sent from ArduSub to QGC, not filtered, brown line
-    GPS2_RAW -- sensor_data from a 2nd GPS system, sent from ArduSub to QGC, not filtered, red line
+    GPS_RAW_INT -- sensor data sent from ArduSub to QGC, will appear as a blue line, should be close to the csv file
+    GLOBAL_POSITION_INT -- the filtered position estimate, green line
+    GPS_INPUT -- sensor data sent from ugps-extension to ArduSub, not filtered, red line
 
 """
 
@@ -52,11 +51,14 @@ class MapMaker:
         if self.verbose:
             print(df.head())
             print(len(df))
-        folium.PolyLine(df[[lat_col, lon_col]].values, color=color).add_to(self.m)
+        folium.PolyLine(df[[lat_col, lon_col]].values, color=color, weight=1).add_to(self.m)
 
     def write(self, outfile):
-        print(f'Writing {outfile}')
-        self.m.save(outfile)
+        if self.m:
+            print(f'Writing {outfile}')
+            self.m.save(outfile)
+        else:
+            print(f'Nothing to write')
 
 
 def build_map_from_csv(infile, outfile, verbose, center, zoom):
@@ -83,7 +85,9 @@ def build_map_from_csv(infile, outfile, verbose, center, zoom):
 
 def build_map_from_tlog(infile, outfile, verbose, center, zoom):
     # Create tables
-    msg_types = ['GLOBAL_POSITION_INT', 'GPS_INPUT', 'GPS_RAW_INT', 'GPS2_RAW']
+    # TODO GPS_INPUT will crash pymavlink, so ignore for now
+    # msg_types = ['GLOBAL_POSITION_INT', 'GPS_INPUT', 'GPS_RAW_INT']
+    msg_types = ['GLOBAL_POSITION_INT', 'GPS_RAW_INT']
     tables: dict[str, table_types.Table] = {}
     for msg_type in msg_types:
         tables[msg_type] = table_types.Table.create_table(msg_type)
@@ -117,14 +121,12 @@ def build_map_from_tlog(infile, outfile, verbose, center, zoom):
     for msg_type in msg_types:
         df = tables[msg_type].get_dataframe(False)
         if len(df) > 0:
-            if msg_type == 'GLOBAL_POSITION_INT':
-                mm.add_df(df, 'GLOBAL_POSITION_INT.lat_deg', 'GLOBAL_POSITION_INT.lon_deg', 'DodgerBlue')
-            elif msg_type == 'GPS_INPUT':
-                mm.add_df(df, 'GPS_INPUT.lat_deg', 'GPS_INPUT.lon_deg', 'LimeGreen')
-            elif msg_type == 'GPS_RAW_INT':
-                mm.add_df(df, 'GPS_RAW_INT.lat_deg', 'GPS_RAW_INT.lon_deg', 'Chocolate')
+            if msg_type == 'GPS_RAW_INT':
+                mm.add_df(df, 'GPS_RAW_INT.lat_deg', 'GPS_RAW_INT.lon_deg', 'blue')
+            elif msg_type == 'GLOBAL_POSITION_INT':
+                mm.add_df(df, 'GLOBAL_POSITION_INT.lat_deg', 'GLOBAL_POSITION_INT.lon_deg', 'green')
             else:
-                mm.add_df(df, 'GPS2_RAW.lat_deg', 'GPS2_RAW.lon_deg', 'Crimson')
+                mm.add_df(df, 'GPS_INPUT.lat_deg', 'GPS_INPUT.lon_deg', 'red')
         else:
             if verbose:
                 print(f'{msg_type} table is empty, ignoring')
