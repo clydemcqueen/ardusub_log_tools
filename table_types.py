@@ -5,13 +5,14 @@ import pandas as pd
 
 class Table:
     @staticmethod
-    def create_table(msg_type: str):
+    def create_table(msg_type: str, **kwargs):
         if msg_type == 'BATTERY_STATUS':
             return BatteryStatusTable()
         elif msg_type == 'HEARTBEAT':
             return HeartbeatTable()
+        elif msg_type == 'GPS_INPUT':
+            return GPSInputTable(**kwargs)
         elif msg_type == 'GLOBAL_POSITION_INT' or \
-                msg_type == 'GPS_INPUT' or \
                 msg_type == 'GPS_RAW_INT' or \
                 msg_type == 'GPS2_RAW':
             return GPSTable(msg_type)
@@ -45,6 +46,9 @@ class Table:
                     print(self._df.head())
 
         return self._df
+
+    def __len__(self):
+        return len(self._rows)
 
 
 class BatteryStatusTable(Table):
@@ -92,6 +96,25 @@ class GPSTable(Table):
         # Convert degE7 to float
         row[f'{self._msg_type}.lat_deg'] = row[f'{self._msg_type}.lat'] / 1.0e7
         row[f'{self._msg_type}.lon_deg'] = row[f'{self._msg_type}.lon'] / 1.0e7
+        super().append(row)
+
+
+class GPSInputTable(Table):
+    def __init__(self, verbose: bool, hdop: float):
+        super().__init__('GPS_INPUT')
+        self._verbose = verbose
+        self._hdop = hdop
+
+    def append(self, row: dict):
+        # Convert degE7 to float
+        row[f'{self._msg_type}.lat_deg'] = row[f'{self._msg_type}.lat'] / 1.0e7
+        row[f'{self._msg_type}.lon_deg'] = row[f'{self._msg_type}.lon'] / 1.0e7
+
+        if row['GPS_INPUT.hdop'] > self._hdop:
+            if self._verbose:
+                print(f'drop GPS_INPUT lat {row["GPS_INPUT.lat_deg"]}, lon {row["GPS_INPUT.lon_deg"]}, hdop {row["GPS_INPUT.hdop"]}')
+            return
+
         super().append(row)
 
 

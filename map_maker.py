@@ -53,6 +53,9 @@ class MapMaker:
             print(len(df))
         folium.PolyLine(df[[lat_col, lon_col]].values, color=color, weight=1).add_to(self.m)
 
+    def add_table(self, table, lat_col, lon_col, color):
+        self.add_df(table.get_dataframe(self.verbose), lat_col, lon_col, color)
+
     def write(self, outfile):
         if self.m:
             print(f'Writing {outfile}')
@@ -83,14 +86,11 @@ def build_map_from_csv(infile, outfile, verbose, center, zoom):
         print('GPS information not found')
 
 
-def build_map_from_tlog(infile, outfile, verbose, center, zoom):
+def build_map_from_tlog(infile, outfile, verbose, center, zoom, msg_types, hdop):
     # Create tables
-    # TODO GPS_INPUT will crash pymavlink, so ignore for now
-    # msg_types = ['GLOBAL_POSITION_INT', 'GPS_INPUT', 'GPS_RAW_INT']
-    msg_types = ['GLOBAL_POSITION_INT', 'GPS_RAW_INT']
     tables: dict[str, table_types.Table] = {}
     for msg_type in msg_types:
-        tables[msg_type] = table_types.Table.create_table(msg_type)
+        tables[msg_type] = table_types.Table.create_table(msg_type, verbose=verbose, hdop=hdop)
 
     # Read tlog file, don't crash
     # TODO this loop is common w/ code in tlog_merge.py, move to table_types.py?
@@ -118,31 +118,15 @@ def build_map_from_tlog(infile, outfile, verbose, center, zoom):
 
     mm = MapMaker(verbose, center, zoom)
 
-    for msg_type in msg_types:
-        df = tables[msg_type].get_dataframe(False)
-        if len(df) > 0:
-            if msg_type == 'GPS_RAW_INT':
-                mm.add_df(df, 'GPS_RAW_INT.lat_deg', 'GPS_RAW_INT.lon_deg', 'blue')
-            elif msg_type == 'GLOBAL_POSITION_INT':
-                mm.add_df(df, 'GLOBAL_POSITION_INT.lat_deg', 'GLOBAL_POSITION_INT.lon_deg', 'green')
-            else:
-                mm.add_df(df, 'GPS_INPUT.lat_deg', 'GPS_INPUT.lon_deg', 'red')
-        else:
-            if verbose:
-                print(f'{msg_type} table is empty, ignoring')
+    # Build the map in a specific order
+    if 'GPS_RAW_INT' in msg_types and len(tables['GPS_RAW_INT']):
+        mm.add_table(tables['GPS_RAW_INT'], 'GPS_RAW_INT.lat_deg', 'GPS_RAW_INT.lon_deg', 'blue')
+    if 'GLOBAL_POSITION_INT' in msg_types and len(tables['GLOBAL_POSITION_INT']):
+        mm.add_table(tables['GLOBAL_POSITION_INT'], 'GLOBAL_POSITION_INT.lat_deg', 'GLOBAL_POSITION_INT.lon_deg', 'green')
+    if 'GPS_INPUT' in msg_types and len(tables['GPS_INPUT']):
+        mm.add_table(tables['GPS_INPUT'], 'GPS_INPUT.lat_deg', 'GPS_INPUT.lon_deg', 'red')
 
     mm.write(outfile)
-
-
-def build_map(infile, verbose, center, zoom):
-    dirname, basename = os.path.split(infile)
-    root, ext = os.path.splitext(basename)
-    outfile = os.path.join(dirname, root + '.html')
-
-    if ext == '.csv':
-        build_map_from_csv(infile, outfile, verbose, center, zoom)
-    else:
-        build_map_from_tlog(infile, outfile, verbose, center, zoom)
 
 
 def float_or_none(x):
@@ -169,15 +153,32 @@ def main():
                         help='center the map at this longitude, default is mean of all points')
     parser.add_argument('--zoom', default=18, type=int,
                         help='initial zoom, default is 18')
+    parser.add_argument('--types', default=None,
+                        help='comma separated list of message types, the default is GPS_RAW_INT and GPS_GLOBAL_INT')
+    parser.add_argument('--hdop', default=100.0, type=float,
+                        help='reject GPS_INPUT messages where hdop exceeds this limit, default 100.0 (no limit)')
     parser.add_argument('paths', nargs='+')
     args = parser.parse_args()
     files = util.expand_path(args.paths, args.recurse, ['.csv', '.tlog'])
     print(f'Processing {len(files)} files')
 
-    for file in files:
+    if args.types:
+        msg_types = args.types.split(',')
+    else:
+        # The default doesn't include GPS_INPUT because of this bug: https://github.com/ArduPilot/pymavlink/issues/807
+        msg_types = ['GLOBAL_POSITION_INT', 'GPS_RAW_INT']
+
+    for infile in files:
         print('-------------------')
-        print(file)
-        build_map(file, args.verbose, [args.lat, args.lon], args.zoom)
+        print(infile)
+        dirname, basename = os.path.split(infile)
+        root, ext = os.path.splitext(basename)
+        outfile = os.path.join(dirname, root + '.html')
+
+        if ext == '.csv':
+            build_map_from_csv(infile, outfile, args.verbose, [args.lat, args.lon], args.zoom)
+        else:
+            build_map_from_tlog(infile, outfile, args.verbose, [args.lat, args.lon], args.zoom, msg_types, args.hdop)
 
 
 if __name__ == '__main__':
