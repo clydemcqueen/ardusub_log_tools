@@ -110,9 +110,14 @@ class GPSInputTable(Table):
         row[f'{self._msg_type}.lat_deg'] = row[f'{self._msg_type}.lat'] / 1.0e7
         row[f'{self._msg_type}.lon_deg'] = row[f'{self._msg_type}.lon'] / 1.0e7
 
+        if row['GPS_INPUT.fix_type'] < 3:
+            if self._verbose:
+                print(f'GPS_INPUT.fix_type < 3, lat {row["GPS_INPUT.lat_deg"]}, lon {row["GPS_INPUT.lon_deg"]}, fix_type {row["GPS_INPUT.fix_type"]}')
+            return
+
         if row['GPS_INPUT.hdop'] > self._hdop:
             if self._verbose:
-                print(f'drop GPS_INPUT lat {row["GPS_INPUT.lat_deg"]}, lon {row["GPS_INPUT.lon_deg"]}, hdop {row["GPS_INPUT.hdop"]}')
+                print(f'GPS_INPUT.hdop > {self._hdop}, lat {row["GPS_INPUT.lat_deg"]}, lon {row["GPS_INPUT.lon_deg"]}, hdop {row["GPS_INPUT.hdop"]}')
             return
 
         super().append(row)
