@@ -86,11 +86,11 @@ def build_map_from_csv(infile, outfile, verbose, center, zoom):
         print('GPS information not found')
 
 
-def build_map_from_tlog(infile, outfile, verbose, center, zoom, msg_types, hdop):
+def build_map_from_tlog(infile, outfile, verbose, center, zoom, msg_types, hdop_max):
     # Create tables
     tables: dict[str, table_types.Table] = {}
     for msg_type in msg_types:
-        tables[msg_type] = table_types.Table.create_table(msg_type, verbose=verbose, hdop=hdop)
+        tables[msg_type] = table_types.Table.create_table(msg_type, verbose=verbose, hdop_max=hdop_max)
 
     # Read tlog file, don't crash
     # TODO this loop is common w/ code in tlog_merge.py, move to table_types.py?
@@ -155,7 +155,7 @@ def main():
                         help='initial zoom, default is 18')
     parser.add_argument('--types', default=None,
                         help='comma separated list of message types, the default is GPS_RAW_INT and GPS_GLOBAL_INT')
-    parser.add_argument('--hdop', default=100.0, type=float,
+    parser.add_argument('--hdop-max', default=100.0, type=float,
                         help='reject GPS_INPUT messages where hdop exceeds this limit, default 100.0 (no limit)')
     parser.add_argument('paths', nargs='+')
     args = parser.parse_args()
@@ -178,7 +178,7 @@ def main():
         if ext == '.csv':
             build_map_from_csv(infile, outfile, args.verbose, [args.lat, args.lon], args.zoom)
         else:
-            build_map_from_tlog(infile, outfile, args.verbose, [args.lat, args.lon], args.zoom, msg_types, args.hdop)
+            build_map_from_tlog(infile, outfile, args.verbose, [args.lat, args.lon], args.zoom, msg_types, args.hdop_max)
 
 
 if __name__ == '__main__':

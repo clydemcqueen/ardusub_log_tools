@@ -100,10 +100,10 @@ class GPSTable(Table):
 
 
 class GPSInputTable(Table):
-    def __init__(self, verbose: bool, hdop: float):
+    def __init__(self, verbose: bool, hdop_max: float):
         super().__init__('GPS_INPUT')
         self._verbose = verbose
-        self._hdop = hdop
+        self._hdop_max = hdop_max
 
     def append(self, row: dict):
         # Convert degE7 to float
@@ -115,9 +115,9 @@ class GPSInputTable(Table):
                 print(f'GPS_INPUT.fix_type < 3, lat {row["GPS_INPUT.lat_deg"]}, lon {row["GPS_INPUT.lon_deg"]}, fix_type {row["GPS_INPUT.fix_type"]}')
             return
 
-        if row['GPS_INPUT.hdop'] > self._hdop:
+        if row['GPS_INPUT.hdop'] > self._hdop_max:
             if self._verbose:
-                print(f'GPS_INPUT.hdop > {self._hdop}, lat {row["GPS_INPUT.lat_deg"]}, lon {row["GPS_INPUT.lon_deg"]}, hdop {row["GPS_INPUT.hdop"]}')
+                print(f'GPS_INPUT.hdop > {self._hdop_max}, lat {row["GPS_INPUT.lat_deg"]}, lon {row["GPS_INPUT.lon_deg"]}, hdop {row["GPS_INPUT.hdop"]}')
             return
 
         super().append(row)
