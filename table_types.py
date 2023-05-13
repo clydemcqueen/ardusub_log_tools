@@ -5,17 +5,19 @@ import pandas as pd
 
 class Table:
     @staticmethod
-    def create_table(msg_type: str, **kwargs):
+    def create_table(msg_type: str, verbose: bool, hdop_max: float):
         if msg_type == 'BATTERY_STATUS':
             return BatteryStatusTable()
         elif msg_type == 'HEARTBEAT':
             return HeartbeatTable()
+        elif msg_type == 'GLOBAL_POSITION_INT':
+            return GlobalPositionIntTable()
         elif msg_type == 'GPS_INPUT':
-            return GPSInputTable(**kwargs)
-        elif msg_type == 'GLOBAL_POSITION_INT' or \
-                msg_type == 'GPS_RAW_INT' or \
-                msg_type == 'GPS2_RAW':
-            return GPSTable(msg_type)
+            return GPSInputTable(verbose, hdop_max)
+        elif msg_type == 'GPS_RAW_INT':
+            return GPSRawIntTable(hdop_max)
+        elif msg_type == 'GPS2_RAW':
+            return GPS2RawTable(hdop_max)
         elif msg_type == 'NAMED_VALUE_FLOAT':
             return NamedValueFloatTable()
         else:
@@ -27,7 +29,7 @@ class Table:
         self._df = None
 
     def append(self, row: dict):
-        # Drop fields that have array values
+        # Drop fields that have array values, they don't work well in csv files
         for key in list(row.keys()):
             if isinstance(row[key], list):
                 row.pop(key)
@@ -88,9 +90,9 @@ class HeartbeatTable(Table):
         super().append(row)
 
 
-class GPSTable(Table):
-    def __init__(self, msg_type: str):
-        super().__init__(msg_type)
+class GlobalPositionIntTable(Table):
+    def __init__(self):
+        super().__init__('GLOBAL_POSITION_INT')
 
     def append(self, row: dict):
         # Convert degE7 to float
@@ -118,6 +120,46 @@ class GPSInputTable(Table):
         if row['GPS_INPUT.hdop'] > self._hdop_max:
             if self._verbose:
                 print(f'GPS_INPUT.hdop > {self._hdop_max}, lat {row["GPS_INPUT.lat_deg"]}, lon {row["GPS_INPUT.lon_deg"]}, hdop {row["GPS_INPUT.hdop"]}')
+            return
+
+        super().append(row)
+
+
+class GPSRawIntTable(Table):
+    def __init__(self, hdop_max: float):
+        super().__init__('GPS_RAW_INT')
+        self._hdop_max = hdop_max
+
+    def append(self, row: dict):
+        # Convert degE7 to float
+        row[f'{self._msg_type}.lat_deg'] = row[f'{self._msg_type}.lat'] / 1.0e7
+        row[f'{self._msg_type}.lon_deg'] = row[f'{self._msg_type}.lon'] / 1.0e7
+
+        # ArduSub warm up sends zillions of sensor messages with bad fix_type and eph; don't bother printing these
+        if row['GPS_RAW_INT.fix_type'] < 3:
+            return
+
+        if row['GPS_RAW_INT.eph'] > self._hdop_max:
+            return
+
+        super().append(row)
+
+
+class GPS2RawTable(Table):
+    def __init__(self, hdop_max: float):
+        super().__init__('GPS2_RAW')
+        self._hdop_max = hdop_max
+
+    def append(self, row: dict):
+        # Convert degE7 to float
+        row[f'{self._msg_type}.lat_deg'] = row[f'{self._msg_type}.lat'] / 1.0e7
+        row[f'{self._msg_type}.lon_deg'] = row[f'{self._msg_type}.lon'] / 1.0e7
+
+        # ArduSub warm up sends zillions of sensor messages with bad fix_type and eph; don't bother printing these
+        if row['GPS2_RAW.fix_type'] < 3:
+            return
+
+        if row['GPS2_RAW.eph'] > self._hdop_max:
             return
 
         super().append(row)

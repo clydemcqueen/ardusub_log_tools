@@ -154,7 +154,7 @@ options:
   --lon LON            center the map at this longitude, default is mean of all points
   --zoom ZOOM          initial zoom, default is 18
   --types TYPES        comma separated list of message types, the default is GPS_RAW_INT and GPS_GLOBAL_INT
-  --hdop-max HDOP_MAX  reject GPS_INPUT messages where hdop exceeds this limit, default 100.0 (no limit)
+  --hdop-max HDOP_MAX  reject GPS messages where hdop exceeds this limit, default 100.0 (no limit)
 ~~~
 
 ## Timestamp notes
