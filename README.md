@@ -60,7 +60,8 @@ options:
 $ tlog_param.py --help
 usage: tlog_param.py [-h] [-r] paths [paths ...]
 
-Read MAVLink PARAM_VALUE messages from a tlog file (telemetry log) and use these to reconstruct the parameter state of a vehicle.
+Read MAVLink PARAM_VALUE messages from a tlog file (telemetry log), reconstruct the parameter state of a
+vehicle, and write the parameters to a QGC-compatible params file.
 
 positional arguments:
   paths
