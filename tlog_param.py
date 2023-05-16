@@ -20,52 +20,54 @@ class Param(NamedTuple):
     type: str   # Actual values are MAV_PARAM_TYPE_*, but we'll store them as strings
 
 
-def read(infile: str) -> dict[str, Param]:
-    mlog = mavutil.mavlink_connection(infile, robust_parsing=False, dialect='ardupilotmega')
+class ParamState:
+    def __init__(self):
+        self.params: dict[str, Param] = {}
+        self.autopilot_version: str = ''
+        self.git_hash: str = ''
 
-    params: dict[str, Param] = {}
-    while (msg := mlog.recv_match(blocking=False, type=['PARAM_VALUE'])) is not None:
-        data = msg.to_dict()
-        param_id = data['param_id']
-        param_value = data['param_value']
+    def read(self, infile: str):
+        mlog = mavutil.mavlink_connection(infile, robust_parsing=False, dialect='ardupilotmega')
 
-        if param_id in params and params[param_id].value != param_value:
-            print(f'{param_id} was {params[param_id].value}, changed to {param_value}')
+        while (msg := mlog.recv_match(blocking=False, type=['PARAM_VALUE'])) is not None:
+            data = msg.to_dict()
+            param_id = data['param_id']
+            param_value = data['param_value']
 
-        params[param_id] = Param(param_value, data['param_type'])
+            if param_id in self.params and self.params[param_id].value != param_value:
+                print(f'{param_id} was {self.params[param_id].value}, changed to {param_value}')
 
-    return params
+            self.params[param_id] = Param(param_value, data['param_type'])
 
+    # TODO write ArduSub version #
+    # TODO write ArduSub git revision #
 
-# TODO write ArduSub version #
-# TODO write ArduSub git revision #
+    def write(self, outfile: str):
+        """
+        Write a QGC-compatible params file
 
-def write(params: dict[str, Param], outfile: str):
-    """
-    Write a QGC-compatible params file
+        File format: https://dev.qgroundcontrol.com/master/en/file_formats/parameters.html
+        """
+        if len(self.params) == 0:
+            print('Nothing to write')
+            return
 
-    File format: https://dev.qgroundcontrol.com/master/en/file_formats/parameters.html
-    """
-    if len(params) == 0:
-        print('Nothing to write')
-        return
+        print(f'Writing {outfile}')
+        f = open(outfile, 'w')
 
-    print(f'Writing {outfile}')
-    f = open(outfile, 'w')
+        f.write('# Onboard parameters for Vehicle 1\n')
+        f.write('#\n')
+        f.write('# Stack: ArduPilot\n')
+        f.write('# Vehicle: Sub\n')
+        f.write('# Version: TODO \n')
+        f.write('# Git Revision: TODO\n')
+        f.write('#\n')
+        f.write('# Vehicle-Id\tComponent-Id\tName\tValue\tType\n')
 
-    f.write('# Onboard parameters for Vehicle 1\n')
-    f.write('#\n')
-    f.write('# Stack: ArduPilot\n')
-    f.write('# Vehicle: Sub\n')
-    f.write('# Version: TODO \n')
-    f.write('# Git Revision: TODO\n')
-    f.write('#\n')
-    f.write('# Vehicle-Id\tComponent-Id\tName\tValue\tType\n')
+        for pi in sorted(self.params.items()):
+            f.write(f'1\t1\t{pi[0]}\t{pi[1].value}\t{pi[1].type}\n')
 
-    for pi in sorted(params.items()):
-        f.write(f'1\t1\t{pi[0]}\t{pi[1].value}\t{pi[1].type}\n')
-
-    f.close()
+        f.close()
 
 
 def main():
@@ -82,7 +84,10 @@ def main():
         dirname, basename = os.path.split(infile)
         root, ext = os.path.splitext(basename)
         outfile = os.path.join(dirname, root + '.params')
-        write(read(infile), outfile)
+
+        param_state = ParamState()
+        param_state.read(infile)
+        param_state.write(outfile)
 
 
 if __name__ == '__main__':
