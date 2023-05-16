@@ -37,7 +37,7 @@ class TelemetryLogReader:
     def read_tlog(self):
         self.tables = {}
         for msg_type in self.msg_types:
-            self.tables[msg_type] = table_types.Table.create_table(msg_type)
+            self.tables[msg_type] = table_types.Table.create_table(msg_type, self.verbose)
 
         print(f'Reading {self.tlog_filename}')
         mlog = mavutil.mavlink_connection(self.tlog_filename, robust_parsing=True, dialect='ardupilotmega')

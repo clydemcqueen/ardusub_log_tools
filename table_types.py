@@ -5,7 +5,7 @@ import pandas as pd
 
 class Table:
     @staticmethod
-    def create_table(msg_type: str, verbose: bool, hdop_max: float):
+    def create_table(msg_type: str, verbose: bool = False, hdop_max: float = 100.0):
         if msg_type == 'BATTERY_STATUS':
             return BatteryStatusTable()
         elif msg_type == 'HEARTBEAT':
