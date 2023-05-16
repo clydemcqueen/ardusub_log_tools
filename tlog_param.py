@@ -36,7 +36,7 @@ class Param(NamedTuple):
     type: str   # Actual values are MAV_PARAM_TYPE_*, but we'll store them as strings
 
 
-class ParamState:
+class TelemetryLogParam:
     def __init__(self):
         self.params: dict[str, Param] = {}
         self.autopilot_version: str = ''
@@ -108,9 +108,9 @@ def main():
         root, ext = os.path.splitext(basename)
         outfile = os.path.join(dirname, root + '.params')
 
-        param_state = ParamState()
-        param_state.read(infile)
-        param_state.write(outfile)
+        tlog_param = TelemetryLogParam()
+        tlog_param.read(infile)
+        tlog_param.write(outfile)
 
 
 if __name__ == '__main__':
