@@ -5,8 +5,10 @@ import os
 def expand_path(paths: list[str], recurse: bool, ext: str | list[str]) -> set[str]:
     files = set()
 
-    if ext is str:
+    if type(ext) is str:
         ext = [ext]
+
+    # TODO bug: this doesn't expand path/to/dir/*.tlog
 
     for path in paths:
         if os.path.isfile(path):
