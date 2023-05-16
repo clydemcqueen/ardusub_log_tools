@@ -19,16 +19,13 @@ os.environ['MAVLINK20'] = '1'
 
 
 def firmware_version_type_str(firmware_version_type: int) -> str:
-    if firmware_version_type == mav_common.FIRMWARE_VERSION_TYPE_DEV:
-        return 'dev'
-    elif firmware_version_type == mav_common.FIRMWARE_VERSION_TYPE_ALPHA:
-        return 'alpha'
-    elif firmware_version_type == mav_common.FIRMWARE_VERSION_TYPE_BETA:
-        return 'beta'
-    elif firmware_version_type == mav_common.FIRMWARE_VERSION_TYPE_RC:
-        return 'rc'
-    else:
-        return ''
+    try:
+        return mav_common.enums['FIRMWARE_VERSION_TYPE'][firmware_version_type].description
+
+    except KeyError:
+        pass
+
+    return ''
 
 
 class Param(NamedTuple):
@@ -71,7 +68,7 @@ class TelemetryLogParam:
 
         File format: https://dev.qgroundcontrol.com/master/en/file_formats/parameters.html
         """
-        if len(self.params) == 0:
+        if not len(self.params):
             print('Nothing to write')
             return
 
@@ -87,8 +84,8 @@ class TelemetryLogParam:
         f.write('#\n')
         f.write('# Vehicle-Id\tComponent-Id\tName\tValue\tType\n')
 
-        for pi in sorted(self.params.items()):
-            f.write(f'1\t1\t{pi[0]}\t{pi[1].value}\t{pi[1].type}\n')
+        for param_item in sorted(self.params.items()):
+            f.write(f'1\t1\t{param_item[0]}\t{param_item[1].value}\t{param_item[1].type}\n')
 
         f.close()
 
