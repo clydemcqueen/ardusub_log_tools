@@ -1,4 +1,4 @@
-## ArduSub Log Tools
+# ArduSub Log Tools ![Test status](https://github.com/clydemcqueen/ardusub_log_tools/actions/workflows/test.yml/badge.svg?branch=main)
 
 This is a collection of log analysis tools for working with [ArduSub](https://www.ardusub.com/) vehicles.
 
@@ -11,6 +11,13 @@ tool.py *.tlog
 tool.py --recurse directory
 tool.py --recurse .
 ~~~
+
+## Requirements
+
+ardusub_log_tools requires Python 3.10.
+Other requirements are listed in [requirements.txt](requirements.txt).
+
+## Tools
 
 ### tlog_info.py
 
@@ -179,4 +186,3 @@ Possible future tools or capabilities:
 * Open Ping Sonar log (.bin) files
 * Join telemetry, dataflash and ping sonar log files together
 * Clip log files to 'interesting' segments based on timestamps or other markers
-* Add 'theory of operation' documents describing important subsystems, e.g. WL UGPS
