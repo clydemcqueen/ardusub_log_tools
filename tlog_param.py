@@ -14,9 +14,6 @@ from pymavlink import mavutil
 
 import util
 
-# Use MAVLink2
-os.environ['MAVLINK20'] = '1'
-
 
 def firmware_version_type_str(firmware_version_type: int) -> str:
     try:

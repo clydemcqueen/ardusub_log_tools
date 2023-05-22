@@ -23,9 +23,6 @@ import os
 import table_types
 import util
 
-# Use MAVLink2
-os.environ['MAVLINK20'] = '1'
-
 
 class MapMaker:
     @staticmethod

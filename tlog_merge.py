@@ -13,9 +13,6 @@ from pymavlink import mavutil
 import table_types
 import util
 
-# Use MAVLink2
-os.environ['MAVLINK20'] = '1'
-
 
 class TelemetryLogReader:
     def __init__(self,

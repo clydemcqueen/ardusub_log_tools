@@ -10,9 +10,6 @@ from pymavlink import mavutil
 import pymavlink.dialects.v20.ardupilotmega as apm
 import util
 
-# Use MAVLink2
-os.environ['MAVLINK20'] = '1'
-
 
 class Scanner:
     def __init__(self, filename: str, types: list[str] | None):

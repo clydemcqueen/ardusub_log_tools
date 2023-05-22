@@ -9,9 +9,6 @@ import os
 from pymavlink import mavutil
 import util
 
-# Use MAVLink2
-os.environ['MAVLINK20'] = '1'
-
 
 class TypeFinder:
     def __init__(self, filename: str):
