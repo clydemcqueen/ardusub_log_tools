@@ -5,8 +5,9 @@ Read MAVLink messages from a tlog file (telemetry log) and report on the message
 """
 
 from argparse import ArgumentParser
-import os
+
 from pymavlink import mavutil
+
 import util
 
 

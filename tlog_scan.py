@@ -5,9 +5,9 @@ Read MAVLink messages from a tlog file (telemetry log) and report on any pymavli
 """
 
 from argparse import ArgumentParser
-import os
+
 from pymavlink import mavutil
-import pymavlink.dialects.v20.ardupilotmega as apm
+
 import util
 
 

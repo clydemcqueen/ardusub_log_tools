@@ -15,11 +15,13 @@ For tlog files, these messages are read:
 """
 
 import argparse
-from argparse import ArgumentParser
-import folium
-from pymavlink import mavutil
-import pandas as pd
 import os
+from argparse import ArgumentParser
+
+import folium
+import pandas as pd
+from pymavlink import mavutil
+
 import table_types
 import util
 

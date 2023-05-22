@@ -6,10 +6,12 @@ operation does a forward-fill (data is copied from the previous row), so the res
 substantially larger than the sum of the per-type csv files.
 """
 
-from argparse import ArgumentParser
 import os
+from argparse import ArgumentParser
+
 import pandas as pd
 from pymavlink import mavutil
+
 import table_types
 import util
 
