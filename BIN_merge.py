@@ -12,6 +12,7 @@ import pandas as pd
 from pymavlink import mavutil
 
 import util
+from log_merger import LogMerger
 
 # Basically everything I've seen in an ArduSub dataflash (BIN) file
 ALL_MSG_TYPES = [
@@ -128,28 +129,22 @@ class DataflashTable:
         return self._df
 
 
-class DataflashLogReader:
+class DataflashLogReader(LogMerger):
     def __init__(self,
-                 input_filename: str,
+                 infile: str,
                  msg_types: list[str],
                  max_msgs: int,
                  max_rows: int,
                  verbose: bool):
-        self.input_filename = input_filename
-        self.prefix = input_filename.split('.')[0]
-        self.msg_types = msg_types
-        self.max_msgs = max_msgs
-        self.max_rows = max_rows
-        self.verbose = verbose
-        self.tables = None
+        super().__init__(infile, msg_types, max_msgs, max_rows, verbose)
 
     def read(self):
         self.tables = {}
         for msg_type in self.msg_types:
             self.tables[msg_type] = DataflashTable.create_table(msg_type)
 
-        print(f'Reading {self.input_filename}')
-        mlog = mavutil.mavlink_connection(self.input_filename, robust_parsing=False, dialect='ardupilotmega')
+        print(f'Reading {self.infile}')
+        mlog = mavutil.mavlink_connection(self.infile, robust_parsing=False, dialect='ardupilotmega')
 
         print('Parsing messages')
         msg_count = 0
@@ -176,40 +171,6 @@ class DataflashLogReader:
                 print(f'{msg_count} messages')
 
         print(f'{msg_count} messages')
-
-    def write_msg_csv_files(self):
-        print('Writing csv files')
-        for msg_type in self.msg_types:
-            df = self.tables[msg_type].get_dataframe(self.verbose)
-            filename = f'{self.prefix}_{msg_type}.csv'
-            df.to_csv(filename)
-            print(f'Writing {len(df)} rows to {filename}')
-
-    def write_merged_csv_file(self):
-        merged_df = None
-        print(f'Merging dataframes')
-        for msg_type in self.msg_types:
-            df = self.tables[msg_type].get_dataframe(self.verbose)
-            if df.empty:
-                if self.verbose:
-                    print(f'{msg_type} empty, skipping')
-            else:
-                if merged_df is None:
-                    if self.verbose:
-                        print(f'Starting with {len(df)} {msg_type} rows')
-                    merged_df = df
-                else:
-                    if self.verbose:
-                        print(f'Merging {len(df)} {msg_type} rows')
-                    merged_df = pd.merge_ordered(merged_df, df, on='timestamp', fill_method='ffill')
-                    if self.verbose:
-                        print(f'Merged dataframe has {len(merged_df)} rows')
-                    if len(merged_df) > self.max_rows:
-                        print('Merged dataframe is too big, stopping')
-                        break
-        filename = f'{self.prefix}.csv'
-        print(f'Writing {len(merged_df)} rows to {filename}')
-        merged_df.to_csv(filename)
 
 
 def main():
