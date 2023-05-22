@@ -95,22 +95,6 @@ options:
   --types TYPES  comma separated list of message types
 ~~~
 
-### tlog_types.py
-
-~~~
-$ tlog_types.py --help
-usage: tlog_types.py [-h] [-r] paths [paths ...]
-
-Read MAVLink messages from a tlog file (telemetry log) and report on the message types found.
-
-positional arguments:
-  paths
-
-options:
-  -h, --help     show this help message and exit
-  -r, --recurse  enter directories looking for tlog files
-~~~
-
 ### BIN_merge.py
 
 ~~~
@@ -163,6 +147,22 @@ options:
   --zoom ZOOM          initial zoom, default is 18
   --types TYPES        comma separated list of message types, the default is GPS_RAW_INT and GPS_GLOBAL_INT
   --hdop-max HDOP_MAX  reject GPS messages where hdop exceeds this limit, default 100.0 (no limit)
+~~~
+
+### show_types.py
+
+~~~
+$ show_types.py --help
+usage: show_types.py [-h] [-r] paths [paths ...]
+
+Read messages from tlog (telemetry) and BIN (dataflash) logs and report on the message types found.
+
+positional arguments:
+  paths
+
+options:
+  -h, --help     show this help message and exit
+  -r, --recurse  enter directories looking for tlog and BIN files
 ~~~
 
 ## Timestamp notes

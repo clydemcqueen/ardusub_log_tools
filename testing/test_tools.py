@@ -5,11 +5,11 @@
 # python -m pytest -rP
 
 import map_maker
+import show_types
 import tlog_info
 import tlog_merge
 import tlog_param
 import tlog_scan
-import tlog_types
 
 
 # TODO compare output to known output
@@ -38,5 +38,5 @@ class TestTools:
         tool.read()
 
     def test_tlog_types(self):
-        tool = tlog_types.TypeFinder('testing/small.tlog')
+        tool = show_types.TypeFinder('testing/small.tlog')
         tool.read()
