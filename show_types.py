@@ -45,9 +45,9 @@ class TypeFinder:
 def main():
     parser = ArgumentParser(description=__doc__)
     parser.add_argument('-r', '--recurse', action='store_true', help='enter directories looking for tlog and BIN files')
-    parser.add_argument('paths', nargs='+')
+    parser.add_argument('path', nargs='+')
     args = parser.parse_args()
-    files = util.expand_path(args.paths, args.recurse, ['.tlog', '.BIN'])
+    files = util.expand_path(args.path, args.recurse, ['.tlog', '.BIN'])
     print(f'Processing {len(files)} files')
 
     for file in files:

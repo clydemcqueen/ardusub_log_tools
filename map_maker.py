@@ -156,9 +156,9 @@ def main():
                         help='comma separated list of message types, the default is GPS_RAW_INT and GPS_GLOBAL_INT')
     parser.add_argument('--hdop-max', default=100.0, type=float,
                         help='reject GPS_INPUT messages where hdop exceeds this limit, default 100.0 (no limit)')
-    parser.add_argument('paths', nargs='+')
+    parser.add_argument('path', nargs='+')
     args = parser.parse_args()
-    files = util.expand_path(args.paths, args.recurse, ['.csv', '.tlog'])
+    files = util.expand_path(args.path, args.recurse, ['.csv', '.tlog'])
     print(f'Processing {len(files)} files')
 
     if args.types:

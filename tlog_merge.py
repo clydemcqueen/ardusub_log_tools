@@ -85,9 +85,9 @@ def main():
                         help='stop after processing this number of messages (default 500K)')
     parser.add_argument('--max-rows', type=int, default=500000,
                         help='stop if the merged table exceeds this number of rows (default 500K)')
-    parser.add_argument('paths', nargs='+')
+    parser.add_argument('path', nargs='+')
     args = parser.parse_args()
-    files = util.expand_path(args.paths, args.recurse, '.tlog')
+    files = util.expand_path(args.path, args.recurse, '.tlog')
     print(f'Processing {len(files)} files')
 
     if args.types:

@@ -23,12 +23,12 @@ Other requirements are listed in [requirements.txt](requirements.txt).
 
 ~~~
 $ tlog_info.py --help
-usage: tlog_info.py [-h] [-r] paths [paths ...]
+usage: tlog_info.py [-h] [-r] path [path ...]
 
 Read MAVLink messages from a tlog file (telemetry log) and report on anything interesting.
 
 positional arguments:
-  paths
+  path
 
 options:
   -h, --help     show this help message and exit
@@ -40,14 +40,14 @@ options:
 ~~~
 $ tlog_merge.py --help
 usage: tlog_merge.py [-h] [-r] [-v] [--all] [--explode] [--no-merge] [--types TYPES] [--max-msgs MAX_MSGS] [--max-rows MAX_ROWS]
-                     paths [paths ...]
+                     path [path ...]
 
 Read MAVLink messages from a tlog file (telemetry log) and merge the messages into a single, wide csv file. The merge operation does a
 forward-fill (data is copied from the previous row), so the resulting merged csv file may be substantially larger than the sum of the per-
 type csv files.
 
 positional arguments:
-  paths
+  path
 
 options:
   -h, --help           show this help message and exit
@@ -65,13 +65,13 @@ options:
 
 ~~~
 $ tlog_param.py --help
-usage: tlog_param.py [-h] [-r] paths [paths ...]
+usage: tlog_param.py [-h] [-r] path [path ...]
 
 Read MAVLink PARAM_VALUE messages from a tlog file (telemetry log), reconstruct the parameter state of a
 vehicle, and write the parameters to a QGC-compatible params file.
 
 positional arguments:
-  paths
+  path
 
 options:
   -h, --help     show this help message and exit
@@ -82,12 +82,12 @@ options:
 
 ~~~
 $ tlog_scan.py --help
-usage: tlog_scan.py [-h] [-r] [--types TYPES] paths [paths ...]
+usage: tlog_scan.py [-h] [-r] [--types TYPES] path [path ...]
 
 Read MAVLink messages from a tlog file (telemetry log) and report on any pymavlink crashes.
 
 positional arguments:
-  paths
+  path
 
 options:
   -h, --help     show this help message and exit
@@ -99,13 +99,13 @@ options:
 
 ~~~
 clyde@fastr:~/projects/ardusub_log_tools (main *)$ BIN_merge.py --help
-usage: BIN_merge.py [-h] [-r] [-v] [--explode] [--no-merge] [--types TYPES] [--max-msgs MAX_MSGS] [--max-rows MAX_ROWS] paths [paths ...]
+usage: BIN_merge.py [-h] [-r] [-v] [--explode] [--no-merge] [--types TYPES] [--max-msgs MAX_MSGS] [--max-rows MAX_ROWS] path [path ...]
 
 Read ArduSub dataflash messages from a BIN file and merge the messages into a single, wide csv file. The merge operation does a forward-fill
 (data is copied from the previous row), so the resulting merged csv file may be substantially larger than the sum of the per-type csv files.
 
 positional arguments:
-  paths
+  path
 
 options:
   -h, --help           show this help message and exit
@@ -122,7 +122,7 @@ options:
 
 ~~~
 $ map_maker.py --help
-usage: map_maker.py [-h] [-r] [-v] [--lat LAT] [--lon LON] [--zoom ZOOM] [--types TYPES] [--hdop-max HDOP_MAX] paths [paths ...]
+usage: map_maker.py [-h] [-r] [-v] [--lat LAT] [--lon LON] [--zoom ZOOM] [--types TYPES] [--hdop-max HDOP_MAX] path [path ...]
 
 Read csv or tlog files and build Leaflet (interactive HTML) maps from GPS coordinates.
 
@@ -136,7 +136,7 @@ For tlog files, these messages are read:
     GPS_INPUT -- sensor data sent from ugps-extension to ArduSub, not filtered, red line
 
 positional arguments:
-  paths
+  path
 
 options:
   -h, --help           show this help message and exit
@@ -153,12 +153,12 @@ options:
 
 ~~~
 $ show_types.py --help
-usage: show_types.py [-h] [-r] paths [paths ...]
+usage: show_types.py [-h] [-r] path [path ...]
 
 Read messages from tlog (telemetry) and BIN (dataflash) logs and report on the message types found.
 
 positional arguments:
-  paths
+  path
 
 options:
   -h, --help     show this help message and exit
