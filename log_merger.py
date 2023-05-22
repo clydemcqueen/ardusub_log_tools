@@ -11,14 +11,13 @@ class LogMerger:
                  max_rows: int,
                  verbose: bool):
         self.infile = infile
-        self.prefix = infile.split('.')[0]
         self.msg_types = msg_types
         self.max_msgs = max_msgs
         self.max_rows = max_rows
         self.verbose = verbose
         self.tables = None
 
-    def outfile(self, suffix: str = '', ext: str = '.csv'):
+    def get_outfile_name(self, suffix: str = '', ext: str = '.csv'):
         dirname, basename = os.path.split(self.infile)
         root, _ = os.path.splitext(basename)
         return os.path.join(dirname, root + suffix + ext)
@@ -28,7 +27,7 @@ class LogMerger:
         for msg_type in self.msg_types:
             df = self.tables[msg_type].get_dataframe(self.verbose)
             if len(df):
-                filename = self.outfile(suffix=f'_{msg_type}')
+                filename = self.get_outfile_name(suffix=f'_{msg_type}')
                 print(f'Writing {len(df)} rows to {filename}')
                 df.to_csv(filename)
 
@@ -58,6 +57,6 @@ class LogMerger:
         if merged_df is None:
             print(f'Nothing to write')
         else:
-            filename = self.outfile()
+            filename = self.get_outfile_name()
             print(f'Writing {len(merged_df)} rows to {filename}')
             merged_df.to_csv(filename)
