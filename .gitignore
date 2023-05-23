@@ -1,3 +1,8 @@
 .idea/
 __pycache__/
 .pytest_cache/
+
+# Don't save test output
+testing/*.csv
+testing/*.html
+testing/*.params

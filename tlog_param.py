@@ -14,9 +14,6 @@ from pymavlink import mavutil
 
 import util
 
-# Use MAVLink2
-os.environ['MAVLINK20'] = '1'
-
 
 def firmware_version_type_str(firmware_version_type: int) -> str:
     try:
@@ -93,9 +90,9 @@ class TelemetryLogParam:
 def main():
     parser = ArgumentParser(description=__doc__)
     parser.add_argument('-r', '--recurse', help='enter directories looking for tlog files', action='store_true')
-    parser.add_argument('paths', nargs='+')
+    parser.add_argument('path', nargs='+')
     args = parser.parse_args()
-    files = util.expand_path(args.paths, args.recurse, '.tlog')
+    files = util.expand_path(args.path, args.recurse, '.tlog')
     print(f'Processing {len(files)} files')
 
     for infile in files:

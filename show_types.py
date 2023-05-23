@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
 
 """
-Read MAVLink messages from a tlog file (telemetry log) and report on the message types found.
+Read messages from tlog (telemetry) and BIN (dataflash) logs and report on the message types found.
 """
 
 from argparse import ArgumentParser
-import os
-from pymavlink import mavutil
-import util
 
-# Use MAVLink2
-os.environ['MAVLINK20'] = '1'
+from pymavlink import mavutil
+
+import util
 
 
 class TypeFinder:
@@ -46,10 +44,10 @@ class TypeFinder:
 
 def main():
     parser = ArgumentParser(description=__doc__)
-    parser.add_argument('-r', '--recurse', action='store_true', help='enter directories looking for tlog files')
-    parser.add_argument('paths', nargs='+')
+    parser.add_argument('-r', '--recurse', action='store_true', help='enter directories looking for tlog and BIN files')
+    parser.add_argument('path', nargs='+')
     args = parser.parse_args()
-    files = util.expand_path(args.paths, args.recurse, '.tlog')
+    files = util.expand_path(args.path, args.recurse, ['.tlog', '.BIN'])
     print(f'Processing {len(files)} files')
 
     for file in files:

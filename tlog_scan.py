@@ -5,13 +5,10 @@ Read MAVLink messages from a tlog file (telemetry log) and report on any pymavli
 """
 
 from argparse import ArgumentParser
-import os
-from pymavlink import mavutil
-import pymavlink.dialects.v20.ardupilotmega as apm
-import util
 
-# Use MAVLink2
-os.environ['MAVLINK20'] = '1'
+from pymavlink import mavutil
+
+import util
 
 
 class Scanner:
@@ -42,9 +39,9 @@ def main():
     parser = ArgumentParser(description=__doc__)
     parser.add_argument('-r', '--recurse', action='store_true', help='enter directories looking for tlog files')
     parser.add_argument('--types', default=None, help='comma separated list of message types')
-    parser.add_argument('paths', nargs='+')
+    parser.add_argument('path', nargs='+')
     args = parser.parse_args()
-    files = util.expand_path(args.paths, args.recurse, '.tlog')
+    files = util.expand_path(args.path, args.recurse, '.tlog')
     print(f'Processing {len(files)} files')
 
     if args.types:
