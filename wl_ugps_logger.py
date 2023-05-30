@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 
 """
-Get data from the Water Linked UGPS API and write it to a csv file.
+Get acoustic position data from the Water Linked UGPS API and write it to a csv file.
 """
 
-import time
 import argparse
-import requests
+import datetime
+import time
+
 import pandas as pd
+import requests
 
 
-def get_data(url):
+def get_data(url) -> dict | None:
     try:
         r = requests.get(url)
     except requests.exceptions.RequestException as e:
@@ -40,30 +42,40 @@ def get_position_master(base_url):
     return get_data("{}/api/v1/position/master".format(base_url))
 
 
-class Row:
-    def __init__(self, url: str):
-        self.timestamp = time.time()
-        self.position_acoustic_raw = get_position_acoustic_raw(url)
+def flatten_list_value(d: dict, old_key: str, new_key_format: str):
+    # Add new items, one for each value in the list
+    # The new key names are generated from new_key_format
+    list_value = d[old_key]
+    for i in range(len(list_value)):
+        d[new_key_format.format(i=i)] = list_value[i]
+
+    # Delete the list
+    del d[old_key]
 
 
-class WaterLinkedLogWriter:
+def get_position_acoustic_reading(base_url: str, raw: bool) -> dict:
+    position_acoustic = dict(get_position_acoustic_raw(base_url) if raw else get_position_acoustic_filtered(base_url))
+
+    # Flatten lists
+    flatten_list_value(position_acoustic, 'receiver_distance', 'distance_r{i}')
+    flatten_list_value(position_acoustic, 'receiver_nsd', 'nsd_r{i}')
+    flatten_list_value(position_acoustic, 'receiver_rssi', 'rssi_r{i}')
+    flatten_list_value(position_acoustic, 'receiver_valid', 'valid_r{i}')
+
+    # Add a timestamp
+    position_acoustic['timestamp'] = time.time()
+
+    return position_acoustic
+
+
+class CsvWriter:
     def __init__(self):
         self.rows = []
 
-    def record_data(self, url: str, hz: float, send_mavlink: bool):
-        period = 1.0 / hz
-        while True:
-            position_acoustic_raw = get_position_acoustic_raw(url)
+    def add_row(self, row):
+        self.rows.append(row)
 
-            row = {**position_acoustic_raw, 'timestamp': time.time()}
-
-            self.rows.append(row)
-
-            # TODO send mavlink
-
-            time.sleep(period)
-
-    def write_csv(self, outfile: str):
+    def write(self, outfile: str):
         if len(self.rows):
             dataframe = pd.DataFrame(self.rows)
             print(dataframe.head())
@@ -76,25 +88,37 @@ class WaterLinkedLogWriter:
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('-u', '--url', type=str, default='https://demo.waterlinked.com',
+    parser.add_argument('--url', type=str, default='https://demo.waterlinked.com',
                         help='URL of UGPS topside unit')
-    parser.add_argument('-o', '--output', type=str, default='ugps.csv',
-                        help='output file')
+    parser.add_argument('--raw', action='store_true',
+                        help='get raw acoustic position (default is filtered)')
     parser.add_argument('--hz', type=float, default=2.0,
                         help='polling rate')
-    parser.add_argument('--mavlink', action='store_true',
-                        help='write MAVLink messages')
+    parser.add_argument('--output', type=str, default=None,
+                        help='output file')
     args = parser.parse_args()
 
-    logger = WaterLinkedLogWriter()
+    print(f'Polling {args.url}/position/acoustic/{"raw" if args.raw else "filtered"} at {args.hz} Hz')
+    print('Press Ctrl-C to stop')
+
+    csv_writer = CsvWriter()
+    period = 1.0 / args.hz
 
     try:
-        print(f'Logging data from {args.url}, press Ctrl-C to stop')
-        logger.record_data(args.url, args.hz, args.mavlink)
-    except KeyboardInterrupt:
-        pass
+        while True:
+            csv_writer.add_row(get_position_acoustic_reading(args.url, args.raw))
+            time.sleep(period)
 
-    logger.write_csv(args.output)
+    except KeyboardInterrupt:
+        print('Ctrl-C detected, stopping')
+
+    output = args.output
+
+    if output is None:
+        output = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        output += '_raw.csv' if args.raw else '_filtered.csv'
+
+    csv_writer.write(output)
 
 
 if __name__ == '__main__':
