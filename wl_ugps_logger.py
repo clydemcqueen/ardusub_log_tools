@@ -5,10 +5,10 @@ Get acoustic position data from the Water Linked UGPS API and write it to a csv 
 """
 
 import argparse
+import csv
 import datetime
 import time
 
-import pandas as pd
 import requests
 
 
@@ -68,24 +68,6 @@ def get_position_acoustic_reading(base_url: str, raw: bool) -> dict:
     return position_acoustic
 
 
-class CsvWriter:
-    def __init__(self):
-        self.rows = []
-
-    def add_row(self, row):
-        self.rows.append(row)
-
-    def write(self, outfile: str):
-        if len(self.rows):
-            dataframe = pd.DataFrame(self.rows)
-            print(dataframe.head())
-
-            print(f'Writing {len(dataframe)} rows')
-            dataframe.to_csv(outfile)
-        else:
-            print('Nothing to write')
-
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--url', type=str, default='https://demo.waterlinked.com',
@@ -98,19 +80,7 @@ def main():
                         help='output file')
     args = parser.parse_args()
 
-    print(f'Polling {args.url}/position/acoustic/{"raw" if args.raw else "filtered"} at {args.hz} Hz')
-    print('Press Ctrl-C to stop')
-
-    csv_writer = CsvWriter()
     period = 1.0 / args.hz
-
-    try:
-        while True:
-            csv_writer.add_row(get_position_acoustic_reading(args.url, args.raw))
-            time.sleep(period)
-
-    except KeyboardInterrupt:
-        print('Ctrl-C detected, stopping')
 
     output = args.output
 
@@ -118,7 +88,33 @@ def main():
         output = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
         output += '_raw.csv' if args.raw else '_filtered.csv'
 
-    csv_writer.write(output)
+    print(f'Polling {args.url}/position/acoustic/{"raw" if args.raw else "filtered"} at {args.hz} Hz')
+    print(f'Writing to {output}')
+    print('Press Ctrl-C to stop')
+
+    csv_file = open(output, 'w', newline='')
+    csv_writer = None
+
+
+    try:
+        while True:
+            row = get_position_acoustic_reading(args.url, args.raw)
+
+            if csv_writer is None:
+                csv_writer = csv.DictWriter(csv_file, fieldnames=row.keys())
+                csv_writer.writeheader()
+
+            csv_writer.writerow(row)
+
+            # Robust against crashes
+            csv_file.flush()
+
+            time.sleep(period)
+
+    except KeyboardInterrupt:
+        print('Ctrl-C detected, stopping')
+
+    csv_file.close()
 
 
 if __name__ == '__main__':
