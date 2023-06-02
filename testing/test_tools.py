@@ -36,7 +36,7 @@ class TestTools:
         tool.read()
 
     def test_bad_data(self):
-        tool = tlog_bad_data.BadDataFinder('testing/small.tlog')
+        tool = tlog_bad_data.BadDataFinder('testing/small.tlog', True)
         tool.read()
 
     def test_tlog_info(self):
