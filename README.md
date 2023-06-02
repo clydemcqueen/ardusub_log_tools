@@ -165,6 +165,22 @@ options:
   -r, --recurse  enter directories looking for tlog and BIN files
 ~~~
 
+### wl_ugps_logger.py
+
+~~~
+$ wl_ugps_logger.py -h
+usage: wl_ugps_logger.py [-h] [--url URL] [--raw] [--hz HZ] [--output OUTPUT]
+
+Get acoustic position data from the Water Linked UGPS API and write it to a csv file.
+
+options:
+  -h, --help       show this help message and exit
+  --url URL        URL of UGPS topside unit
+  --raw            get raw acoustic position (default is filtered)
+  --hz HZ          polling rate
+  --output OUTPUT  output file
+~~~
+
 ## Timestamp notes
 
 For a QGC-generated tlog file, `msg._timestamp` is the UNIX system time when the message was logged, to the nearest ms.
