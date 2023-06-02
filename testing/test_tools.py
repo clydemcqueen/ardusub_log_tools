@@ -7,6 +7,7 @@
 import BIN_merge
 import map_maker
 import show_types
+import tlog_bad_data
 import tlog_info
 import tlog_merge
 import tlog_param
@@ -32,6 +33,10 @@ class TestTools:
 
     def test_BIN_types(self):
         tool = show_types.TypeFinder('testing/small.BIN')
+        tool.read()
+
+    def test_bad_data(self):
+        tool = tlog_bad_data.BadDataFinder('testing/small.tlog')
         tool.read()
 
     def test_tlog_info(self):
