@@ -165,6 +165,23 @@ options:
   -r, --recurse  enter directories looking for tlog and BIN files
 ~~~
 
+### tlog_bad_data.py
+
+~~~
+$ tlog_bad_data.py -h
+usage: tlog_bad_data.py [-h] [-r] [-v] path [path ...]
+
+Read MAVLink messages from a tlog file (telemetry log) and report on BAD_DATA messages.
+
+positional arguments:
+  path
+
+options:
+  -h, --help     show this help message and exit
+  -r, --recurse  enter directories looking for tlog files
+  -v, --verbose  print a lot more information
+~~~
+
 ### wl_ugps_logger.py
 
 ~~~
