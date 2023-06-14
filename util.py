@@ -18,3 +18,10 @@ def expand_path(paths: list[str], recurse: bool, ext: str | list[str]) -> set[st
                 paths += glob.glob(path + '/*')
 
     return files
+
+
+def get_outfile_name(infile: str, suffix: str = '', ext: str = '.csv'):
+    """Given input file path, return <path to infile>/<infile root>suffix.ext"""
+    dirname, basename = os.path.split(infile)
+    root, _ = os.path.splitext(basename)
+    return os.path.join(dirname, root + suffix + ext)

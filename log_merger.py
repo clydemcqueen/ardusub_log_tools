@@ -1,6 +1,6 @@
-import os
-
 import pandas as pd
+
+import util
 
 
 class LogMerger:
@@ -17,17 +17,12 @@ class LogMerger:
         self.verbose = verbose
         self.tables = None
 
-    def get_outfile_name(self, suffix: str = '', ext: str = '.csv'):
-        dirname, basename = os.path.split(self.infile)
-        root, _ = os.path.splitext(basename)
-        return os.path.join(dirname, root + suffix + ext)
-
     def write_msg_csv_files(self):
         print('Writing csv files')
         for msg_type in self.msg_types:
             df = self.tables[msg_type].get_dataframe(self.verbose)
             if len(df):
-                filename = self.get_outfile_name(suffix=f'_{msg_type}')
+                filename = util.get_outfile_name(self.infile, suffix=f'_{msg_type}')
                 print(f'Writing {len(df)} rows to {filename}')
                 df.to_csv(filename)
 
@@ -57,6 +52,6 @@ class LogMerger:
         if merged_df is None:
             print(f'Nothing to write')
         else:
-            filename = self.get_outfile_name()
+            filename = util.get_outfile_name(self.infile)
             print(f'Writing {len(merged_df)} rows to {filename}')
             merged_df.to_csv(filename)
