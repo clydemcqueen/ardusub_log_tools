@@ -58,7 +58,7 @@ def add_rate_field(messages: list[dict], half_n: int, max_gap: float, field_name
         messages[-1][field_name] = 0.0
 
     except ZeroDivisionError:
-        print(f'timestamps are not monotonic, will not add {field_name}')
+        print(f'WARNING: divide by zero while calculating {field_name}, timestamps may repeat due to high rate')
 
 
 def expand_path(paths: list[str], recurse: bool, ext: str | list[str]) -> set[str]:
