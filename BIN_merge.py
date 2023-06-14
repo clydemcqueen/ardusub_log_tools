@@ -44,6 +44,7 @@ ALL_MSG_TYPES = [
     'RCI2',
     'RCIN',
     'RCOU',
+    'RFND',
     'UNIT',
     'VIBE',
     'XKF1',
@@ -88,6 +89,7 @@ PERHAPS_USEFUL_MSG_TYPES = [
     'RCI2',
     'RCIN',
     'RCOU',
+    'RFND',
 ]
 
 # Useful for surftrak testing, this is the default for now
@@ -99,6 +101,7 @@ SURFTRAK_MSG_TYPES = [
     'MODE',
     'RCIN',
     'RCOU',
+    'RFND',
 ]
 
 
