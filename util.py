@@ -11,6 +11,8 @@ def add_rate_field(messages: list[dict], half_n: int, max_gap: float, field_name
 
     Note that messages might be coming from multiple components, e.g., DISTANCE_SENSOR from autopilot and BlueOS.
     Re-run with compid=x to isolate each source component.
+
+    This is a linear but tricky algorithm. See the tests for example output.
     """
 
     if len(messages) < 2 * half_n + 1:
@@ -19,19 +21,15 @@ def add_rate_field(messages: list[dict], half_n: int, max_gap: float, field_name
     def is_gap_right(j: int):
         return j + 1 < len(messages) and messages[j + 1]['timestamp'] - messages[j]['timestamp'] > max_gap
 
-    def init_wr(j):
-        while j < len(messages) and j - wl < half_n and not is_gap_right(j):
-            j += 1
-        return j
-
     # If timestamps aren't monotonic we might end up with division by zero
     try:
         # Note left and right edge of window
-        wl = i = 0
-        wr = init_wr(0)
+        wl = i = wr = 0
+        while wr < len(messages) and wr < half_n and not is_gap_right(wr):
+            wr += 1
 
         while i < len(messages) - 1:
-            # Expand window to the right
+            # Expand window on the right
             if wr < len(messages) and not is_gap_right(wr - 1):
                 wr += 1
 
@@ -45,10 +43,14 @@ def add_rate_field(messages: list[dict], half_n: int, max_gap: float, field_name
                 messages[i][field_name] = 0.0
 
                 # Reset the window
-                wl = i
-                wr = init_wr(i) + 1
+                wl = wr = i
+                while wr < len(messages) and wr - wl - 1 < half_n and not is_gap_right(wr):
+                    wr += 1
             else:
+                # print(f"{i} :: {wr - wl - 1}.0 / (messages[{wr - 1}]['timestamp'] - messages[{wl}]['timestamp']")
                 messages[i][field_name] = (wr - wl - 1) / (messages[wr - 1]['timestamp'] - messages[wl]['timestamp'])
+
+                # Shrink window on the left
                 if i - wl >= half_n:
                     wl += 1
 

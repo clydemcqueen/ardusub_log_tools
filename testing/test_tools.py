@@ -74,7 +74,7 @@ class TestTools:
             {'timestamp': 0.5342},
             {'timestamp': 0.6324},
             {'timestamp': 0.7883},
-            # Huge gap -- maybe ArduSub crashed
+            # First gap
             {'timestamp': 10.0123},
             {'timestamp': 10.1897},
             {'timestamp': 10.2321},
@@ -83,8 +83,20 @@ class TestTools:
             {'timestamp': 10.5643},
             {'timestamp': 10.6248},
             {'timestamp': 10.7431},
+            # Second gap, right near end
+            {'timestamp': 20.0123},
+            {'timestamp': 20.1328},
+            {'timestamp': 20.2888},
         ]
 
+        # Look for crashes
+        util.add_rate_field(messages, 1, 4.0, 'rate')
+        util.add_rate_field(messages, 2, 4.0, 'rate')
+        util.add_rate_field(messages, 4, 4.0, 'rate')
+        util.add_rate_field(messages, 5, 4.0, 'rate')
+        util.add_rate_field(messages, 9, 4.0, 'rate')
+
+        # Compare output at half_n == 3 to make sure we're calculating correctly
         rates = [
             3.0 / (messages[3]['timestamp'] - messages[0]['timestamp']),
             4.0 / (messages[4]['timestamp'] - messages[0]['timestamp']),
@@ -94,7 +106,7 @@ class TestTools:
             5.0 / (messages[7]['timestamp'] - messages[2]['timestamp']),
             4.0 / (messages[7]['timestamp'] - messages[3]['timestamp']),
 
-            # Huge gap:
+            # First gap:
             0.0,
             0.0,
 
@@ -104,6 +116,12 @@ class TestTools:
             6.0 / (messages[15]['timestamp'] - messages[9]['timestamp']),
             5.0 / (messages[15]['timestamp'] - messages[10]['timestamp']),
             4.0 / (messages[15]['timestamp'] - messages[11]['timestamp']),
+
+            # Second gap, right near the end:
+            0.0,
+            0.0,
+
+            2.0 / (messages[18]['timestamp'] - messages[16]['timestamp']),
 
             # Last message:
             0.0,
