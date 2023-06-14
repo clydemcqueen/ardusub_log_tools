@@ -39,7 +39,8 @@ options:
 
 ~~~
 $ tlog_merge.py --help
-usage: tlog_merge.py [-h] [-r] [-v] [--all] [--explode] [--no-merge] [--types TYPES] [--max-msgs MAX_MSGS] [--max-rows MAX_ROWS]
+usage: tlog_merge.py [-h] [-r] [-v] [--explode] [--no-merge] [--types TYPES] [--max-msgs MAX_MSGS] [--max-rows MAX_ROWS] [--rate]
+                     [--sysid SYSID] [--compid COMPID]
                      path [path ...]
 
 Read MAVLink messages from a tlog file (telemetry log) and merge the messages into a single, wide csv file. The merge operation does a
@@ -53,12 +54,14 @@ options:
   -h, --help           show this help message and exit
   -r, --recurse        enter directories looking for tlog files
   -v, --verbose        print a lot more information
-  --all                include all sources
   --explode            write a csv file for each message type
   --no-merge           do not merge tables, useful if you also select --explode
   --types TYPES        comma separated list of message types, the default is a set of useful types
   --max-msgs MAX_MSGS  stop after processing this number of messages (default 500K)
   --max-rows MAX_ROWS  stop if the merged table exceeds this number of rows (default 500K)
+  --rate               calculate rate for each message type
+  --sysid SYSID        select source system id (default is all source systems)
+  --compid COMPID      select source component id (default is all source components)
 ~~~
 
 ### tlog_param.py

@@ -4,6 +4,11 @@
 # Run tests and show captured stdout:
 # python -m pytest -rP
 
+# Run a particular test:
+# python -m pytest -rP testing/test_tools.py::TestTools::test_add_rate_field
+
+import pytest
+
 import BIN_merge
 import map_maker
 import show_types
@@ -12,6 +17,7 @@ import tlog_info
 import tlog_merge
 import tlog_param
 import tlog_scan
+import util
 
 
 # TODO compare output to known output
@@ -44,8 +50,9 @@ class TestTools:
         tool.read_and_report()
 
     def test_tlog_merge(self):
-        tool = tlog_merge.TelemetryLogReader('testing/small.tlog', ['GLOBAL_POSITION_INT'], 10000, 10000, False, True)
+        tool = tlog_merge.TelemetryLogReader('testing/small.tlog', ['GLOBAL_POSITION_INT'], 10000, 10000, False, 0, 0)
         tool.read_tlog()
+        tool.add_rate_field()
         tool.write_merged_csv_file()
 
     def test_tlog_param(self):
@@ -56,3 +63,53 @@ class TestTools:
     def test_tlog_scan(self):
         tool = tlog_scan.Scanner('testing/small.tlog', ['GLOBAL_POSITION_INT'])
         tool.read()
+
+    def test_add_rate_field(self):
+        messages = [
+            {'timestamp': 0.0},
+            {'timestamp': 0.1122},
+            {'timestamp': 0.2532},
+            {'timestamp': 0.3432},
+            {'timestamp': 0.4974},
+            {'timestamp': 0.5342},
+            {'timestamp': 0.6324},
+            {'timestamp': 0.7883},
+            # Huge gap -- maybe ArduSub crashed
+            {'timestamp': 10.0123},
+            {'timestamp': 10.1897},
+            {'timestamp': 10.2321},
+            {'timestamp': 10.3998},
+            {'timestamp': 10.4234},
+            {'timestamp': 10.5643},
+            {'timestamp': 10.6248},
+            {'timestamp': 10.7431},
+        ]
+
+        rates = [
+            3.0 / (messages[3]['timestamp'] - messages[0]['timestamp']),
+            4.0 / (messages[4]['timestamp'] - messages[0]['timestamp']),
+            5.0 / (messages[5]['timestamp'] - messages[0]['timestamp']),
+            6.0 / (messages[6]['timestamp'] - messages[0]['timestamp']),
+            6.0 / (messages[7]['timestamp'] - messages[1]['timestamp']),
+            5.0 / (messages[7]['timestamp'] - messages[2]['timestamp']),
+            4.0 / (messages[7]['timestamp'] - messages[3]['timestamp']),
+
+            # Huge gap:
+            0.0,
+            0.0,
+
+            4.0 / (messages[12]['timestamp'] - messages[8]['timestamp']),
+            5.0 / (messages[13]['timestamp'] - messages[8]['timestamp']),
+            6.0 / (messages[14]['timestamp'] - messages[8]['timestamp']),
+            6.0 / (messages[15]['timestamp'] - messages[9]['timestamp']),
+            5.0 / (messages[15]['timestamp'] - messages[10]['timestamp']),
+            4.0 / (messages[15]['timestamp'] - messages[11]['timestamp']),
+
+            # Last message:
+            0.0,
+        ]
+
+        util.add_rate_field(messages, 3, 4.0, 'rate')
+
+        for rate, message in zip(rates, messages):
+            assert pytest.approx(rate) == message['rate']
