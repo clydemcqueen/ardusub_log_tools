@@ -2,6 +2,8 @@
 
 import pandas as pd
 
+import util
+
 
 class Table:
     @staticmethod
@@ -35,6 +37,9 @@ class Table:
                 row.pop(key)
 
         self._rows.append(row)
+
+    def add_rate_field(self, half_n=10, field_name='rate'):
+        util.add_rate_field(self._rows, half_n, 4.0, f'{self._msg_type}.{field_name}')
 
     def get_dataframe(self, verbose):
         if self._df is None:
