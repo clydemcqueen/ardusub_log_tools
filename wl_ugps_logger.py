@@ -85,8 +85,9 @@ def main():
     output = args.output
 
     if output is None:
+        # Use the '.ugps' extension to avoid conflict w/ other tools
         output = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-        output += '_raw.csv' if args.raw else '_filtered.csv'
+        output += '_raw.ugps' if args.raw else '_filtered.ugps'
 
     print(f'Polling {args.url}/position/acoustic/{"raw" if args.raw else "filtered"} at {args.hz} Hz')
     print(f'Writing to {output}')
