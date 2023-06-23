@@ -79,13 +79,8 @@ class HeartbeatTable(Table):
     def get_mode(row):
         if not HeartbeatTable.is_armed(row):
             return 0  # Disarmed
-        elif row['HEARTBEAT.custom_mode'] == 19:
-            return 1  # Armed, manual
-        elif row['HEARTBEAT.custom_mode'] == 2:
-            return 2  # Armed, depth hold
         else:
-            # TODO split stabilize and rng_hold
-            return 3  # Armed, something else (RNG_HOLD?)
+            return row['HEARTBEAT.custom_mode']
 
     def __init__(self):
         super().__init__('HEARTBEAT')
