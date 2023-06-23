@@ -14,6 +14,64 @@ import table_types
 import util
 from log_merger import LogMerger
 
+# Tables that look generally interesting
+PERHAPS_USEFUL_MSG_TYPES = [
+    'AHRS',
+    'AHRS2',
+    'ATTITUDE',
+    # 'AUTOPILOT_VERSION',
+    'BATTERY_STATUS',
+    # 'COMMAND_ACK',
+    # 'COMMAND_LONG',
+    # 'DISTANCE_SENSOR',
+    'EKF_STATUS_REPORT',
+    'GLOBAL_POSITION_INT',
+    'GPS2_RAW',
+    'GPS_GLOBAL_ORIGIN',
+    'GPS_RAW_INT',
+    'HEARTBEAT',
+    # 'HOME_POSITION',
+    'HWSTATUS',
+    'LOCAL_POSITION_NED',
+    # 'MANUAL_CONTROL',
+    'MEMINFO',
+    # 'MISSION_ACK',
+    # 'MISSION_COUNT',
+    # 'MISSION_CURRENT',
+    # 'MISSION_REQUEST_LIST',
+    # 'MOUNT_STATUS',
+    # 'NAMED_VALUE_FLOAT',
+    # 'NAV_CONTROLLER_OUTPUT',
+    # 'PARAM_REQUEST_LIST',
+    # 'PARAM_VALUE',
+    'POWER_STATUS',
+    'RANGEFINDER',
+    'RAW_IMU',
+    'RC_CHANNELS',
+    # 'REQUEST_DATA_STREAM',
+    'SCALED_IMU2',
+    'SCALED_PRESSURE',
+    'SCALED_PRESSURE2',
+    # 'SENSOR_OFFSETS',
+    'SERVO_OUTPUT_RAW',
+    # 'STATUSTEXT',
+    'SYS_STATUS',
+    'SYSTEM_TIME',
+    # 'TIMESYNC',
+    'VFR_HUD',
+    # 'VIBRATION',
+]
+
+# Useful for surftrak testing
+SURFTRAK_MSG_TYPES = [
+    'AHRS2',
+    'DISTANCE_SENSOR',
+    'HEARTBEAT',
+    'RC_CHANNELS',
+    'SYSTEM_TIME',
+    'TIMESYNC',
+]
+
 
 class TelemetryLogReader(LogMerger):
     def __init__(self,
@@ -23,10 +81,12 @@ class TelemetryLogReader(LogMerger):
                  max_rows: int,
                  verbose: bool,
                  sysid: int,
-                 compid: int):
+                 compid: int,
+                 surftrak: bool):
         super().__init__(infile, msg_types, max_msgs, max_rows, verbose)
         self.sysid = sysid
         self.compid = compid
+        self.surftrak = surftrak
 
     def read_tlog(self):
         self.tables = {}
@@ -50,13 +110,14 @@ class TelemetryLogReader(LogMerger):
 
             msg_type = msg.get_type()
 
-            # Suppress DISTANCE_SENSOR msgs from ArduSub, makes it easier to analyze the raw sensor msgs from BlueOS
-            # if msg_type == 'DISTANCE_SENSOR' and compid == 1:
-            #     continue
+            if self.surftrak:
+                # Focus on DISTANCE_SENSOR messages from BlueOS, not the "echo" messages from ArduSub
+                if msg_type == 'DISTANCE_SENSOR' and compid == 1:
+                    continue
 
-            # Only consider HEARTBEAT msgs from ArduSub
-            # if msg_type == 'HEARTBEAT' and compid != 1:
-            #     continue
+                # HEARTBEAT msgs from ArduSub show mode, which is useful
+                if msg_type == 'HEARTBEAT' and compid != 1:
+                    continue
 
             raw_data = msg.to_dict()
 
@@ -107,6 +168,8 @@ def main():
                         help='select source system id (default is all source systems)')
     parser.add_argument('--compid', type=int, default=0,
                         help='select source component id (default is all source components)')
+    parser.add_argument('--surftrak', action='store_true',
+                        help='surftrak-specific analysis, see code')
     parser.add_argument('path', nargs='+')
     args = parser.parse_args()
     files = util.expand_path(args.path, args.recurse, '.tlog')
@@ -114,59 +177,15 @@ def main():
 
     if args.types:
         msg_types = args.types.split(',')
+    elif args.surftrak:
+        msg_types = SURFTRAK_MSG_TYPES
     else:
-        # Basically everything I've seen in an ArduSub tlog file
-        msg_types = [
-            'AHRS',
-            'AHRS2',
-            'ATTITUDE',
-            # 'AUTOPILOT_VERSION',
-            'BATTERY_STATUS',
-            # 'COMMAND_ACK',
-            # 'COMMAND_LONG',
-            # 'DISTANCE_SENSOR',
-            'EKF_STATUS_REPORT',
-            'GLOBAL_POSITION_INT',
-            'GPS2_RAW',
-            'GPS_GLOBAL_ORIGIN',
-            'GPS_RAW_INT',
-            'HEARTBEAT',
-            # 'HOME_POSITION',
-            'HWSTATUS',
-            'LOCAL_POSITION_NED',
-            # 'MANUAL_CONTROL',
-            'MEMINFO',
-            # 'MISSION_ACK',
-            # 'MISSION_COUNT',
-            # 'MISSION_CURRENT',
-            # 'MISSION_REQUEST_LIST',
-            # 'MOUNT_STATUS',
-            # 'NAMED_VALUE_FLOAT',
-            # 'NAV_CONTROLLER_OUTPUT',
-            # 'PARAM_REQUEST_LIST',
-            # 'PARAM_VALUE',
-            'POWER_STATUS',
-            'RANGEFINDER',
-            'RAW_IMU',
-            'RC_CHANNELS',
-            # 'REQUEST_DATA_STREAM',
-            'SCALED_IMU2',
-            'SCALED_PRESSURE',
-            'SCALED_PRESSURE2',
-            # 'SENSOR_OFFSETS',
-            'SERVO_OUTPUT_RAW',
-            # 'STATUSTEXT',
-            'SYS_STATUS',
-            'SYSTEM_TIME',
-            # 'TIMESYNC',
-            'VFR_HUD',
-            # 'VIBRATION',
-        ]
+        msg_types = PERHAPS_USEFUL_MSG_TYPES
 
     for file in files:
         print('===================')
         tlog_reader = TelemetryLogReader(file, msg_types, args.max_msgs, args.max_rows, args.verbose,
-                                         args.sysid, args.compid)
+                                         args.sysid, args.compid, args.surftrak)
 
         tlog_reader.read_tlog()
 
