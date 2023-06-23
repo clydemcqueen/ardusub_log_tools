@@ -4,6 +4,10 @@ import pandas as pd
 
 import util
 
+# Look at tables with time_boot_ms fields. Findings:
+# DISTANCE_SENSOR from BlueOS is off by ~450s, so it can't be trusted
+# Good readings from messages from ArduSub (RC_CHANNELS, SYSTEM_TIME, possibly others)
+# tables_with_time_boot_ms = []
 
 class Table:
     @staticmethod
@@ -35,6 +39,13 @@ class Table:
         for key in list(row.keys()):
             if isinstance(row[key], list):
                 row.pop(key)
+
+        # global tables_with_time_boot_ms
+        # for key in list(row.keys()):
+        #     key_str = str(key)
+        #     if key_str.endswith('time_boot_ms') and key_str not in tables_with_time_boot_ms:
+        #         print(f'{key_str} in seconds: {row[key_str] / 1000.0}')
+        #         tables_with_time_boot_ms.append(key_str)
 
         self._rows.append(row)
 
