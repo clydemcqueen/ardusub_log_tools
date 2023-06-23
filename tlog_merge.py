@@ -68,8 +68,6 @@ SURFTRAK_MSG_TYPES = [
     'DISTANCE_SENSOR',
     'HEARTBEAT',
     'RC_CHANNELS',
-    'SYSTEM_TIME',
-    'TIMESYNC',
 ]
 
 
@@ -82,11 +80,14 @@ class TelemetryLogReader(LogMerger):
                  verbose: bool,
                  sysid: int,
                  compid: int,
-                 surftrak: bool):
+                 surftrak: bool,
+                 system_time: bool):
         super().__init__(infile, msg_types, max_msgs, max_rows, verbose)
         self.sysid = sysid
         self.compid = compid
         self.surftrak = surftrak
+        self.system_time = system_time
+        self.time_delta_s = None
 
     def read_tlog(self):
         self.tables = {}
@@ -121,9 +122,29 @@ class TelemetryLogReader(LogMerger):
 
             raw_data = msg.to_dict()
 
-            # Add timestamp, sysid and compid
-            timestamp = getattr(msg, '_timestamp', 0.0)
-            clean_data = {'timestamp': timestamp, f'{msg_type}.sysid': sysid, f'{msg_type}.compid': compid}
+            qgc_s = getattr(msg, '_timestamp', 0.0)
+
+            if self.system_time:
+                # Merge on time_boot_ms (time since ArduSub boot in ms) instead of QGroundControl (system time in s).
+                # Get the delta from the first SYSTEM_TIME message that we find.
+                # Drop all messages before the first SYSTEM_TIME message arrives.
+                # TODO measure drift
+                # TODO watch for resets (ArduSub reboots)
+
+                if msg_type == 'SYSTEM_TIME' and sysid == 1 and compid == 1 and self.time_delta_s is None:
+                    self.time_delta_s = qgc_s - raw_data['time_boot_ms'] / 1000.0
+                    print(f'Time synchronized, delta is {self.time_delta_s} seconds')
+
+                if self.time_delta_s is None:
+                    continue
+
+                clean_data = {'timestamp': int((qgc_s - self.time_delta_s) * 1000.0)}
+            else:
+                clean_data = {'timestamp': qgc_s}
+
+            # Add sysid and compid
+            clean_data[f'{msg_type}.sysid'] = sysid
+            clean_data[f'{msg_type}.compid'] = compid
 
             # Add a prefix to the existing keys
             for key in raw_data.keys():
@@ -168,6 +189,8 @@ def main():
                         help='select source system id (default is all source systems)')
     parser.add_argument('--compid', type=int, default=0,
                         help='select source component id (default is all source components)')
+    parser.add_argument('--system-time', action='store_true',
+                        help='Experimental: use ArduSub SYSTEM_TIME.time_boot_ms rather than QGC timestamp')
     parser.add_argument('--surftrak', action='store_true',
                         help='surftrak-specific analysis, see code')
     parser.add_argument('path', nargs='+')
@@ -182,10 +205,16 @@ def main():
     else:
         msg_types = PERHAPS_USEFUL_MSG_TYPES
 
+    if args.system_time:
+        print('Merge on SYSTEM_TIME.time_boot_ms instead of QGC timestamp')
+        if 'SYSTEM_TIME' not in msg_types:
+            print(f'Adding SYSTEM_TIME to message types')
+            msg_types.append('SYSTEM_TIME')
+
     for file in files:
         print('===================')
         tlog_reader = TelemetryLogReader(file, msg_types, args.max_msgs, args.max_rows, args.verbose,
-                                         args.sysid, args.compid, args.surftrak)
+                                         args.sysid, args.compid, args.surftrak, args.system_time)
 
         tlog_reader.read_tlog()
 

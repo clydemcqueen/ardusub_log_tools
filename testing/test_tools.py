@@ -50,7 +50,8 @@ class TestTools:
         tool.read_and_report()
 
     def test_tlog_merge(self):
-        tool = tlog_merge.TelemetryLogReader('testing/small.tlog', ['GLOBAL_POSITION_INT'], 10000, 10000, False, 0, 0)
+        tool = tlog_merge.TelemetryLogReader('testing/small.tlog', ['GLOBAL_POSITION_INT'],
+                                             10000, 10000, False, 0, 0, False, False)
         tool.read_tlog()
         tool.add_rate_field()
         tool.write_merged_csv_file()
