@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Get acoustic position data from the Water Linked UGPS API and write it to a csv file.
+Get position data from the Water Linked UGPS API and write it to one or more csv files.
 """
 
 import argparse
@@ -26,22 +26,6 @@ def get_data(url) -> dict | None:
     return r.json()
 
 
-def get_position_acoustic_raw(base_url):
-    return get_data("{}/api/v1/position/acoustic/raw".format(base_url))
-
-
-def get_position_acoustic_filtered(base_url):
-    return get_data("{}/api/v1/position/acoustic/filtered".format(base_url))
-
-
-def get_position_global(base_url):
-    return get_data("{}/api/v1/position/global".format(base_url))
-
-
-def get_position_master(base_url):
-    return get_data("{}/api/v1/position/master".format(base_url))
-
-
 def flatten_list_value(d: dict, old_key: str, new_key_format: str):
     # Add new items, one for each value in the list
     # The new key names are generated from new_key_format
@@ -53,21 +37,6 @@ def flatten_list_value(d: dict, old_key: str, new_key_format: str):
     del d[old_key]
 
 
-def get_position_acoustic_reading(endpoint) -> dict:
-    position_acoustic = dict(get_data(endpoint))
-
-    # Flatten lists
-    flatten_list_value(position_acoustic, 'receiver_distance', 'distance_r{i}')
-    flatten_list_value(position_acoustic, 'receiver_nsd', 'nsd_r{i}')
-    flatten_list_value(position_acoustic, 'receiver_rssi', 'rssi_r{i}')
-    flatten_list_value(position_acoustic, 'receiver_valid', 'valid_r{i}')
-
-    # Add a timestamp
-    position_acoustic['timestamp'] = time.time()
-
-    return position_acoustic
-
-
 class Logger:
     def __init__(self, endpoint: str, filename: str):
         print(f'Polling {endpoint}, writing to {filename}')
@@ -75,8 +44,18 @@ class Logger:
         self.csv_file = open(filename, 'w', newline='')
         self.csv_writer = None
 
-    def poll_and_log(self):
-        row = get_position_acoustic_reading(self.endpoint)
+    def poll(self) -> dict | None:
+        data = get_data(self.endpoint)
+        if data is None:
+            return None
+        else:
+            return dict(data)
+
+    def log(self):
+        row = self.poll()
+
+        if row is None:
+            return
 
         if self.csv_writer is None:
             self.csv_writer = csv.DictWriter(self.csv_file, fieldnames=row.keys())
@@ -91,6 +70,25 @@ class Logger:
         self.csv_file.close()
 
 
+class AcousticLogger(Logger):
+    def poll(self) -> dict | None:
+        row = super().poll()
+
+        if row is None:
+            return None
+
+        # Flatten lists
+        flatten_list_value(row, 'receiver_distance', 'distance_r{i}')
+        flatten_list_value(row, 'receiver_nsd', 'nsd_r{i}')
+        flatten_list_value(row, 'receiver_rssi', 'rssi_r{i}')
+        flatten_list_value(row, 'receiver_valid', 'valid_r{i}')
+
+        # Add a timestamp
+        row['timestamp'] = time.time()
+
+        return row
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--url', type=str, default='https://demo.waterlinked.com',
@@ -99,21 +97,30 @@ def main():
                         help='log position/acoustic/filtered')
     parser.add_argument('--raw', action='store_true',
                         help='log position/acoustic/raw')
+    parser.add_argument('--locator', action='store_true',
+                        help='log position/global (locator)')
+    parser.add_argument('--g2', action='store_true',
+                        help='log position/master (G2 box)')
     parser.add_argument('--all', action='store_true',
                         help='log everything')
     parser.add_argument('--rate', type=float, default=2.0,
                         help='polling rate')
     args = parser.parse_args()
 
-    prefix = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-
     loggers = []
+    base = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
     if args.raw or args.all:
-        loggers.append(Logger(args.url + '/api/v1/position/acoustic/raw', prefix + '_raw.csv'))
+        loggers.append(AcousticLogger(args.url + '/api/v1/position/acoustic/raw', base + '_acoustic_raw.csv'))
 
     if args.filtered or args.all:
-        loggers.append(Logger(args.url + '/api/v1/position/acoustic/filtered', prefix + '_filtered.csv'))
+        loggers.append(AcousticLogger(args.url + '/api/v1/position/acoustic/filtered', base + '_acoustic_filtered.csv'))
+
+    if args.locator or args.all:
+        loggers.append(Logger(args.url + '/api/v1/position/global', base + '_locator.csv'))
+
+    if args.g2 or args.all:
+        loggers.append(Logger(args.url + '/api/v1/position/master', base + '_g2.csv'))
 
     if len(loggers) == 0:
         print('Nothing to log (did you mean to log something?)')
@@ -126,15 +133,17 @@ def main():
     try:
         while True:
             for logger in loggers:
-                logger.poll_and_log()
+                logger.log()
 
             time.sleep(period)
 
     except KeyboardInterrupt:
         print('Ctrl-C detected, stopping')
 
-    for logger in loggers:
-        logger.close()
+    finally:
+        print('Cleaning up')
+        for logger in loggers:
+            logger.close()
 
 
 if __name__ == '__main__':
