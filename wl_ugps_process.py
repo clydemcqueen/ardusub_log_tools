@@ -81,9 +81,9 @@ def process_wl_log(infile: str, antenna: Antenna, zoom: int):
     df['lon'] = df.apply(lambda row: lon_plus_dist(antenna.lat, antenna.lon, row.rot_y), axis=1)
 
     # Temp: save csv
-    outfile = util.get_outfile_name(infile, suffix='_position_valid', ext='.csv')
-    print(f'Writing {outfile}')
-    df.to_csv(outfile)
+    # outfile = util.get_outfile_name(infile, suffix='_position_valid', ext='.csv')
+    # print(f'Writing {outfile}')
+    # df.to_csv(outfile)
 
     # Filter out rows where only 3 transducers have a valid signal
     df_4_good = df[df['valid_r0'] == 1]
@@ -92,9 +92,9 @@ def process_wl_log(infile: str, antenna: Antenna, zoom: int):
     df_4_good = df_4_good[df_4_good['valid_r3'] == 1]
 
     # Temp: save csv
-    outfile = util.get_outfile_name(infile, suffix='_all_4_valid', ext='.csv')
-    print(f'Writing {outfile}')
-    df_4_good.to_csv(outfile)
+    # outfile = util.get_outfile_name(infile, suffix='_all_4_valid', ext='.csv')
+    # print(f'Writing {outfile}')
+    # df_4_good.to_csv(outfile)
 
     # Generate map
     mm = MapMaker(False, [df['lat'].mean(), df['lon'].mean()], zoom)
@@ -117,7 +117,7 @@ def main():
                         help='initial zoom, default is 18')
     parser.add_argument('path', nargs='+')
     args = parser.parse_args()
-    files = util.expand_path(args.path, args.recurse, '.ugps')
+    files = util.expand_path(args.path, args.recurse, '.csv')
     print(f'Processing {len(files)} files')
 
     for infile in files:
