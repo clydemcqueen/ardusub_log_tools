@@ -53,8 +53,8 @@ def flatten_list_value(d: dict, old_key: str, new_key_format: str):
     del d[old_key]
 
 
-def get_position_acoustic_reading(base_url: str, raw: bool) -> dict:
-    position_acoustic = dict(get_position_acoustic_raw(base_url) if raw else get_position_acoustic_filtered(base_url))
+def get_position_acoustic_reading(endpoint) -> dict:
+    position_acoustic = dict(get_data(endpoint))
 
     # Flatten lists
     flatten_list_value(position_acoustic, 'receiver_distance', 'distance_r{i}')
@@ -68,53 +68,73 @@ def get_position_acoustic_reading(base_url: str, raw: bool) -> dict:
     return position_acoustic
 
 
+class Logger:
+    def __init__(self, endpoint: str, filename: str):
+        print(f'Polling {endpoint}, writing to {filename}')
+        self.endpoint = endpoint
+        self.csv_file = open(filename, 'w', newline='')
+        self.csv_writer = None
+
+    def poll_and_log(self):
+        row = get_position_acoustic_reading(self.endpoint)
+
+        if self.csv_writer is None:
+            self.csv_writer = csv.DictWriter(self.csv_file, fieldnames=row.keys())
+            self.csv_writer.writeheader()
+
+        self.csv_writer.writerow(row)
+
+        # Robust against crashes
+        self.csv_file.flush()
+
+    def close(self):
+        self.csv_file.close()
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--url', type=str, default='https://demo.waterlinked.com',
                         help='URL of UGPS topside unit')
+    parser.add_argument('--filtered', action='store_true',
+                        help='log position/acoustic/filtered')
     parser.add_argument('--raw', action='store_true',
-                        help='get raw acoustic position (default is filtered)')
-    parser.add_argument('--hz', type=float, default=2.0,
+                        help='log position/acoustic/raw')
+    parser.add_argument('--all', action='store_true',
+                        help='log everything')
+    parser.add_argument('--rate', type=float, default=2.0,
                         help='polling rate')
-    parser.add_argument('--output', type=str, default=None,
-                        help='output file')
     args = parser.parse_args()
 
-    period = 1.0 / args.hz
+    prefix = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
-    output = args.output
+    loggers = []
 
-    if output is None:
-        output = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-        output += '_raw.csv' if args.raw else '_filtered.csv'
+    if args.raw or args.all:
+        loggers.append(Logger(args.url + '/api/v1/position/acoustic/raw', prefix + '_raw.csv'))
 
-    print(f'Polling {args.url}/position/acoustic/{"raw" if args.raw else "filtered"} at {args.hz} Hz')
-    print(f'Writing to {output}')
+    if args.filtered or args.all:
+        loggers.append(Logger(args.url + '/api/v1/position/acoustic/filtered', prefix + '_filtered.csv'))
+
+    if len(loggers) == 0:
+        print('Nothing to log (did you mean to log something?)')
+        return
+
     print('Press Ctrl-C to stop')
 
-    csv_file = open(output, 'w', newline='')
-    csv_writer = None
-
+    period = 1.0 / args.rate
 
     try:
         while True:
-            row = get_position_acoustic_reading(args.url, args.raw)
-
-            if csv_writer is None:
-                csv_writer = csv.DictWriter(csv_file, fieldnames=row.keys())
-                csv_writer.writeheader()
-
-            csv_writer.writerow(row)
-
-            # Robust against crashes
-            csv_file.flush()
+            for logger in loggers:
+                logger.poll_and_log()
 
             time.sleep(period)
 
     except KeyboardInterrupt:
         print('Ctrl-C detected, stopping')
 
-    csv_file.close()
+    for logger in loggers:
+        logger.close()
 
 
 if __name__ == '__main__':
