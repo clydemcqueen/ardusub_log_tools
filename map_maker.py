@@ -39,7 +39,7 @@ class MapMaker:
         self.center = center
         self.zoom = zoom
 
-    def add_df(self, df, lat_col, lon_col, color):
+    def add_df(self, df, lat_col, lon_col, color, marker_function=None):
         if self.m is None:
             if self.center[0] is None:
                 self.center[0] = df[lat_col].mean()
@@ -50,7 +50,15 @@ class MapMaker:
         if self.verbose:
             print(df.head())
             print(len(df))
+
+        # smooth_factor=1 (default) seems to mean "do not remove points", which is what we want
         folium.PolyLine(df[[lat_col, lon_col]].values, color=color, weight=1).add_to(self.m)
+
+        if marker_function is not None:
+            for index, row in df.iterrows():
+                marker = marker_function(row)
+                if marker is not None:
+                    marker.add_to(self.m)
 
     def add_table(self, table, lat_col, lon_col, color):
         self.add_df(table.get_dataframe(self.verbose), lat_col, lon_col, color)
