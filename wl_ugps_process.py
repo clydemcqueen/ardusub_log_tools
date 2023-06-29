@@ -17,10 +17,24 @@ from map_maker import MapMaker
 
 # WL UGPS reference frames: https://waterlinked.github.io/underwater-gps/reference-frames/
 
-# Default antenna location is just off the Seattle Aquarium diver ramp, with "Forward" pointing west
-DEFAULT_ANTENNA_LATITUDE = 47.6075779801547
-DEFAULT_ANTENNA_LONGITUDE = -122.34390446166833
-DEFAULT_ANTENNA_HEADING = -90
+
+class Antenna(NamedTuple):
+    lat: float
+    lon: float
+    heading_deg: float
+
+    def heading_rad(self):
+        return math.radians(self.heading_deg)
+
+
+# Antenna location for Seattle Aquarium diver ramp tests
+SEAQ_ANTENNA = Antenna(47.6075779801547, -122.34390446166833, -90)
+
+# Antenna location for Bell Harbor dock tests
+BH_ANTENNA = Antenna(47.610146, -122.347964, -45)
+
+# Default antenna location
+DEFAULT_ANTENNA = SEAQ_ANTENNA
 
 # Fields we use
 # x == Forward
@@ -47,12 +61,6 @@ def rotate_y(x, y, a):
     return math.sin(a) * x + math.cos(a) * y
 
 
-class Antenna(NamedTuple):
-    lat: float
-    lon: float
-    heading_rad: float
-
-
 def process_wl_log(infile: str, antenna: Antenna, zoom: int):
     # Read csv file, don't crash
     try:
@@ -70,11 +78,17 @@ def process_wl_log(infile: str, antenna: Antenna, zoom: int):
 
     # Filter out rows where 'position_valid' is False
     df = df[df['position_valid'] == True]
+
+    if len(df) == 0:
+        print('No valid rows, skipping')
+        return
+
     print(f'{len(df)} valid rows')
 
     # Rotate
-    df['rot_x'] = df.apply(lambda row: rotate_x(row.x, row.y, antenna.heading_rad), axis=1)
-    df['rot_y'] = df.apply(lambda row: rotate_y(row.x, row.y, antenna.heading_rad), axis=1)
+    heading_rad = antenna.heading_rad()
+    df['rot_x'] = df.apply(lambda row: rotate_x(row.x, row.y, heading_rad), axis=1)
+    df['rot_y'] = df.apply(lambda row: rotate_y(row.x, row.y, heading_rad), axis=1)
 
     # Translate (global antenna position + relative ROV position)
     df['lat'] = df.apply(lambda row: lat_plus_dist(antenna.lat, row.rot_x), axis=1)
@@ -107,11 +121,11 @@ def main():
     parser = ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=__doc__)
     parser.add_argument('-r', '--recurse', action='store_true',
                         help='enter directories looking for csv files')
-    parser.add_argument('--lat', default=DEFAULT_ANTENNA_LATITUDE, type=float,
+    parser.add_argument('--lat', default=DEFAULT_ANTENNA.lat, type=float,
                         help='WL UGPS antenna latitude')
-    parser.add_argument('--lon', default=DEFAULT_ANTENNA_LONGITUDE, type=float,
+    parser.add_argument('--lon', default=DEFAULT_ANTENNA.lon, type=float,
                         help='WL UGPS antenna longitude')
-    parser.add_argument('--heading', default=DEFAULT_ANTENNA_HEADING, type=float,
+    parser.add_argument('--heading', default=DEFAULT_ANTENNA.heading_deg, type=float,
                         help='WL UGPS antenna heading')
     parser.add_argument('--zoom', default=18, type=int,
                         help='initial zoom, default is 18')
@@ -123,7 +137,7 @@ def main():
     for infile in files:
         print('-------------------')
         print(infile)
-        process_wl_log(infile, Antenna(args.lat, args.lon, math.radians(args.heading)), args.zoom)
+        process_wl_log(infile, Antenna(args.lat, args.lon, args.heading), args.zoom)
 
 
 if __name__ == '__main__':
