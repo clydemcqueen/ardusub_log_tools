@@ -9,6 +9,7 @@
 
 import pytest
 
+import BIN_info
 import BIN_merge
 import map_maker
 import show_types
@@ -24,7 +25,7 @@ import util
 
 class TestTools:
 
-    def test_BIN_merge(self):
+    def test_dataflash_merge(self):
         tool = BIN_merge.DataflashLogReader('testing/small.BIN', ['VIBE'], 10000, 10000, False)
         tool.read()
         tool.write_merged_csv_file()
@@ -37,7 +38,7 @@ class TestTools:
         tool = show_types.TypeFinder('testing/small.tlog')
         tool.read()
 
-    def test_BIN_types(self):
+    def test_dataflash_types(self):
         tool = show_types.TypeFinder('testing/small.BIN')
         tool.read()
 
@@ -47,6 +48,10 @@ class TestTools:
 
     def test_tlog_info(self):
         tool = tlog_info.TelemetryLogInfo('testing/small.tlog')
+        tool.read_and_report()
+
+    def test_dataflash_info(self):
+        tool = BIN_info.DataflashLogInfo('testing/small.BIN')
         tool.read_and_report()
 
     def test_tlog_merge(self):
