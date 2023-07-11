@@ -30,7 +30,7 @@ RECEIVERS = [
     Receiver('valid_r0', 'missing R1, -x, aft', 'red'),
     Receiver('valid_r1', 'missing R2, +y, starboard', 'black'),
     Receiver('valid_r2', 'missing R3, +x, forward', 'green'),
-    Receiver('valid_r3', 'missing R4, +z, down', 'blue'),
+    Receiver('valid_r3', 'missing R4, 0, center', 'blue'),
 ]
 
 
