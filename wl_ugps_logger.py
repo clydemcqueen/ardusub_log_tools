@@ -2,6 +2,12 @@
 
 """
 Get position data from the Water Linked UGPS API and write it to one or more csv files.
+
+To run in the field, capturing all outputs:
+wl_ugps_logger.py --all
+
+To test with the demo server, capturing all outputs:
+wl_ugps_logger.py --url https://demo.waterlinked.com --all
 """
 
 import argparse
@@ -90,8 +96,8 @@ class AcousticLogger(Logger):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--url', type=str, default='https://demo.waterlinked.com',
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=__doc__)
+    parser.add_argument('--url', type=str, default='http://192.168.2.194',
                         help='URL of UGPS topside unit')
     parser.add_argument('--filtered', action='store_true',
                         help='log position/acoustic/filtered')
