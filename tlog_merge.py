@@ -6,6 +6,12 @@ operation does a forward-fill (data is copied from the previous row), so the res
 substantially larger than the sum of the per-type csv files.
 """
 
+import os
+
+# Bug? I'm seeing mavlink.WIRE_PROTOCOL_VERSION == "1.0" for some QGC-generated tlog files
+# Force WIRE_PROTOCOL_VERSION to be 2.0
+os.environ['MAVLINK20'] = '1'
+
 from argparse import ArgumentParser
 
 from pymavlink import mavutil
@@ -96,6 +102,7 @@ class TelemetryLogReader(LogMerger):
 
         print(f'Reading {self.infile}')
         mlog = mavutil.mavlink_connection(self.infile, robust_parsing=True, dialect='ardupilotmega')
+        print(f'WIRE_PROTOCOL_VERSION {mlog.WIRE_PROTOCOL_VERSION}')
 
         print('Parsing messages')
         msg_count = 0
@@ -195,6 +202,7 @@ def main():
                         help='surftrak-specific analysis, see code')
     parser.add_argument('path', nargs='+')
     args = parser.parse_args()
+    print(f'Starting paths: {args.path}')
     files = util.expand_path(args.path, args.recurse, '.tlog')
     print(f'Processing {len(files)} files')
 
