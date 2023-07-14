@@ -97,7 +97,7 @@ class AcousticLogger(Logger):
 
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=__doc__)
-    parser.add_argument('--url', type=str, default='http://192.168.2.194',
+    parser.add_argument('--url', type=str, default='http://192.168.2.94',
                         help='URL of UGPS topside unit')
     parser.add_argument('--filtered', action='store_true',
                         help='log position/acoustic/filtered')
