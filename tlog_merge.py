@@ -4,6 +4,20 @@
 Read MAVLink messages from a tlog file (telemetry log) and merge the messages into a single, wide csv file. The merge
 operation does a forward-fill (data is copied from the previous row), so the resulting merged csv file may be
 substantially larger than the sum of the per-type csv files.
+
+HEARTBEAT.mode is a combination of HEARTBEAT.base_mode and HEARTBEAT.custom_mode with these values:
+    -10             disarmed
+      0             armed, stabilize
+      1             armed, acro
+      2             armed, alt_hold
+      3             armed, auto
+      4             armed, guided
+      7             armed, circle
+      9             armed, surface
+     16             armed, pos_hold
+     19             armed, manual
+     20             armed, motor detect
+     21             armed, rng_hold
 """
 
 import os
@@ -12,7 +26,7 @@ import os
 # Force WIRE_PROTOCOL_VERSION to be 2.0
 os.environ['MAVLINK20'] = '1'
 
-from argparse import ArgumentParser
+import argparse
 
 from pymavlink import mavutil
 
@@ -73,6 +87,7 @@ SURFTRAK_MSG_TYPES = [
     'AHRS2',
     'DISTANCE_SENSOR',
     'HEARTBEAT',
+    'RANGEFINDER',
     'RC_CHANNELS',
 ]
 
@@ -175,7 +190,7 @@ class TelemetryLogReader(LogMerger):
 
 
 def main():
-    parser = ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=__doc__)
     parser.add_argument('-r', '--recurse', action='store_true',
                         help='enter directories looking for tlog files')
     parser.add_argument('-v', '--verbose', action='store_true',

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import math
 
 import pandas as pd
 
@@ -9,10 +10,13 @@ import util
 # Good readings from messages from ArduSub (RC_CHANNELS, SYSTEM_TIME, possibly others)
 # tables_with_time_boot_ms = []
 
+
 class Table:
     @staticmethod
     def create_table(msg_type: str, verbose: bool = False, hdop_max: float = 100.0):
-        if msg_type == 'BATTERY_STATUS':
+        if msg_type == 'AHRS2':
+            return AHRS2Table()
+        elif msg_type == 'BATTERY_STATUS':
             return BatteryStatusTable()
         elif msg_type == 'HEARTBEAT':
             return HeartbeatTable()
@@ -26,6 +30,8 @@ class Table:
             return GPS2RawTable(hdop_max)
         elif msg_type == 'NAMED_VALUE_FLOAT':
             return NamedValueFloatTable()
+        elif msg_type == 'RC_CHANNELS':
+            return RCChannelsTable()
         else:
             return Table(msg_type)
 
@@ -69,6 +75,18 @@ class Table:
         return len(self._rows)
 
 
+class AHRS2Table(Table):
+    def __init__(self):
+        super().__init__('AHRS2')
+
+    def append(self, row: dict):
+        # Add degree fields
+        row['AHRS2.roll_deg'] = math.degrees(row['AHRS2.roll'])
+        row['AHRS2.pitch_deg'] = math.degrees(row['AHRS2.pitch'])
+        row['AHRS2.yaw_deg'] = math.degrees(row['AHRS2.yaw'])
+        super().append(row)
+
+
 class BatteryStatusTable(Table):
     def __init__(self):
         super().__init__('BATTERY_STATUS')
@@ -80,6 +98,8 @@ class BatteryStatusTable(Table):
 
 
 class HeartbeatTable(Table):
+    MODE_DISARMED = -10
+
     @staticmethod
     def is_armed(row):
         # base_mode is a bitfield, 128 == armed
@@ -89,7 +109,7 @@ class HeartbeatTable(Table):
     @staticmethod
     def get_mode(row):
         if not HeartbeatTable.is_armed(row):
-            return 0  # Disarmed
+            return HeartbeatTable.MODE_DISARMED
         else:
             return row['HEARTBEAT.custom_mode']
 
@@ -220,3 +240,16 @@ class NamedValueFloatTable(Table):
                     print(self._df.head())
 
         return self._df
+
+
+class RCChannelsTable(Table):
+    def __init__(self):
+        super().__init__('RC_CHANNELS')
+
+    RC_MAP = [(1, 'pitch'), (2, 'roll'), (3, 'throttle'), (4, 'yaw'), (5, 'forward'), (6, 'lateral')]
+
+    def append(self, row: dict):
+        # Rename a few fields for ease-of-use
+        for item in RCChannelsTable.RC_MAP:
+            row[f'RC_CHANNELS.chan{item[0]}_raw_{item[1]}'] = row.pop(f'RC_CHANNELS.chan{item[0]}_raw')
+        super().append(row)
