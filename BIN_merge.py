@@ -108,7 +108,10 @@ SURFTRAK_MSG_TYPES = [
 class DataflashTable:
     @staticmethod
     def create_table(msg_type: str):
-        return DataflashTable(msg_type)
+        if msg_type == 'RCIN':
+            return RCINTable()
+        else:
+            return DataflashTable(msg_type)
 
     def __init__(self, msg_type: str):
         self._msg_type = msg_type
@@ -130,6 +133,19 @@ class DataflashTable:
                     print(self._df.head())
 
         return self._df
+
+
+class RCINTable(DataflashTable):
+    def __init__(self):
+        super().__init__('RCIN')
+
+    RC_MAP = [(1, 'pitch'), (2, 'roll'), (3, 'throttle'), (4, 'yaw'), (5, 'forward'), (6, 'lateral')]
+
+    def append(self, row: dict):
+        # Rename a few fields for ease-of-use
+        for item in RCINTable.RC_MAP:
+            row[f'RCIN.C{item[0]}_{item[1]}'] = row.pop(f'RCIN.C{item[0]}')
+        super().append(row)
 
 
 class DataflashLogReader(LogMerger):

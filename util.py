@@ -21,6 +21,8 @@ def add_rate_field(messages: list[dict], half_n: int, max_gap: float, field_name
     def is_gap_right(j: int):
         return j + 1 < len(messages) and messages[j + 1]['timestamp'] - messages[j]['timestamp'] > max_gap
 
+    total_gaps = 0
+
     # If timestamps aren't monotonic we might end up with division by zero
     try:
         # Note left and right edge of window
@@ -35,6 +37,7 @@ def add_rate_field(messages: list[dict], half_n: int, max_gap: float, field_name
 
             if is_gap_right(i):
                 gap_len = messages[i + 1]['timestamp'] - messages[i]['timestamp']
+                total_gaps += gap_len
                 print(f'NOTE: {gap_len :.2f}s gap detected while generating {field_name}')
 
                 # Set the rate to 0.0 on either side of the segment
@@ -62,8 +65,13 @@ def add_rate_field(messages: list[dict], half_n: int, max_gap: float, field_name
     except ZeroDivisionError:
         print(f'WARNING: divide by zero while calculating {field_name}, timestamps may repeat due to high rate')
 
+    total_time = messages[-1]['timestamp'] - messages[0]['timestamp']
+    without_gaps = total_time - total_gaps
+    print(f'{field_name} summary: {len(messages)} messages in {total_time :.2f} seconds for '
+          f'{len(messages) / total_time :.2f} mps, without gaps {len(messages) / without_gaps :.2f} mps')
 
-def expand_path(paths: list[str], recurse: bool, ext: str | list[str]) -> set[str]:
+
+def expand_path(paths: list[str], recurse: bool, ext: str | list[str]) -> list[str]:
     files = set()
 
     if type(ext) is str:
@@ -78,7 +86,7 @@ def expand_path(paths: list[str], recurse: bool, ext: str | list[str]) -> set[st
             if recurse:
                 paths += glob.glob(path + '/*')
 
-    return files
+    return sorted(files)
 
 
 def get_outfile_name(infile: str, suffix: str = '', ext: str = '.csv'):
