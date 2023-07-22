@@ -4,9 +4,14 @@
 Read ArduSub dataflash messages from a BIN file and merge the messages into a single, wide csv file. The merge
 operation does a forward-fill (data is copied from the previous row), so the resulting merged csv file may be
 substantially larger than the sum of the per-type csv files.
+
+BIN_merge.py can also write multiple csv files, one per type, using the --explode option.
+
+You can examine the contents of a single table using the --explode, --no-merge and --types options:
+BIN_merge.py --explode --no-merge --types GPS 000011.BIN
 """
 
-from argparse import ArgumentParser
+import argparse
 
 import pandas as pd
 from pymavlink import mavutil
@@ -29,6 +34,7 @@ ALL_MSG_TYPES = [
     'FMT',
     'FMTU',
     'FTN',
+    'GPS',
     'IMU',
     'MAG',
     'MAV',
@@ -74,6 +80,7 @@ PERHAPS_USEFUL_MSG_TYPES = [
     'FMT',
     'FMTU',
     'FTN',
+    'GPS',
     'IMU',
     'MAG',
     'MAV',
@@ -92,7 +99,7 @@ PERHAPS_USEFUL_MSG_TYPES = [
     'RFND',
 ]
 
-# Useful for surftrak testing, this is the default for now
+# Useful for surftrak testing
 SURFTRAK_MSG_TYPES = [
     'ARM',
     'ATT',
@@ -193,7 +200,7 @@ class DataflashLogReader(LogMerger):
 
 
 def main():
-    parser = ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=__doc__)
     parser.add_argument('-r', '--recurse', action='store_true',
                         help='enter directories looking for BIN files')
     parser.add_argument('-v', '--verbose', action='store_true',
@@ -216,7 +223,7 @@ def main():
     if args.types:
         msg_types = args.types.split(',')
     else:
-        msg_types = SURFTRAK_MSG_TYPES
+        msg_types = PERHAPS_USEFUL_MSG_TYPES
 
     for file in files:
         print('===================')
