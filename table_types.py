@@ -32,6 +32,8 @@ class Table:
             return NamedValueFloatTable()
         elif msg_type == 'RC_CHANNELS':
             return RCChannelsTable()
+        elif msg_type == 'VISION_POSITION_DELTA':
+            return VisionPositionDeltaTable()
         else:
             return Table(msg_type)
 
@@ -252,4 +254,22 @@ class RCChannelsTable(Table):
         # Rename a few fields for ease-of-use
         for item in RCChannelsTable.RC_MAP:
             row[f'RC_CHANNELS.chan{item[0]}_raw_{item[1]}'] = row.pop(f'RC_CHANNELS.chan{item[0]}_raw')
+        super().append(row)
+
+
+class VisionPositionDeltaTable(Table):
+    def __init__(self):
+        super().__init__('VISION_POSITION_DELTA')
+
+    def append(self, row: dict):
+        # Flatten angle array
+        row['VISION_POSITION_DELTA.roll_delta'] = row['VISION_POSITION_DELTA.angle_delta'][0]
+        row['VISION_POSITION_DELTA.pitch_delta'] = row['VISION_POSITION_DELTA.angle_delta'][1]
+        row['VISION_POSITION_DELTA.yaw_delta'] = row['VISION_POSITION_DELTA.angle_delta'][2]
+
+        # Flatten position array
+        row['VISION_POSITION_DELTA.x_delta'] = row['VISION_POSITION_DELTA.position_delta'][0]
+        row['VISION_POSITION_DELTA.y_delta'] = row['VISION_POSITION_DELTA.position_delta'][1]
+        row['VISION_POSITION_DELTA.z_delta'] = row['VISION_POSITION_DELTA.position_delta'][2]
+
         super().append(row)
