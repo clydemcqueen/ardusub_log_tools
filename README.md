@@ -161,12 +161,26 @@ options:
 ~~~
 $ tlog_merge.py --help
 usage: tlog_merge.py [-h] [-r] [-v] [--explode] [--no-merge] [--types TYPES] [--max-msgs MAX_MSGS] [--max-rows MAX_ROWS] [--rate]
-                     [--sysid SYSID] [--compid COMPID]
+                     [--sysid SYSID] [--compid COMPID] [--system-time] [--surftrak] [--split-source]
                      path [path ...]
 
-Read MAVLink messages from a tlog file (telemetry log) and merge the messages into a single, wide csv file. The merge operation does a
-forward-fill (data is copied from the previous row), so the resulting merged csv file may be substantially larger than the sum of the per-
-type csv files.
+Read MAVLink messages from a tlog file (telemetry log) and merge the messages into a single, wide csv file. The merge
+operation does a forward-fill (data is copied from the previous row), so the resulting merged csv file may be
+substantially larger than the sum of the per-type csv files.
+
+HEARTBEAT.mode is a combination of HEARTBEAT.base_mode and HEARTBEAT.custom_mode with these values:
+    -10             disarmed
+      0             armed, stabilize
+      1             armed, acro
+      2             armed, alt_hold
+      3             armed, auto
+      4             armed, guided
+      7             armed, circle
+      9             armed, surface
+     16             armed, pos_hold
+     19             armed, manual
+     20             armed, motor detect
+     21             armed, rng_hold
 
 positional arguments:
   path
@@ -183,6 +197,9 @@ options:
   --rate               calculate rate for each message type
   --sysid SYSID        select source system id (default is all source systems)
   --compid COMPID      select source component id (default is all source components)
+  --system-time        Experimental: use ArduSub SYSTEM_TIME.time_boot_ms rather than QGC timestamp
+  --surftrak           Experimental: surftrak-specific analysis, see code
+  --split-source       Experimental: split messages by source (sysid, compid)
 ~~~
 
 ### tlog_param.py

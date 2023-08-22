@@ -102,18 +102,19 @@ class TelemetryLogReader(LogMerger):
                  sysid: int,
                  compid: int,
                  surftrak: bool,
-                 system_time: bool):
-        super().__init__(infile, msg_types, max_msgs, max_rows, verbose)
+                 system_time: bool,
+                 split_source: bool):
+        super().__init__(infile, max_msgs, max_rows, verbose)
+        self.msg_types = msg_types
         self.sysid = sysid
         self.compid = compid
         self.surftrak = surftrak
         self.system_time = system_time
+        self.split_source = split_source
         self.time_delta_s = None
 
     def read_tlog(self):
         self.tables = {}
-        for msg_type in self.msg_types:
-            self.tables[msg_type] = table_types.Table.create_table(msg_type, self.verbose)
 
         print(f'Reading {self.infile}')
         mlog = mavutil.mavlink_connection(self.infile, robust_parsing=True, dialect='ardupilotmega')
@@ -164,16 +165,25 @@ class TelemetryLogReader(LogMerger):
             else:
                 clean_data = {'timestamp': qgc_s}
 
-            # Add sysid and compid
-            clean_data[f'{msg_type}.sysid'] = sysid
-            clean_data[f'{msg_type}.compid'] = compid
+            # Save sysid and compid in the table name or in the data
+            if self.split_source:
+                table_name = f'{msg_type}_{sysid}_{compid}'
+            else:
+                table_name = msg_type
+                clean_data[f'{msg_type}.sysid'] = sysid
+                clean_data[f'{msg_type}.compid'] = compid
 
             # Add a prefix to the existing keys
             for key in raw_data.keys():
                 if key != 'mavpackettype':
-                    clean_data[f'{msg_type}.{key}'] = raw_data[key]
+                    clean_data[f'{table_name}.{key}'] = raw_data[key]
 
-            self.tables[msg_type].append(clean_data)
+            # Make sure the table exists
+            if table_name not in self.tables:
+                self.tables[table_name] = table_types.Table.create_table(msg_type, table_name=table_name)
+
+            # Append the message to the table
+            self.tables[table_name].append(clean_data)
 
             msg_count += 1
             if msg_count > self.max_msgs:
@@ -185,8 +195,8 @@ class TelemetryLogReader(LogMerger):
         print(f'{msg_count} messages')
 
     def add_rate_field(self, half_n=10, field_name='rate'):
-        for msg_type in self.msg_types:
-            self.tables[msg_type].add_rate_field(half_n, field_name)
+        for table_name in self.tables:
+            self.tables[table_name].add_rate_field(half_n, field_name)
 
 
 def main():
@@ -214,7 +224,9 @@ def main():
     parser.add_argument('--system-time', action='store_true',
                         help='Experimental: use ArduSub SYSTEM_TIME.time_boot_ms rather than QGC timestamp')
     parser.add_argument('--surftrak', action='store_true',
-                        help='surftrak-specific analysis, see code')
+                        help='Experimental: surftrak-specific analysis, see code')
+    parser.add_argument('--split-source', action='store_true',
+                        help='Experimental: split messages by source (sysid, compid)')
     parser.add_argument('path', nargs='+')
     args = parser.parse_args()
     print(f'Starting paths: {args.path}')
@@ -237,7 +249,7 @@ def main():
     for file in files:
         print('===================')
         tlog_reader = TelemetryLogReader(file, msg_types, args.max_msgs, args.max_rows, args.verbose,
-                                         args.sysid, args.compid, args.surftrak, args.system_time)
+                                         args.sysid, args.compid, args.surftrak, args.system_time, args.split_source)
 
         tlog_reader.read_tlog()
 

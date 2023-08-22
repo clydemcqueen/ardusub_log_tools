@@ -162,7 +162,8 @@ class DataflashLogReader(LogMerger):
                  max_msgs: int,
                  max_rows: int,
                  verbose: bool):
-        super().__init__(infile, msg_types, max_msgs, max_rows, verbose)
+        super().__init__(infile, max_msgs, max_rows, verbose)
+        self.msg_types = msg_types
 
     def read(self):
         self.tables = {}

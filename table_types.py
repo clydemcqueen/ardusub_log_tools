@@ -13,32 +13,36 @@ import util
 
 class Table:
     @staticmethod
-    def create_table(msg_type: str, verbose: bool = False, hdop_max: float = 100.0):
-        if msg_type == 'AHRS2':
-            return AHRS2Table()
-        elif msg_type == 'BATTERY_STATUS':
-            return BatteryStatusTable()
-        elif msg_type == 'HEARTBEAT':
-            return HeartbeatTable()
-        elif msg_type == 'GLOBAL_POSITION_INT':
-            return GlobalPositionIntTable()
-        elif msg_type == 'GPS_INPUT':
-            return GPSInputTable(verbose, hdop_max)
-        elif msg_type == 'GPS_RAW_INT':
-            return GPSRawIntTable(hdop_max)
-        elif msg_type == 'GPS2_RAW':
-            return GPS2RawTable(hdop_max)
-        elif msg_type == 'NAMED_VALUE_FLOAT':
-            return NamedValueFloatTable()
-        elif msg_type == 'RC_CHANNELS':
-            return RCChannelsTable()
-        elif msg_type == 'VISION_POSITION_DELTA':
-            return VisionPositionDeltaTable()
-        else:
-            return Table(msg_type)
+    def create_table(msg_type: str, verbose: bool = False, hdop_max: float = 100.0, table_name: str | None = None):
+        # table_name can be different from msg_type, e.g., HEARTBEAT_255_0 if split_source is True
+        if table_name is None:
+            table_name = msg_type
 
-    def __init__(self, msg_type: str):
-        self._msg_type = msg_type
+        if msg_type == 'AHRS2':
+            return AHRS2Table(table_name)
+        elif msg_type == 'BATTERY_STATUS':
+            return BatteryStatusTable(table_name)
+        elif msg_type == 'HEARTBEAT':
+            return HeartbeatTable(table_name)
+        elif msg_type == 'GLOBAL_POSITION_INT':
+            return GlobalPositionIntTable(table_name)
+        elif msg_type == 'GPS_INPUT':
+            return GPSInputTable(table_name, verbose, hdop_max)
+        elif msg_type == 'GPS_RAW_INT':
+            return GPSRawIntTable(table_name, hdop_max)
+        elif msg_type == 'GPS2_RAW':
+            return GPS2RawTable(table_name, hdop_max)
+        elif msg_type == 'NAMED_VALUE_FLOAT':
+            return NamedValueFloatTable(table_name)
+        elif msg_type == 'RC_CHANNELS':
+            return RCChannelsTable(table_name)
+        elif msg_type == 'VISION_POSITION_DELTA':
+            return VisionPositionDeltaTable(table_name)
+        else:
+            return Table(table_name)
+
+    def __init__(self, table_name: str):
+        self._table_name = table_name
         self._rows = []
         self._df = None
 
@@ -58,7 +62,7 @@ class Table:
         self._rows.append(row)
 
     def add_rate_field(self, half_n=10, field_name='rate'):
-        util.add_rate_field(self._rows, half_n, 4.0, f'{self._msg_type}.{field_name}')
+        util.add_rate_field(self._rows, half_n, 4.0, f'{self._table_name}.{field_name}')
 
     def get_dataframe(self, verbose):
         if self._df is None:
@@ -66,9 +70,9 @@ class Table:
             if verbose:
                 print('-----------------')
                 if self._df.empty:
-                    print(f'{self._msg_type} is empty')
+                    print(f'{self._table_name} is empty')
                 else:
-                    print(f'{self._msg_type} has {len(self._df)} rows:')
+                    print(f'{self._table_name} has {len(self._df)} rows:')
                     print(self._df.head())
 
         return self._df
@@ -78,8 +82,8 @@ class Table:
 
 
 class AHRS2Table(Table):
-    def __init__(self):
-        super().__init__('AHRS2')
+    def __init__(self, table_name: str):
+        super().__init__(table_name)
 
     def append(self, row: dict):
         # Add degree fields
@@ -90,8 +94,8 @@ class AHRS2Table(Table):
 
 
 class BatteryStatusTable(Table):
-    def __init__(self):
-        super().__init__('BATTERY_STATUS')
+    def __init__(self, table_name: str):
+        super().__init__(table_name)
 
     def append(self, row: dict):
         # Grab the voltage of the first battery
@@ -115,8 +119,8 @@ class HeartbeatTable(Table):
         else:
             return row['HEARTBEAT.custom_mode']
 
-    def __init__(self):
-        super().__init__('HEARTBEAT')
+    def __init__(self, table_name: str):
+        super().__init__(table_name)
 
     def append(self, row: dict):
         row['HEARTBEAT.mode'] = HeartbeatTable.get_mode(row)
@@ -124,26 +128,26 @@ class HeartbeatTable(Table):
 
 
 class GlobalPositionIntTable(Table):
-    def __init__(self):
-        super().__init__('GLOBAL_POSITION_INT')
+    def __init__(self, table_name: str):
+        super().__init__(table_name)
 
     def append(self, row: dict):
         # Convert degE7 to float
-        row[f'{self._msg_type}.lat_deg'] = row[f'{self._msg_type}.lat'] / 1.0e7
-        row[f'{self._msg_type}.lon_deg'] = row[f'{self._msg_type}.lon'] / 1.0e7
+        row[f'{self._table_name}.lat_deg'] = row[f'{self._table_name}.lat'] / 1.0e7
+        row[f'{self._table_name}.lon_deg'] = row[f'{self._table_name}.lon'] / 1.0e7
         super().append(row)
 
 
 class GPSInputTable(Table):
-    def __init__(self, verbose: bool, hdop_max: float):
-        super().__init__('GPS_INPUT')
+    def __init__(self, table_name: str, verbose: bool, hdop_max: float):
+        super().__init__(table_name)
         self._verbose = verbose
         self._hdop_max = hdop_max
 
     def append(self, row: dict):
         # Convert degE7 to float
-        row[f'{self._msg_type}.lat_deg'] = row[f'{self._msg_type}.lat'] / 1.0e7
-        row[f'{self._msg_type}.lon_deg'] = row[f'{self._msg_type}.lon'] / 1.0e7
+        row[f'{self._table_name}.lat_deg'] = row[f'{self._table_name}.lat'] / 1.0e7
+        row[f'{self._table_name}.lon_deg'] = row[f'{self._table_name}.lon'] / 1.0e7
 
         if row['GPS_INPUT.fix_type'] < 3:
             if self._verbose:
@@ -159,14 +163,14 @@ class GPSInputTable(Table):
 
 
 class GPSRawIntTable(Table):
-    def __init__(self, hdop_max: float):
-        super().__init__('GPS_RAW_INT')
+    def __init__(self, table_name: str, hdop_max: float):
+        super().__init__(table_name)
         self._hdop_max = hdop_max
 
     def append(self, row: dict):
         # Convert degE7 to float
-        row[f'{self._msg_type}.lat_deg'] = row[f'{self._msg_type}.lat'] / 1.0e7
-        row[f'{self._msg_type}.lon_deg'] = row[f'{self._msg_type}.lon'] / 1.0e7
+        row[f'{self._table_name}.lat_deg'] = row[f'{self._table_name}.lat'] / 1.0e7
+        row[f'{self._table_name}.lon_deg'] = row[f'{self._table_name}.lon'] / 1.0e7
 
         # ArduSub warm up sends zillions of sensor messages with bad fix_type and eph; don't bother printing these
         if row['GPS_RAW_INT.fix_type'] < 3:
@@ -179,14 +183,14 @@ class GPSRawIntTable(Table):
 
 
 class GPS2RawTable(Table):
-    def __init__(self, hdop_max: float):
-        super().__init__('GPS2_RAW')
+    def __init__(self, table_name: str, hdop_max: float):
+        super().__init__(table_name)
         self._hdop_max = hdop_max
 
     def append(self, row: dict):
         # Convert degE7 to float
-        row[f'{self._msg_type}.lat_deg'] = row[f'{self._msg_type}.lat'] / 1.0e7
-        row[f'{self._msg_type}.lon_deg'] = row[f'{self._msg_type}.lon'] / 1.0e7
+        row[f'{self._table_name}.lat_deg'] = row[f'{self._table_name}.lat'] / 1.0e7
+        row[f'{self._table_name}.lon_deg'] = row[f'{self._table_name}.lon'] / 1.0e7
 
         # ArduSub warm up sends zillions of sensor messages with bad fix_type and eph; don't bother printing these
         if row['GPS2_RAW.fix_type'] < 3:
@@ -210,8 +214,8 @@ class NamedValueFloatTable(Table):
         # Rename one column
         return df.rename(columns={'NAMED_VALUE_FLOAT.value': f'SUB_INFO.{name}'})
 
-    def __init__(self):
-        super().__init__('NAMED_VALUE_FLOAT')
+    def __init__(self, table_name: str):
+        super().__init__(table_name)
 
     def get_dataframe(self, verbose):
         if self._df is None:
@@ -221,9 +225,9 @@ class NamedValueFloatTable(Table):
             if verbose:
                 print('-----------------')
                 if named_value_float_df.empty:
-                    print(f'{self._msg_type} is empty')
+                    print(f'{self._table_name} is empty')
                 else:
-                    print(f'{self._msg_type} has {len(named_value_float_df)} rows:')
+                    print(f'{self._table_name} has {len(named_value_float_df)} rows:')
                     print(named_value_float_df.head())
 
             # Re-arrange the data so it appears like it does in the QGC-generated csv file. Since the timestamps are
@@ -236,17 +240,17 @@ class NamedValueFloatTable(Table):
 
             if verbose:
                 if self._df.empty:
-                    print(f'{self._msg_type} is empty')
+                    print(f'{self._table_name} is empty')
                 else:
-                    print(f'{self._msg_type} has {len(self._df)} rows:')
+                    print(f'{self._table_name} has {len(self._df)} rows:')
                     print(self._df.head())
 
         return self._df
 
 
 class RCChannelsTable(Table):
-    def __init__(self):
-        super().__init__('RC_CHANNELS')
+    def __init__(self, table_name: str):
+        super().__init__(table_name)
 
     RC_MAP = [(1, 'pitch'), (2, 'roll'), (3, 'throttle'), (4, 'yaw'), (5, 'forward'), (6, 'lateral')]
 
@@ -258,8 +262,8 @@ class RCChannelsTable(Table):
 
 
 class VisionPositionDeltaTable(Table):
-    def __init__(self):
-        super().__init__('VISION_POSITION_DELTA')
+    def __init__(self, table_name: str):
+        super().__init__(table_name)
 
     def append(self, row: dict):
         # Flatten angle array
