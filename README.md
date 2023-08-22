@@ -17,6 +17,16 @@ tool.py --recurse .
 ardusub_log_tools requires Python 3.10.
 Other requirements are listed in [requirements.txt](requirements.txt).
 
+### A note on BAD_DATA messages
+
+Some BlueOS-generated messages in QGC-generated tlog files may have bad CRC values. These messages will show
+up as type=BAD_DATA. See [this discussion for the cause(es) and fix(es)](https://github.com/bluerobotics/BlueOS/issues/1740).
+A simple workaround is to set the `MAV_IGNORE_CRC` environment variable:
+~~~
+export MAV_IGNORE_CRC=1
+show_types.py *.tlog
+~~~
+
 ## Special tools
 
 ### map_maker.py
