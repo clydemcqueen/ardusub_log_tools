@@ -87,9 +87,9 @@ class AHRS2Table(Table):
 
     def append(self, row: dict):
         # Add degree fields
-        row['AHRS2.roll_deg'] = math.degrees(row['AHRS2.roll'])
-        row['AHRS2.pitch_deg'] = math.degrees(row['AHRS2.pitch'])
-        row['AHRS2.yaw_deg'] = math.degrees(row['AHRS2.yaw'])
+        row[f'{self._table_name}.roll_deg'] = math.degrees(row[f'{self._table_name}.roll'])
+        row[f'{self._table_name}.pitch_deg'] = math.degrees(row[f'{self._table_name}.pitch'])
+        row[f'{self._table_name}.yaw_deg'] = math.degrees(row[f'{self._table_name}.yaw'])
         super().append(row)
 
 
@@ -99,31 +99,29 @@ class BatteryStatusTable(Table):
 
     def append(self, row: dict):
         # Grab the voltage of the first battery
-        row['BATTERY_STATUS.voltage'] = row['BATTERY_STATUS.voltages'][0]
+        row[f'{self._table_name}.voltage'] = row[f'{self._table_name}.voltages'][0]
         super().append(row)
 
 
 class HeartbeatTable(Table):
     MODE_DISARMED = -10
 
-    @staticmethod
-    def is_armed(row):
-        # base_mode is a bitfield, 128 == armed
-        # Sub modes: https://mavlink.io/en/messages/ardupilotmega.html#SUB_MODE
-        return row['HEARTBEAT.base_mode'] >= 128
-
-    @staticmethod
-    def get_mode(row):
-        if not HeartbeatTable.is_armed(row):
-            return HeartbeatTable.MODE_DISARMED
-        else:
-            return row['HEARTBEAT.custom_mode']
-
     def __init__(self, table_name: str):
         super().__init__(table_name)
 
+    def is_armed(self, row):
+        # base_mode is a bitfield, 128 == armed
+        # Sub modes: https://mavlink.io/en/messages/ardupilotmega.html#SUB_MODE
+        return row[f'{self._table_name}.base_mode'] >= 128
+
+    def get_mode(self, row):
+        if not self.is_armed(row):
+            return HeartbeatTable.MODE_DISARMED
+        else:
+            return row[f'{self._table_name}.custom_mode']
+
     def append(self, row: dict):
-        row['HEARTBEAT.mode'] = HeartbeatTable.get_mode(row)
+        row[f'{self._table_name}.mode'] = self.get_mode(row)
         super().append(row)
 
 
@@ -149,14 +147,14 @@ class GPSInputTable(Table):
         row[f'{self._table_name}.lat_deg'] = row[f'{self._table_name}.lat'] / 1.0e7
         row[f'{self._table_name}.lon_deg'] = row[f'{self._table_name}.lon'] / 1.0e7
 
-        if row['GPS_INPUT.fix_type'] < 3:
+        if row[f'{self._table_name}.fix_type'] < 3:
             if self._verbose:
-                print(f'GPS_INPUT.fix_type < 3, lat {row["GPS_INPUT.lat_deg"]}, lon {row["GPS_INPUT.lon_deg"]}, fix_type {row["GPS_INPUT.fix_type"]}')
+                print(f'{self._table_name}.fix_type < 3, lat {row["{self._table_name}.lat_deg"]}, lon {row["{self._table_name}.lon_deg"]}, fix_type {row["{self._table_name}.fix_type"]}')
             return
 
-        if row['GPS_INPUT.hdop'] > self._hdop_max:
+        if row[f'{self._table_name}.hdop'] > self._hdop_max:
             if self._verbose:
-                print(f'GPS_INPUT.hdop > {self._hdop_max}, lat {row["GPS_INPUT.lat_deg"]}, lon {row["GPS_INPUT.lon_deg"]}, hdop {row["GPS_INPUT.hdop"]}')
+                print(f'{self._table_name}.hdop > {self._hdop_max}, lat {row["{self._table_name}.lat_deg"]}, lon {row["{self._table_name}.lon_deg"]}, hdop {row["{self._table_name}.hdop"]}')
             return
 
         super().append(row)
@@ -173,10 +171,10 @@ class GPSRawIntTable(Table):
         row[f'{self._table_name}.lon_deg'] = row[f'{self._table_name}.lon'] / 1.0e7
 
         # ArduSub warm up sends zillions of sensor messages with bad fix_type and eph; don't bother printing these
-        if row['GPS_RAW_INT.fix_type'] < 3:
+        if row[f'{self._table_name}.fix_type'] < 3:
             return
 
-        if row['GPS_RAW_INT.eph'] > self._hdop_max:
+        if row[f'{self._table_name}.eph'] > self._hdop_max:
             return
 
         super().append(row)
@@ -193,29 +191,28 @@ class GPS2RawTable(Table):
         row[f'{self._table_name}.lon_deg'] = row[f'{self._table_name}.lon'] / 1.0e7
 
         # ArduSub warm up sends zillions of sensor messages with bad fix_type and eph; don't bother printing these
-        if row['GPS2_RAW.fix_type'] < 3:
+        if row[f'{self._table_name}.fix_type'] < 3:
             return
 
-        if row['GPS2_RAW.eph'] > self._hdop_max:
+        if row[f'{self._table_name}.eph'] > self._hdop_max:
             return
 
         super().append(row)
 
 
 class NamedValueFloatTable(Table):
-    @staticmethod
-    def get_one_named_value_float_type(input_df, name: str):
-        # Get a subset of rows
-        df = input_df[input_df['NAMED_VALUE_FLOAT.name'] == name]
-
-        # Get a subset of columns
-        df = df[['timestamp', 'NAMED_VALUE_FLOAT.value']]
-
-        # Rename one column
-        return df.rename(columns={'NAMED_VALUE_FLOAT.value': f'SUB_INFO.{name}'})
-
     def __init__(self, table_name: str):
         super().__init__(table_name)
+
+    def get_one_named_value_float_type(self, input_df, name: str):
+        # Get a subset of rows
+        df = input_df[input_df[f'{self._table_name}.name'] == name]
+
+        # Get a subset of columns
+        df = df[['timestamp', f'{self._table_name}.value']]
+
+        # Rename one column
+        return df.rename(columns={f'{self._table_name}.value': f'SUB_INFO.{name}'})
 
     def get_dataframe(self, verbose):
         if self._df is None:
@@ -234,8 +231,8 @@ class NamedValueFloatTable(Table):
             # fine-grained this may result in an explosion of data, so let's just do this for a few key columns.
             if verbose:
                 print('Pulling out Lights2 and PilotGain and rearranging')
-            lights2_df = NamedValueFloatTable.get_one_named_value_float_type(named_value_float_df, 'Lights2')
-            pilot_gain_df = NamedValueFloatTable.get_one_named_value_float_type(named_value_float_df, 'PilotGain')
+            lights2_df = self.get_one_named_value_float_type(named_value_float_df, 'Lights2')
+            pilot_gain_df = self.get_one_named_value_float_type(named_value_float_df, 'PilotGain')
             self._df = pd.merge_ordered(lights2_df, pilot_gain_df, on='timestamp', fill_method='ffill')
 
             if verbose:
@@ -257,7 +254,7 @@ class RCChannelsTable(Table):
     def append(self, row: dict):
         # Rename a few fields for ease-of-use
         for item in RCChannelsTable.RC_MAP:
-            row[f'RC_CHANNELS.chan{item[0]}_raw_{item[1]}'] = row.pop(f'RC_CHANNELS.chan{item[0]}_raw')
+            row[f'{self._table_name}.chan{item[0]}_raw_{item[1]}'] = row.pop(f'{self._table_name}.chan{item[0]}_raw')
         super().append(row)
 
 
@@ -267,13 +264,13 @@ class VisionPositionDeltaTable(Table):
 
     def append(self, row: dict):
         # Flatten angle array
-        row['VISION_POSITION_DELTA.roll_delta'] = row['VISION_POSITION_DELTA.angle_delta'][0]
-        row['VISION_POSITION_DELTA.pitch_delta'] = row['VISION_POSITION_DELTA.angle_delta'][1]
-        row['VISION_POSITION_DELTA.yaw_delta'] = row['VISION_POSITION_DELTA.angle_delta'][2]
+        row[f'{self._table_name}.roll_delta'] = row[f'{self._table_name}.angle_delta'][0]
+        row[f'{self._table_name}.pitch_delta'] = row[f'{self._table_name}.angle_delta'][1]
+        row[f'{self._table_name}.yaw_delta'] = row[f'{self._table_name}.angle_delta'][2]
 
         # Flatten position array
-        row['VISION_POSITION_DELTA.x_delta'] = row['VISION_POSITION_DELTA.position_delta'][0]
-        row['VISION_POSITION_DELTA.y_delta'] = row['VISION_POSITION_DELTA.position_delta'][1]
-        row['VISION_POSITION_DELTA.z_delta'] = row['VISION_POSITION_DELTA.position_delta'][2]
+        row[f'{self._table_name}.x_delta'] = row[f'{self._table_name}.position_delta'][0]
+        row[f'{self._table_name}.y_delta'] = row[f'{self._table_name}.position_delta'][1]
+        row[f'{self._table_name}.z_delta'] = row[f'{self._table_name}.position_delta'][2]
 
         super().append(row)
