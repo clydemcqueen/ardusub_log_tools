@@ -2,7 +2,7 @@
 
 This is a collection of log analysis tools for working with [ArduSub](https://www.ardusub.com/) vehicles.
 
-All tools support file globbing and recursion.
+All tools support file globbing and recursion on Linux.
 
 Examples:
 ~~~
@@ -416,15 +416,7 @@ References:
 * [QGC code](https://github.com/mavlink/qgroundcontrol/blob/245f9f1f9c475a24b02271e0b1a7a150f601f80d/src/comm/MAVLinkProtocol.cc#L280)
 * [pymavlink code](https://github.com/ArduPilot/pymavlink/blob/d63c5ba4e9e20c702b0b7e31ab6bd71b80f161a5/mavutil.py#L1443)
 
-## Project status
+## Other tools
 
-There are quite a few TODOs in the code.
-
-There are a lot of small tools. Some of these may be combined.
-
-Possible future tools or capabilities:
-* Combine multiple telementry (.tlog) files to produce a single telemetry log for a dive
-* Combine multiple dataflash (.BIN) files to produce a single dataflash log for a dive
-* Open Ping Sonar log (.bin) files
-* Join telemetry, dataflash and ping sonar log files together
-* Clip log files to 'interesting' segments based on timestamps or other markers
+* https://github.com/waterlinked/examples
+* https://github.com/tridge/log_analysis

@@ -21,8 +21,6 @@ import tlog_scan
 import util
 
 
-# TODO compare output to known output
-
 class TestTools:
 
     def test_dataflash_merge(self):

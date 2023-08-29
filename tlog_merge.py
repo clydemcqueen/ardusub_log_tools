@@ -151,7 +151,6 @@ class TelemetryLogReader(LogMerger):
                 # Merge on time_boot_ms (time since ArduSub boot in ms) instead of QGroundControl (system time in s).
                 # Get the delta from the first SYSTEM_TIME message that we find.
                 # Drop all messages before the first SYSTEM_TIME message arrives.
-                # TODO measure drift
                 # TODO watch for resets (ArduSub reboots)
 
                 if msg_type == 'SYSTEM_TIME' and sysid == 1 and compid == 1 and self.time_delta_s is None:
