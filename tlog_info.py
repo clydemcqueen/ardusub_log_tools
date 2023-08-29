@@ -173,15 +173,6 @@ class TelemetryLogInfo:
                 ci[1].report()
 
 
-# TODO display the sensors available from SYS_STATUS
-# TODO what does EKF_STATUS_REPORT say?
-# TODO look at battery level, did it go too low? Did it alarm?
-# TODO what is VIDEO_STREAM_STATUS?
-# TODO what is the timestamp?
-# TODO COMMAND_ACK, seems to come if a mode is changed, etc.
-# TODO show time in various modes (alt_hold, etc.)
-
-
 def main():
     parser = ArgumentParser(description=__doc__)
     parser.add_argument('-r', '--recurse', help='enter directories looking for tlog files', action='store_true')

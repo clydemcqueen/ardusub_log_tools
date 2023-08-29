@@ -23,47 +23,53 @@ def add_rate_field(messages: list[dict], half_n: int, max_gap: float, field_name
 
     total_gaps = 0
 
-    # If timestamps aren't monotonic we might end up with division by zero
-    try:
-        # Note left and right edge of window
-        wl = i = wr = 0
-        while wr < len(messages) and wr < half_n and not is_gap_right(wr):
+    # Note left and right edge of window
+    wl = i = wr = 0
+    while wr < len(messages) and wr < half_n and not is_gap_right(wr):
+        wr += 1
+
+    while i < len(messages) - 1:
+        # Expand window on the right
+        if wr < len(messages) and not is_gap_right(wr - 1):
             wr += 1
 
-        while i < len(messages) - 1:
-            # Expand window on the right
-            if wr < len(messages) and not is_gap_right(wr - 1):
-                wr += 1
+        if is_gap_right(i):
+            gap_len = messages[i + 1]['timestamp'] - messages[i]['timestamp']
+            total_gaps += gap_len
+            print(f'NOTE: {gap_len :.2f}s gap detected while generating {field_name}')
 
-            if is_gap_right(i):
-                gap_len = messages[i + 1]['timestamp'] - messages[i]['timestamp']
-                total_gaps += gap_len
-                print(f'NOTE: {gap_len :.2f}s gap detected while generating {field_name}')
-
-                # Set the rate to 0.0 on either side of the segment
-                messages[i][field_name] = 0.0
-                i += 1
-                messages[i][field_name] = 0.0
-
-                # Reset the window
-                wl = wr = i
-                while wr < len(messages) and wr - wl - 1 < half_n and not is_gap_right(wr):
-                    wr += 1
-            else:
-                # print(f"{i} :: {wr - wl - 1}.0 / (messages[{wr - 1}]['timestamp'] - messages[{wl}]['timestamp']")
-                messages[i][field_name] = (wr - wl - 1) / (messages[wr - 1]['timestamp'] - messages[wl]['timestamp'])
-
-                # Shrink window on the left
-                if i - wl >= half_n:
-                    wl += 1
-
+            # Set the rate to 0.0 on either side of the segment
+            messages[i][field_name] = 0.0
             i += 1
+            messages[i][field_name] = 0.0
 
-        # Last message should have rate=0.0. This will be easy to spot in plotjuggler.
-        messages[-1][field_name] = 0.0
+            # Reset the window
+            wl = wr = i
+            while wr < len(messages) and wr - wl - 1 < half_n and not is_gap_right(wr):
+                wr += 1
+        else:
+            numerator = wr - wl - 1
+            denominator = messages[wr - 1]['timestamp'] - messages[wl]['timestamp']
 
-    except ZeroDivisionError:
-        print(f'WARNING: divide by zero while calculating {field_name}, timestamps may repeat due to high rate')
+            # Avoid edge cases: divide by 0; very high rates; time going backwards
+            # This might happen if timestamps repeat or are very close to each other
+            if denominator < 0.01:
+                print(f'{denominator} < 0.01 computing {field_name}[{i}].rate, clip to 50')
+                messages[i][field_name] = 50.0
+            elif numerator / denominator > 50.0:
+                print(f'{field_name}[{i}].rate > 50, clip to 50')
+                messages[i][field_name] = 50.0
+            else:
+                messages[i][field_name] = numerator / denominator
+
+            # Shrink window on the left
+            if i - wl >= half_n:
+                wl += 1
+
+        i += 1
+
+    # Last message should have rate=0.0. This will be easy to spot in plotjuggler.
+    messages[-1][field_name] = 0.0
 
     total_time = messages[-1]['timestamp'] - messages[0]['timestamp']
     without_gaps = total_time - total_gaps

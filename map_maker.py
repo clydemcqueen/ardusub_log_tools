@@ -100,7 +100,6 @@ def build_map_from_tlog(infile, outfile, verbose, center, zoom, msg_types, hdop_
         tables[msg_type] = table_types.Table.create_table(msg_type, verbose=verbose, hdop_max=hdop_max)
 
     # Read tlog file, don't crash
-    # TODO this loop is common w/ code in tlog_merge.py, move to table_types.py?
     mlog = mavutil.mavlink_connection(infile, robust_parsing=False, dialect='ardupilotmega')
     try:
         while True:
@@ -145,8 +144,6 @@ def float_or_none(x):
     except ValueError:
         raise argparse.ArgumentTypeError(f'{x} is not a floating-point literal')
 
-
-# TODO reject outliers; if we do this then auto-center will work a lot better
 
 def main():
     parser = ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=__doc__)

@@ -2,7 +2,7 @@
 
 This is a collection of log analysis tools for working with [ArduSub](https://www.ardusub.com/) vehicles.
 
-All tools support file globbing and recursion.
+All tools support file globbing and recursion on Linux.
 
 Examples:
 ~~~
@@ -16,6 +16,16 @@ tool.py --recurse .
 
 ardusub_log_tools requires Python 3.10.
 Other requirements are listed in [requirements.txt](requirements.txt).
+
+### A note on BAD_DATA messages
+
+Some BlueOS-generated messages in QGC-generated tlog files may have bad CRC values. These messages will show
+up as type=BAD_DATA. See [this discussion for the cause(es) and fix(es)](https://github.com/bluerobotics/BlueOS/issues/1740).
+A simple workaround is to set the `MAV_IGNORE_CRC` environment variable:
+~~~
+export MAV_IGNORE_CRC=1
+show_types.py *.tlog
+~~~
 
 ## Special tools
 
@@ -151,12 +161,26 @@ options:
 ~~~
 $ tlog_merge.py --help
 usage: tlog_merge.py [-h] [-r] [-v] [--explode] [--no-merge] [--types TYPES] [--max-msgs MAX_MSGS] [--max-rows MAX_ROWS] [--rate]
-                     [--sysid SYSID] [--compid COMPID]
+                     [--sysid SYSID] [--compid COMPID] [--system-time] [--surftrak] [--split-source]
                      path [path ...]
 
-Read MAVLink messages from a tlog file (telemetry log) and merge the messages into a single, wide csv file. The merge operation does a
-forward-fill (data is copied from the previous row), so the resulting merged csv file may be substantially larger than the sum of the per-
-type csv files.
+Read MAVLink messages from a tlog file (telemetry log) and merge the messages into a single, wide csv file. The merge
+operation does a forward-fill (data is copied from the previous row), so the resulting merged csv file may be
+substantially larger than the sum of the per-type csv files.
+
+HEARTBEAT.mode is a combination of HEARTBEAT.base_mode and HEARTBEAT.custom_mode with these values:
+    -10             disarmed
+      0             armed, stabilize
+      1             armed, acro
+      2             armed, alt_hold
+      3             armed, auto
+      4             armed, guided
+      7             armed, circle
+      9             armed, surface
+     16             armed, pos_hold
+     19             armed, manual
+     20             armed, motor detect
+     21             armed, rng_hold
 
 positional arguments:
   path
@@ -173,6 +197,9 @@ options:
   --rate               calculate rate for each message type
   --sysid SYSID        select source system id (default is all source systems)
   --compid COMPID      select source component id (default is all source components)
+  --system-time        Experimental: use ArduSub SYSTEM_TIME.time_boot_ms rather than QGC timestamp
+  --surftrak           Experimental: surftrak-specific analysis, see code
+  --split-source       Experimental: split messages by source (sysid, compid)
 ~~~
 
 ### tlog_param.py
@@ -389,15 +416,7 @@ References:
 * [QGC code](https://github.com/mavlink/qgroundcontrol/blob/245f9f1f9c475a24b02271e0b1a7a150f601f80d/src/comm/MAVLinkProtocol.cc#L280)
 * [pymavlink code](https://github.com/ArduPilot/pymavlink/blob/d63c5ba4e9e20c702b0b7e31ab6bd71b80f161a5/mavutil.py#L1443)
 
-## Project status
+## Other tools
 
-There are quite a few TODOs in the code.
-
-There are a lot of small tools. Some of these may be combined.
-
-Possible future tools or capabilities:
-* Combine multiple telementry (.tlog) files to produce a single telemetry log for a dive
-* Combine multiple dataflash (.BIN) files to produce a single dataflash log for a dive
-* Open Ping Sonar log (.bin) files
-* Join telemetry, dataflash and ping sonar log files together
-* Clip log files to 'interesting' segments based on timestamps or other markers
+* https://github.com/waterlinked/examples
+* https://github.com/tridge/log_analysis

@@ -21,8 +21,6 @@ import tlog_scan
 import util
 
 
-# TODO compare output to known output
-
 class TestTools:
 
     def test_dataflash_merge(self):
@@ -56,7 +54,7 @@ class TestTools:
 
     def test_tlog_merge(self):
         tool = tlog_merge.TelemetryLogReader('testing/small.tlog', ['GLOBAL_POSITION_INT'],
-                                             10000, 10000, False, 0, 0, False, False)
+                                             10000, 10000, False, 0, 0, False, False, True)
         tool.read_tlog()
         tool.add_rate_field()
         tool.write_merged_csv_file()
