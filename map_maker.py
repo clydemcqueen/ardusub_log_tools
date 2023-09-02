@@ -18,7 +18,6 @@ For txt files, look for NMEA 0183 GGA messages of the form r'\$[A-Z]+', e.g., $G
 import argparse
 import os
 import re
-from argparse import ArgumentParser
 from datetime import datetime
 from statistics import fmean
 
@@ -216,9 +215,9 @@ def float_or_none(x):
 
 
 def main():
-    parser = ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=__doc__)
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=__doc__)
     parser.add_argument('-r', '--recurse', action='store_true',
-                        help='enter directories looking for tlog and csv files')
+                        help='enter directories looking for tlog, csv and txt files')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='print a lot more information')
     parser.add_argument('--lat', default=None, type=float_or_none,

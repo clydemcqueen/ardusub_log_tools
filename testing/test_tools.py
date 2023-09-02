@@ -11,6 +11,7 @@ import pytest
 
 import BIN_info
 import BIN_merge
+import plot_local_position
 import map_maker
 import show_types
 import tlog_bad_data
@@ -34,6 +35,9 @@ class TestTools:
 
     def test_nmea_map_maker(self):
         map_maker.build_map_from_txt('testing/nmea_log.txt', 'testing/nmea_log.html', False, [None, None], 18)
+
+    def test_plot_local_position(self):
+        plot_local_position.plot_local_position('testing/small.tlog', 'testing/small.pdf')
 
     def test_tlog_types(self):
         tool = show_types.TypeFinder('testing/small.tlog')

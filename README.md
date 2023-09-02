@@ -38,7 +38,7 @@ as well as the GPS information in MAVLink (.tlog) files.
 $ map_maker.py --help
 usage: map_maker.py [-h] [-r] [-v] [--lat LAT] [--lon LON] [--zoom ZOOM] [--types TYPES] [--hdop-max HDOP_MAX] path [path ...]
 
-Read csv or tlog files and build Leaflet (interactive HTML) maps from GPS coordinates.
+Read csv, tlog or txt files and build Leaflet (interactive HTML) maps from GPS coordinates.
 
 For csv files:
     Latitude column header should be 'gps.lat' or 'lat'
@@ -49,18 +49,39 @@ For tlog files, these messages are read:
     GLOBAL_POSITION_INT -- the filtered position estimate, green line
     GPS_INPUT -- sensor data sent from ugps-extension to ArduSub, not filtered, red line
 
+For txt files, look for NMEA 0183 GGA messages of the form r'\$[A-Z]+', e.g., $GPGGA.
+
 positional arguments:
   path
 
 options:
   -h, --help           show this help message and exit
-  -r, --recurse        enter directories looking for tlog and csv files
+  -r, --recurse        enter directories looking for tlog, csv and txt files
   -v, --verbose        print a lot more information
   --lat LAT            center the map at this latitude, default is mean of all points
   --lon LON            center the map at this longitude, default is mean of all points
   --zoom ZOOM          initial zoom, default is 18
   --types TYPES        comma separated list of message types, the default is GPS_RAW_INT and GPS_GLOBAL_INT
-  --hdop-max HDOP_MAX  reject GPS messages where hdop exceeds this limit, default 100.0 (no limit)
+  --hdop-max HDOP_MAX  reject GPS_INPUT messages where hdop exceeds this limit, default 100.0 (no limit)
+~~~
+
+### plot_local_position.py
+
+plot_local_position scans MAVLink (.tlog) files for LOCAL_POSITION_NED messages and plots the (x,y) positions.
+The plots are saved as PDF files.
+
+~~~
+$ plot_local_position.py --help
+usage: plot_local_position.py [-h] [-r] path [path ...]
+
+Look for LOCATION_POSITION_NED messages in tlog files, plot x and y, and write PDF files.
+
+positional arguments:
+  path
+
+options:
+  -h, --help     show this help message and exit
+  -r, --recurse  enter directories looking for tlog files
 ~~~
 
 ### show_types.py
