@@ -46,6 +46,7 @@ PERHAPS_USEFUL_MSG_TYPES = [
     # 'DISTANCE_SENSOR',
     'EKF_STATUS_REPORT',
     'GLOBAL_POSITION_INT',
+    'GLOBAL_VISION_POSITION_ESTIMATE',
     'GPS2_RAW',
     'GPS_GLOBAL_ORIGIN',
     'GPS_RAW_INT',
@@ -80,6 +81,7 @@ PERHAPS_USEFUL_MSG_TYPES = [
     # 'TIMESYNC',
     'VFR_HUD',
     # 'VIBRATION',
+    'VISION_POSITION_DELTA',
 ]
 
 # Useful for surftrak testing
@@ -228,7 +230,7 @@ def main():
                         help='Experimental: split messages by source (sysid, compid)')
     parser.add_argument('path', nargs='+')
     args = parser.parse_args()
-    print(f'Starting paths: {args.path}')
+    # print(f'Starting paths: {args.path}')
     files = util.expand_path(args.path, args.recurse, '.tlog')
     print(f'Processing {len(files)} files')
 
