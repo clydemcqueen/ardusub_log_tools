@@ -52,10 +52,10 @@ PERHAPS_USEFUL_MSG_TYPES = [
     'GPS_RAW_INT',
     'HEARTBEAT',
     # 'HOME_POSITION',
-    'HWSTATUS',
+    # 'HWSTATUS',
     'LOCAL_POSITION_NED',
     # 'MANUAL_CONTROL',
-    'MEMINFO',
+    # 'MEMINFO',
     # 'MISSION_ACK',
     # 'MISSION_COUNT',
     # 'MISSION_CURRENT',
@@ -75,10 +75,11 @@ PERHAPS_USEFUL_MSG_TYPES = [
     'SCALED_PRESSURE2',
     # 'SENSOR_OFFSETS',
     'SERVO_OUTPUT_RAW',
+    'SET_GPS_GLOBAL_ORIGIN',
     # 'STATUSTEXT',
     'SYS_STATUS',
     'SYSTEM_TIME',
-    # 'TIMESYNC',
+    'TIMESYNC',
     'VFR_HUD',
     # 'VIBRATION',
     'VISION_POSITION_DELTA',
@@ -246,6 +247,8 @@ def main():
         if 'SYSTEM_TIME' not in msg_types:
             print(f'Adding SYSTEM_TIME to message types')
             msg_types.append('SYSTEM_TIME')
+
+    print(f'Looking for these types: {msg_types}')
 
     for file in files:
         print('===================')

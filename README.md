@@ -179,6 +179,40 @@ options:
 
 ### tlog_merge.py
 
+tlog_merge.py can also write multiple csv files, one per type, using the --explode option.
+
+For example, you can examine the contents of a single table using the --explode, --no-merge and --types options together:
+~~~
+tlog_merge.py --explode --no-merge --types LOCAL_POSITION_NED '2023-09-04 09-03-22.tlog'
+~~~
+
+This command will open a tlog file, read in a set of tables that I find useful, calculate the data rates and report on
+any gaps in the data, and then write a series of csv files. Each csv file will correspond to a table type, a sysid and a
+compid, so you may see multiple csv files per table type:
+~~~
+$ tlog_merge.py --explode --no-merge --rate --split-source '2023-09-04 09-03-22.tlog'
+Processing 1 files
+Looking for these types: ['AHRS', 'AHRS2', 'ATTITUDE', 'BATTERY_STATUS', 'EKF_STATUS_REPORT', 'GLOBAL_POSITION_INT', 'GLOBAL_VISION_POSITION_ESTIMATE',
+'GPS2_RAW', 'GPS_GLOBAL_ORIGIN', 'GPS_RAW_INT', 'HEARTBEAT', 'LOCAL_POSITION_NED', 'POWER_STATUS', 'RANGEFINDER', 'RAW_IMU', 'RC_CHANNELS', 'SCALED_IMU2',
+'SCALED_PRESSURE', 'SCALED_PRESSURE2', 'SERVO_OUTPUT_RAW', 'SET_GPS_GLOBAL_ORIGIN', 'SYS_STATUS', 'SYSTEM_TIME', 'TIMESYNC', 'VFR_HUD', 'VISION_POSITION_DELTA']
+===================
+Reading 2023-09-04 09-03-22.tlog
+WIRE_PROTOCOL_VERSION 2.0
+Parsing messages
+...
+$ ls *.csv
+'2023-09-04 09-03-22_AHRS_1_1.csv'                 '2023-09-04 09-03-22_HEARTBEAT_1_1.csv'           '2023-09-04 09-03-22_SERVO_OUTPUT_RAW_1_1.csv'
+'2023-09-04 09-03-22_AHRS2_1_1.csv'                '2023-09-04 09-03-22_HEARTBEAT_255_190.csv'       '2023-09-04 09-03-22_SET_GPS_GLOBAL_ORIGIN_1_197.csv'
+'2023-09-04 09-03-22_ATTITUDE_1_1.csv'             '2023-09-04 09-03-22_LOCAL_POSITION_NED_1_1.csv'  '2023-09-04 09-03-22_SYS_STATUS_1_1.csv'
+'2023-09-04 09-03-22_BATTERY_STATUS_1_1.csv'       '2023-09-04 09-03-22_POWER_STATUS_1_1.csv'        '2023-09-04 09-03-22_SYSTEM_TIME_1_1.csv'
+'2023-09-04 09-03-22_EKF_STATUS_REPORT_1_1.csv'    '2023-09-04 09-03-22_RANGEFINDER_1_1.csv'         '2023-09-04 09-03-22_SYSTEM_TIME_255_190.csv'
+'2023-09-04 09-03-22_GLOBAL_POSITION_INT_1_1.csv'  '2023-09-04 09-03-22_RAW_IMU_1_1.csv'             '2023-09-04 09-03-22_TIMESYNC_1_1.csv'
+'2023-09-04 09-03-22_GPS_GLOBAL_ORIGIN_1_1.csv'    '2023-09-04 09-03-22_RC_CHANNELS_1_1.csv'         '2023-09-04 09-03-22_VFR_HUD_1_1.csv'
+'2023-09-04 09-03-22_HEARTBEAT_1_194.csv'          '2023-09-04 09-03-22_SCALED_IMU2_1_1.csv'         '2023-09-04 09-03-22_VISION_POSITION_DELTA_1_197.csv'
+'2023-09-04 09-03-22_HEARTBEAT_1_197.csv'          '2023-09-04 09-03-22_SCALED_PRESSURE_1_1.csv'
+~~~
+
+Parameters:
 ~~~
 $ tlog_merge.py --help
 usage: tlog_merge.py [-h] [-r] [-v] [--explode] [--no-merge] [--types TYPES] [--max-msgs MAX_MSGS] [--max-rows MAX_ROWS] [--rate]
