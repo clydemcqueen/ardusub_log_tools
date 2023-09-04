@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Read csv or tlog files and build Leaflet (interactive HTML) maps from GPS coordinates.
+Read csv, tlog or txt files and build Leaflet (interactive HTML) maps from GPS coordinates.
 
 For csv files:
     Latitude column header should be 'gps.lat' or 'lat'
@@ -12,14 +12,18 @@ For tlog files, these messages are read:
     GLOBAL_POSITION_INT -- the filtered position estimate, green line
     GPS_INPUT -- sensor data sent from ugps-extension to ArduSub, not filtered, red line
 
+For txt files, look for NMEA 0183 GGA messages of the form r'\$[A-Z]+', e.g., $GPGGA.
 """
 
 import argparse
 import os
-from argparse import ArgumentParser
+import re
+from datetime import datetime
+from statistics import fmean
 
 import folium
 import pandas as pd
+import pynmea2
 from pymavlink import mavutil
 
 import table_types
@@ -33,11 +37,20 @@ class MapMaker:
         mm.add_df(df, lat_col, lon_col, 'blue')
         mm.write(outfile)
 
+    @staticmethod
+    def build_map_from_txt(locations, outfile, verbose, center, zoom):
+        mm = MapMaker(verbose, center, zoom)
+        mm.add_locations(locations, 'blue')
+        mm.write(outfile)
+
     def __init__(self, verbose, center, zoom):
         self.m = None
         self.verbose = verbose
         self.center = center
         self.zoom = zoom
+
+    def _build_empty_map(self):
+        self.m = folium.Map(location=self.center, zoom_start=self.zoom, max_zoom=24)
 
     def add_df(self, df, lat_col, lon_col, color, marker_function=None):
         if self.m is None:
@@ -45,7 +58,7 @@ class MapMaker:
                 self.center[0] = df[lat_col].mean()
             if self.center[1] is None:
                 self.center[1] = df[lon_col].mean()
-            self.m = folium.Map(location=self.center, zoom_start=self.zoom, max_zoom=24)
+            self._build_empty_map()
 
         if self.verbose:
             print(df.head())
@@ -62,6 +75,18 @@ class MapMaker:
 
     def add_table(self, table, lat_col, lon_col, color):
         self.add_df(table.get_dataframe(self.verbose), lat_col, lon_col, color)
+
+    def add_locations(self, locations: list[tuple[float, float]], color):
+        if self.m is None:
+            lats, lons = zip(*locations)
+            if self.center[0] is None:
+                self.center[0] = fmean(lats)
+            if self.center[1] is None:
+                self.center[1] = fmean(lons)
+            self._build_empty_map()
+
+        # smooth_factor=1 (default) seems to mean "do not remove points", which is what we want
+        folium.PolyLine(locations, color=color, weight=1).add_to(self.m)
 
     def write(self, outfile):
         if self.m:
@@ -135,6 +160,50 @@ def build_map_from_tlog(infile, outfile, verbose, center, zoom, msg_types, hdop_
     mm.write(outfile)
 
 
+def get_timestamp(line: str):
+    match = re.search(r'^[^|]+', line)
+    return datetime.strptime(match[0], '%Y-%m-%d %H:%M:%S.%f ')
+
+
+def build_map_from_txt(infile, outfile, verbose, center, zoom):
+    file = open(infile, 'r')
+    line = file.readline()
+
+    if line == '':
+        print('Empty file')
+        return
+
+    # Count messages
+    total_nmea = 0
+
+    locations = []
+
+    # Get the first and last timestamp to compute duration and message rates
+    start = get_timestamp(line)
+    prev_line = line
+
+    # group(0) is everything from $<sentence_type> to end of line
+    # group(1) is $<sentence_type>
+    pattern = re.compile(r'(\$[A-Z]+),.*$')
+
+    while line := file.readline():
+        m = re.search(pattern, line)
+        if m is not None:
+            total_nmea += 1
+            if m.group(1).endswith('GGA'):
+                sentence = pynmea2.parse(m.group(0))
+                locations.append((sentence.latitude, sentence.longitude))
+        prev_line = line
+
+    duration = get_timestamp(prev_line) - start
+    print(f'{total_nmea} sentences received in {duration.seconds} seconds, {len(locations)} were GGA')
+
+    if len(locations) > 0:
+        MapMaker.build_map_from_txt(locations, outfile, verbose, center, zoom)
+    else:
+        print("No GGA messages found")
+
+
 def float_or_none(x):
     if x is None:
         return None
@@ -146,9 +215,9 @@ def float_or_none(x):
 
 
 def main():
-    parser = ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=__doc__)
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=__doc__)
     parser.add_argument('-r', '--recurse', action='store_true',
-                        help='enter directories looking for tlog and csv files')
+                        help='enter directories looking for tlog, csv and txt files')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='print a lot more information')
     parser.add_argument('--lat', default=None, type=float_or_none,
@@ -163,7 +232,7 @@ def main():
                         help='reject GPS_INPUT messages where hdop exceeds this limit, default 100.0 (no limit)')
     parser.add_argument('path', nargs='+')
     args = parser.parse_args()
-    files = util.expand_path(args.path, args.recurse, ['.csv', '.tlog'])
+    files = util.expand_path(args.path, args.recurse, ['.csv', '.tlog', '.txt'])
     print(f'Processing {len(files)} files')
 
     if args.types:
@@ -181,8 +250,10 @@ def main():
 
         if ext == '.csv':
             build_map_from_csv(infile, outfile, args.verbose, [args.lat, args.lon], args.zoom)
-        else:
+        elif ext == '.tlog':
             build_map_from_tlog(infile, outfile, args.verbose, [args.lat, args.lon], args.zoom, msg_types, args.hdop_max)
+        else:
+            build_map_from_txt(infile, outfile, args.verbose, [args.lat, args.lon], args.zoom)
 
 
 if __name__ == '__main__':

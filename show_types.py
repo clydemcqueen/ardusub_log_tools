@@ -11,7 +11,7 @@ from pymavlink import mavutil
 import util
 
 
-# Everything I've ever seen
+# Everything I've ever seen in a dataflash (.BIN) file
 # My comments in [], the rest is from https://ardupilot.org/copter/docs/logmessages.html
 DATAFLASH_DESC = {
     'AHR2': 'Backup AHRS data',
@@ -114,7 +114,7 @@ class TypeFinder:
                 msg_desc = DATAFLASH_DESC[msg_type] if msg_type in DATAFLASH_DESC else 'TODO -- update tool'
                 print(f'{msg_count:6d}  {msg_type:4}  {msg_desc:82}')
             else:
-                print(f'{msg_type:25} {msg_count:6d}')
+                print(f'{msg_type:35} {msg_count:6d}')
 
 
 def main():

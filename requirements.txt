@@ -3,3 +3,5 @@ pymavlink~=2.4.38
 folium~=0.14.0
 requests~=2.31.0
 pytest~=7.3.2
+pynmea2~=1.19.0
+matplotlib~=3.7.2

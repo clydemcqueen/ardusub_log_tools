@@ -6,3 +6,4 @@ __pycache__/
 testing/*.csv
 testing/*.html
 testing/*.params
+testing/*.pdf

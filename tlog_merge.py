@@ -46,15 +46,16 @@ PERHAPS_USEFUL_MSG_TYPES = [
     # 'DISTANCE_SENSOR',
     'EKF_STATUS_REPORT',
     'GLOBAL_POSITION_INT',
+    'GLOBAL_VISION_POSITION_ESTIMATE',
     'GPS2_RAW',
     'GPS_GLOBAL_ORIGIN',
     'GPS_RAW_INT',
     'HEARTBEAT',
     # 'HOME_POSITION',
-    'HWSTATUS',
+    # 'HWSTATUS',
     'LOCAL_POSITION_NED',
     # 'MANUAL_CONTROL',
-    'MEMINFO',
+    # 'MEMINFO',
     # 'MISSION_ACK',
     # 'MISSION_COUNT',
     # 'MISSION_CURRENT',
@@ -74,12 +75,14 @@ PERHAPS_USEFUL_MSG_TYPES = [
     'SCALED_PRESSURE2',
     # 'SENSOR_OFFSETS',
     'SERVO_OUTPUT_RAW',
+    'SET_GPS_GLOBAL_ORIGIN',
     # 'STATUSTEXT',
     'SYS_STATUS',
     'SYSTEM_TIME',
-    # 'TIMESYNC',
+    'TIMESYNC',
     'VFR_HUD',
     # 'VIBRATION',
+    'VISION_POSITION_DELTA',
 ]
 
 # Useful for surftrak testing
@@ -228,7 +231,7 @@ def main():
                         help='Experimental: split messages by source (sysid, compid)')
     parser.add_argument('path', nargs='+')
     args = parser.parse_args()
-    print(f'Starting paths: {args.path}')
+    # print(f'Starting paths: {args.path}')
     files = util.expand_path(args.path, args.recurse, '.tlog')
     print(f'Processing {len(files)} files')
 
@@ -244,6 +247,8 @@ def main():
         if 'SYSTEM_TIME' not in msg_types:
             print(f'Adding SYSTEM_TIME to message types')
             msg_types.append('SYSTEM_TIME')
+
+    print(f'Looking for these types: {msg_types}')
 
     for file in files:
         print('===================')
