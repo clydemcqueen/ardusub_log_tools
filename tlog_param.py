@@ -7,8 +7,8 @@ write the parameters to a QGC-compatible params file.
 
 import os
 from argparse import ArgumentParser
-from typing import NamedTuple
 
+import numpy as np
 import pymavlink.dialects.v20.common as mav_common
 from pymavlink import mavutil
 
@@ -25,9 +25,18 @@ def firmware_version_type_str(firmware_version_type: int) -> str:
     return ''
 
 
-class Param(NamedTuple):
-    value: str
-    type: str   # Actual values are MAV_PARAM_TYPE_*, but we'll store them as strings
+class Param:
+    def __init__(self, value: float, type: int):
+        self.value = value
+        self.type = type
+
+    def value_str(self) -> str:
+        if self.type is mav_common.MAV_PARAM_TYPE_REAL32:
+            return str(np.float32(self.value))
+        elif self.type is mav_common.MAV_PARAM_TYPE_REAL64:
+            return str(self.value)
+        else:
+            return str(int(self.value))
 
 
 class TelemetryLogParam:
@@ -82,7 +91,7 @@ class TelemetryLogParam:
         f.write('# Vehicle-Id\tComponent-Id\tName\tValue\tType\n')
 
         for param_item in sorted(self.params.items()):
-            f.write(f'1\t1\t{param_item[0]}\t{param_item[1].value}\t{param_item[1].type}\n')
+            f.write(f'1\t1\t{param_item[0]}\t{param_item[1].value_str()}\t{param_item[1].type}\n')
 
         f.close()
 
