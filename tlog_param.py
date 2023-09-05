@@ -14,6 +14,47 @@ from pymavlink import mavutil
 
 import util
 
+EK3_SRCn_POSXY = {
+    0: 'None',
+    3: 'GPS',
+    4: 'Beacon',
+    6: 'ExternalNav',
+}
+
+EK3_SRCn_VELXY = {
+    0: 'None',
+    3: 'GPS',
+    4: 'Beacon',
+    5: 'OpticalFlow',
+    6: 'ExternalNav',
+    7: 'WheelEncoder',
+}
+
+EK3_SRCn_POSZ = {
+    0: 'None',
+    1: 'Baro',
+    2: 'RangeFinder',
+    3: 'GPS',
+    4: 'Beacon',
+    6: 'ExternalNav',
+}
+
+EK3_SRCn_VELZ = {
+    0: 'None',
+    3: 'GPS',
+    4: 'Beacon',
+    6: 'ExternalNav',
+}
+
+EK3_SRCn_YAW = {
+    0: 'None',
+    1: 'Compass',
+    2: 'GPS',
+    3: 'GPS with Compass Fallback',
+    6: 'ExternalNav',
+    8: 'GSF',
+}
+
 
 def firmware_version_type_str(firmware_version_type: int) -> str:
     try:
@@ -26,9 +67,20 @@ def firmware_version_type_str(firmware_version_type: int) -> str:
 
 
 class Param:
-    def __init__(self, value: float, type: int):
-        self.value = value
-        self.type = type
+    def __init__(self, param_id: str, param_value: float, value_type: int):
+        self.id = param_id
+        self.value = param_value
+        self.type = value_type
+
+    def value_int(self) -> int:
+        if self.type < 1 or self.type > 8:
+            print(f'ERROR: {self.id} has type {self.type}, will try to convert {self.value} to int')
+            try:
+                return int(self.value)
+            finally:
+                return 0
+
+        return int(self.value)
 
     def value_str(self) -> str:
         if self.type is mav_common.MAV_PARAM_TYPE_REAL32:
@@ -37,6 +89,22 @@ class Param:
             return str(self.value)
         else:
             return str(int(self.value))
+
+    def comment(self) -> str | None:
+        if self.id.startswith('EK3_SRC'):
+            if self.id.endswith('POSXY'):
+                return EK3_SRCn_POSXY[self.value_int()]
+            elif self.id.endswith('VELXY'):
+                return EK3_SRCn_VELXY[self.value_int()]
+            elif self.id.endswith('POSZ'):
+                return EK3_SRCn_POSZ[self.value_int()]
+            elif self.id.endswith('VELZ'):
+                return EK3_SRCn_VELZ[self.value_int()]
+            elif self.id.endswith('YAW'):
+                return EK3_SRCn_YAW[self.value_int()]
+            elif self.id == 'EK3_SRC_OPTIONS':
+                return 'FuseAllVelocities' if self.value_int() == 1 else 'None'
+        return None
 
 
 class TelemetryLogParam:
@@ -57,7 +125,7 @@ class TelemetryLogParam:
                 if param_id in self.params and self.params[param_id].value != param_value:
                     print(f'{param_id} was {self.params[param_id].value}, changed to {param_value}')
 
-                self.params[param_id] = Param(param_value, data['param_type'])
+                self.params[param_id] = Param(param_id, param_value, data['param_type'])
             else:
                 flight_sw_version = data['flight_sw_version']
                 major = (flight_sw_version >> (8 * 3)) & 0xFF
@@ -90,8 +158,12 @@ class TelemetryLogParam:
         f.write('#\n')
         f.write('# Vehicle-Id\tComponent-Id\tName\tValue\tType\n')
 
-        for param_item in sorted(self.params.items()):
-            f.write(f'1\t1\t{param_item[0]}\t{param_item[1].value_str()}\t{param_item[1].type}\n')
+        for _, param in sorted(self.params.items()):
+            comment = param.comment()
+            if comment is not None:
+                f.write(f'1\t1\t{param.id}\t{param.value_str()}\t{param.type}\t# {comment}\n')
+            else:
+                f.write(f'1\t1\t{param.id}\t{param.value_str()}\t{param.type}\n')
 
         f.close()
 
