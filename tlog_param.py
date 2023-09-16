@@ -15,7 +15,7 @@ from pymavlink import mavutil
 import util
 
 # These parameters change all the time, so changes are uninteresting
-NOISY_PARAMS:list[str] = ['BARO1_GND_PRESS', 'BARO2_GND_PRESS']
+NOISY_PARAMS: list[str] = ['BARO1_GND_PRESS', 'BARO2_GND_PRESS']
 
 EK3_SRCn_POSXY = {
     0: 'None',
@@ -119,14 +119,14 @@ class TelemetryLogParam:
         self.autopilot_version: str = ''
         self.git_hash: str = ''
 
-    def handle_param(self, data):
-        new_param = Param(data['param_id'], data['param_value'], data['param_type'])
+    def handle_param(self, msg: mav_common.MAVLink_param_value_message):
+        new_param = Param(msg.param_id, msg.param_value, msg.param_type)
 
         if new_param.id in self.params:
             old_param = self.params[new_param.id]
 
             if new_param.type != old_param.type:
-                print(f'ERROR: BlueOS bug? {old_param.id} changed type from {old_param.type} to {new_param.type}')
+                print(f'ERROR: {old_param.id} changed type from {old_param.type} to {new_param.type}')
 
             if new_param.value != old_param.value:
                 # Note the change
@@ -142,25 +142,24 @@ class TelemetryLogParam:
             # Add the param to the dict
             self.params[new_param.id] = new_param
 
-    def handle_version(self, data):
-        flight_sw_version = data['flight_sw_version']
+    def handle_version(self, msg: mav_common.MAVLink_autopilot_version_message):
+        flight_sw_version = msg.flight_sw_version
         major = (flight_sw_version >> (8 * 3)) & 0xFF
         minor = (flight_sw_version >> (8 * 2)) & 0xFF
         path = (flight_sw_version >> (8 * 1)) & 0xFF
         version_type = (flight_sw_version >> (8 * 0)) & 0xFF
 
         self.autopilot_version = f'{major}.{minor}.{path} {firmware_version_type_str(version_type)}'
-        self.git_hash = bytes(data['flight_custom_version']).decode('utf-8')
+        self.git_hash = bytes(msg.flight_custom_version).decode('utf-8')
 
     def read(self, infile: str):
         mlog = mavutil.mavlink_connection(infile, robust_parsing=False, dialect='ardupilotmega')
 
         while (msg := mlog.recv_match(blocking=False, type=['PARAM_VALUE', 'AUTOPILOT_VERSION'])) is not None:
-            data = msg.to_dict()
             if msg.get_type() == 'PARAM_VALUE':
-                self.handle_param(data)
+                self.handle_param(msg)
             else:
-                self.handle_version(data)
+                self.handle_version(msg)
 
     def write(self, outfile: str):
         """
