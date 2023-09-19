@@ -7,9 +7,10 @@ Read MAVLink messages from a tlog file (telemetry log) and report on anything in
 from argparse import ArgumentParser
 
 import pymavlink.dialects.v20.ardupilotmega as apm
-from pymavlink import mavutil
 
-import util
+from segment_reader import add_segment_args, choose_reader_list
+
+MSG_TYPES = ['HEARTBEAT', 'STATUSTEXT', 'SYSTEM_TIME', 'SYS_STATUS']
 
 
 class SensorInfo:
@@ -197,18 +198,16 @@ class CompInfo:
 
 
 class TelemetryLogInfo:
-    def __init__(self, tlog_filename: str):
-        self.tlog_filename = tlog_filename
+    def __init__(self, reader):
+        self.reader = reader
 
     def read_and_report(self):
-        print(f'Results for {self.tlog_filename}')
-        mlog = mavutil.mavlink_connection(self.tlog_filename, robust_parsing=False, dialect='ardupilotmega')
+        print(f'Results for {self.reader.name}')
 
         # Build a dictionary sys_id => system
         # Each system is a dictionary of comp_id => instance of CompInfo
         systems = {}
-        while (msg := mlog.recv_match(blocking=False,
-                                      type=['HEARTBEAT', 'STATUSTEXT', 'SYSTEM_TIME', 'SYS_STATUS'])) is not None:
+        for msg in self.reader:
             sys_id = msg.get_srcSystem()
 
             if sys_id not in systems:
@@ -232,16 +231,12 @@ class TelemetryLogInfo:
 
 def main():
     parser = ArgumentParser(description=__doc__)
-    parser.add_argument('-r', '--recurse',
-                        help='enter directories looking for tlog files', action='store_true')
-    parser.add_argument('path', nargs='+')
+    add_segment_args(parser)
     args = parser.parse_args()
-    files = util.expand_path(args.path, args.recurse, '.tlog')
-    print(f'Processing {len(files)} files')
 
-    for file in files:
-        print('-------------------')
-        tlog_doctor = TelemetryLogInfo(file)
+    readers = choose_reader_list(args, MSG_TYPES)
+    for reader in readers:
+        tlog_doctor = TelemetryLogInfo(reader)
         tlog_doctor.read_and_report()
 
 

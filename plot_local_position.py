@@ -5,29 +5,27 @@ Look for LOCATION_POSITION_NED messages in tlog files, plot x and y, and write P
 """
 
 import argparse
-import os
 
 import matplotlib
-from pymavlink import mavutil
 
 import util
+from segment_reader import add_segment_args, choose_reader_list
 
 # Set backend before importing matplotlib.pyplot
 matplotlib.use('pdf')
 import matplotlib.pyplot as plt
 
+MSG_TYPES = ['LOCAL_POSITION_NED']
 
-def plot_local_position(infile: str, outfile: str):
-    # Read tlog file, get x and y values
+
+def plot_local_position(reader, outfile: str):
+    """
+    Read tlog file, get x and y values.
+    """
     xs = []
     ys = []
-    mlog = mavutil.mavlink_connection(infile, robust_parsing=False, dialect='ardupilotmega')
     try:
-        while True:
-            msg = mlog.recv_match(blocking=False, type=['LOCAL_POSITION_NED'])
-            if msg is None:
-                break
-
+        for msg in reader:
             xs.append(msg.x)
             ys.append(msg.y)
 
@@ -53,20 +51,14 @@ def plot_local_position(infile: str, outfile: str):
 
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=__doc__)
-    parser.add_argument('-r', '--recurse', action='store_true',
-                        help='enter directories looking for tlog files')
-    parser.add_argument('path', nargs='+')
+    add_segment_args(parser)
     args = parser.parse_args()
-    files = util.expand_path(args.path, args.recurse, '.tlog')
-    print(f'Processing {len(files)} files')
 
-    for infile in files:
+    readers = choose_reader_list(args, MSG_TYPES)
+    for reader in readers:
         print('-------------------')
-        print(infile)
-        dirname, basename = os.path.split(infile)
-        root, ext = os.path.splitext(basename)
-        outfile = os.path.join(dirname, root + '.pdf')
-        plot_local_position(infile, outfile)
+        print(reader.name)
+        plot_local_position(reader, util.get_outfile_name(reader.name, '', '.pdf'))
 
 
 if __name__ == '__main__':
