@@ -26,8 +26,8 @@ def plot_local_position(reader, outfile: str):
     ys = []
     try:
         for msg in reader:
-            xs.append(msg.x)
-            ys.append(msg.y)
+            xs.append(msg.y)
+            ys.append(msg.x)
 
     except Exception as e:
         print(f'CRASH WITH ERROR "{e}", PARTIAL RESULTS')
@@ -37,6 +37,7 @@ def plot_local_position(reader, outfile: str):
         figure, (plot) = plt.subplots(1)
 
         # Plot
+        plot.set_aspect(1)
         plot.plot(xs, ys)
 
         # [Over]write PDF
@@ -56,8 +57,6 @@ def main():
 
     readers = choose_reader_list(args, MSG_TYPES)
     for reader in readers:
-        print('-------------------')
-        print(reader.name)
         plot_local_position(reader, util.get_outfile_name(reader.name, '', '.pdf'))
 
 
