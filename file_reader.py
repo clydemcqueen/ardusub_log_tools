@@ -63,5 +63,5 @@ def add_file_args(parser: argparse.ArgumentParser):
     """
     Add args for working with multiple files.
     """
-    parser.add_argument('-r', '--recurse', action='store_true', help='enter directories looking for tlog files')
+    parser.add_argument('-r', '--recurse', action='store_true', help='enter directories looking for files')
     parser.add_argument('path', nargs='+')

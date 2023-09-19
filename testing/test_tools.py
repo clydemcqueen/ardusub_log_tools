@@ -16,6 +16,7 @@ import plot_local_position
 import show_types
 import tlog_bad_data
 import tlog_info
+import tlog_map_maker
 import tlog_merge
 import tlog_param
 import tlog_scan
@@ -32,8 +33,13 @@ class TestTools:
         tool.write_merged_csv_file()
 
     def test_tlog_map_maker(self):
-        map_maker.build_map_from_tlog('testing/small.tlog', 'testing/small.html', False, [None, None], 18,
-                                      ['GLOBAL_POSITION_INT'], 10.0)
+        tlog_map_maker.build_map_from_tlog(FileReader('testing/small.tlog', ['GLOBAL_POSITION_INT']),
+                                           'testing/small.html', False, [None, None], 18, 10.0)
+
+    def test_tlog_map_maker_segment(self):
+        segment_reader = SegmentReader(Segment(1683220544, 1683220546, 'segment99'),
+                                       FileReader('testing/small.tlog', ['GLOBAL_POSITION_INT']), None)
+        tlog_map_maker.build_map_from_tlog(segment_reader, 'testing/segment99.html', False, [None, None], 18, 10.0)
 
     def test_nmea_map_maker(self):
         map_maker.build_map_from_txt('testing/nmea_log.txt', 'testing/nmea_log.html', False, [None, None], 18)

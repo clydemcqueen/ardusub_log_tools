@@ -32,9 +32,9 @@ class SegmentReader(NamedReader):
 
     def __init__(self, segment: Segment, file_reader: FileReader, file_readers: FileReaderList | None):
         super().__init__(build_segment_name(file_reader.name, segment.name))
-        self.segment = segment
-        self.file_reader = file_reader
-        self.file_readers = file_readers
+        self._segment = segment
+        self._file_reader = file_reader
+        self._file_readers = file_readers
 
     def __iter__(self):
         return self
@@ -45,23 +45,23 @@ class SegmentReader(NamedReader):
 
             # Get the next message
             try:
-                msg = next(self.file_reader)
+                msg = next(self._file_reader)
             except StopIteration:
                 # If we don't have a list of readers, we're done
-                if self.file_readers is None:
+                if self._file_readers is None:
                     raise StopIteration
 
                 # Get the next file reader, this might raise StopIteration, we do not intercept
-                self.file_reader = next(self.file_readers)
+                self._file_reader = next(self._file_readers)
 
             timestamp = getattr(msg, '_timestamp', 0.0)
 
             # Ignore messages before the segment start
-            if timestamp < self.segment.start:
+            if timestamp < self._segment.start:
                 continue
 
             # Is the segment over?
-            if timestamp > self.segment.end:
+            if timestamp > self._segment.end:
                 raise StopIteration
 
             return msg
@@ -172,13 +172,11 @@ def choose_reader_list(args, types):
     """
     If there are segments return a SegmentReaderList, otherwise return a FileReaderList.
     """
-    if 'keep' in args and 'discard' in args:
-        segments = parse_segment_args(args.keep, args.discard)
-        if len(segments) > 0:
-            return SegmentReaderList(args, segments, types)
-
-    # Default is a FileReaderList
-    return FileReaderList(args, types)
+    segments = parse_segment_args(args.keep, args.discard)
+    if len(segments) > 0:
+        return SegmentReaderList(args, segments, types)
+    else:
+        return FileReaderList(args, types)
 
 
 def build_segment_name(first_path: str, segment_name: str):
