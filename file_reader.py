@@ -16,7 +16,7 @@ class FileReader(NamedReader):
     Iterate over messages in a file.
     """
 
-    def __init__(self, path: str, types: list[str]):
+    def __init__(self, path: str, types: list[str] | None):
         super().__init__(path)
         self._types = types
         self._conn = mavutil.mavlink_connection(path, dialect='ardupilotmega')
@@ -38,7 +38,7 @@ class FileReaderList:
     Iterate over a list of file readers.
     """
 
-    def __init__(self, args, types: list[str]):
+    def __init__(self, args, types: list[str] | None):
         paths = expand_path(args.path, args.recurse, '.tlog')
         print(f'Reading {len(paths)} file(s)')
         self._types = types

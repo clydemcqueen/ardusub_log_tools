@@ -72,7 +72,7 @@ class SegmentReaderList:
     Iterate over a list of segments.
     """
 
-    def __init__(self, args, segments, types):
+    def __init__(self, args, segments, types: list[str] | None):
         print(f'Reading {len(segments)} segment(s)')
         self._segments_iter = iter(segments)
 

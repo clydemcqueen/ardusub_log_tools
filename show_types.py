@@ -4,6 +4,11 @@
 Read messages from tlog (telemetry) and BIN (dataflash) logs and report on the message types found.
 """
 
+import os
+
+# Force WIRE_PROTOCOL_VERSION to be 2.0 to get the names of the messages with id > 255
+os.environ['MAVLINK20'] = '1'
+
 from argparse import ArgumentParser
 
 from pymavlink import mavutil
