@@ -98,8 +98,6 @@ def add_segment_args(parser: argparse.ArgumentParser):
     """
     parser.add_argument('-k', '--keep', default=None, action='append',
                         help='Keep these segments; a segment is 2 timestamps separated by a comma, e.g., "100,200"')
-    parser.add_argument('-d', '--discard', default=None, action='append',
-                        help='Discard these segments, keep everything else')
 
     # Include args for working with multiple files
     add_file_args(parser)
@@ -139,40 +137,24 @@ def parse_segment(segment_str: str) -> Segment | None:
     return Segment(start, end, name)
 
 
-def parse_segments(segment_strs: list[str]) -> list[Segment]:
+def parse_segment_args(keep_args) -> list[Segment]:
     """
-    Parse a list of --keep strings to produce a list of segments.
+    Parse a list of --keep arguments to produce a list of segments.
     """
     results = []
-
-    for segment_str in segment_strs:
-        segment = parse_segment(segment_str)
-        if segment is not None:
-            results.append(segment)
-
+    if keep_args is not None:
+        for keep_arg in keep_args:
+            segment = parse_segment(keep_arg)
+            if segment is not None:
+                results.append(segment)
     return results
-
-
-def parse_segment_args(keep, discard) -> list[Segment]:
-    """
-    Parse keep and discard arguments to produce a list of segments.
-    """
-    if discard is not None:
-        # TODO implement --discard
-        print('--discard not implemented yet')
-        return []
-
-    if keep is None:
-        return []
-
-    return parse_segments(keep)
 
 
 def choose_reader_list(args, types):
     """
     If there are segments return a SegmentReaderList, otherwise return a FileReaderList.
     """
-    segments = parse_segment_args(args.keep, args.discard)
+    segments = parse_segment_args(args.keep)
     if len(segments) > 0:
         return SegmentReaderList(args, segments, types)
     else:

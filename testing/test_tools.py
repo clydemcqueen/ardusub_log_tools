@@ -28,7 +28,7 @@ from segment_reader import Segment, SegmentReader, parse_segment_args
 class TestTools:
 
     def test_dataflash_merge(self):
-        tool = BIN_merge.DataflashLogReader('testing/small.BIN', ['VIBE'], 10000, 10000, False)
+        tool = BIN_merge.DataflashLogReader('testing/small.BIN', ['VIBE'], 10000, 10000, False, False)
         tool.read()
         tool.write_merged_csv_file()
 
@@ -165,11 +165,8 @@ class TestTools:
             assert pytest.approx(rate) == message['rate']
 
     def test_parse_segment_args(self):
-        segments = parse_segment_args(
-            ['1683220546.0,1683220547.0,foo', '1683220546,1683220547', 'bar', 'fee,fie'], None)
+        segments = parse_segment_args(['1683220546.0,1683220547.0,foo', '1683220546,1683220547', 'bar', 'fee,fie'])
         assert len(segments) == 2
         s1, s2 = segments
         assert s1.start == 1683220546.0 and s1.end == 1683220547.0 and s1.name == 'foo'
         assert s2.start == 1683220546.0 and s2.end == 1683220547.0 and s2.name == '1683220546_1683220547'
-
-        # TODO test other cases

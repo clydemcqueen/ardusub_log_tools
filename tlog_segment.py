@@ -2,12 +2,8 @@
 
 """
 Read MAVLink messages from one or more tlog files (telemetry logs), stitch them together in time order, then extract
-and write segments as new, smaller tlog files. The segments can be specified in one of 2 ways:
-
-    Use one or more "--keep x,y" options to specify which segments to keep. x and y are timestamps (see below).
-    Use one or more "--discard x,y" options to specify which segments to discard, the rest are kept.
-
-Timestamps can be specified in 2 ways:
+and write segments as new, smaller tlog files. Segments are specified with one or more "--keep x,y,name" options, where
+x and y are timestamps. Timestamps can be specified in 2 ways:
 
     Seconds since the start of the earliest tlog file in the list, e.g., 100.
     Unix time (seconds since January 1st, 1970 UTC), e.g., 1694633807.
@@ -41,7 +37,7 @@ def main():
                         help='source component id to keep, default is all source components')
     args = parser.parse_args()
 
-    segments = parse_segment_args(args.keep, args.discard)
+    segments = parse_segment_args(args.keep)
     print(f'Segments: {segments}')
 
     if args.types:
