@@ -4,7 +4,7 @@
 Read tlog files and build Leaflet (interactive HTML) maps from GPS coordinates.
 
 By default, read these messages:
-    GPS_RAW_INT -- sensor data sent from ArduSub to QGC, will appear as a blue line, should be close to the csv file
+    GPS_RAW_INT -- sensor data sent from ArduSub to QGC, will appear as a blue line
     GLOBAL_POSITION_INT -- the filtered position estimate, green line
     GPS_INPUT -- sensor data sent from ugps-extension to ArduSub, not filtered, red line
 
@@ -55,7 +55,10 @@ def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=__doc__)
     add_segment_args(parser)
     add_map_maker_args(parser)
-    parser.add_argument('--types', default=None, help='comma separated list of message types')
+    parser.add_argument('--types', default=None,
+                        help='comma separated list of message types')
+    parser.add_argument('--hdop-max', default=100.0, type=float,
+                        help='reject GPS_INPUT messages where hdop exceeds this limit, default 100.0 (no limit)')
     args = parser.parse_args()
 
     if args.types is None:

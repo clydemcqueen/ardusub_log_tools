@@ -94,13 +94,11 @@ class SegmentReaderList:
 
 def add_segment_args(parser: argparse.ArgumentParser):
     """
-    Add args for working with multiple segments.
+    Add args for working with multiple files and multiple segments.
     """
-    parser.add_argument('-k', '--keep', default=None, action='append',
-                        help='Keep these segments; a segment is 2 timestamps separated by a comma, e.g., "100,200"')
-
-    # Include args for working with multiple files
     add_file_args(parser)
+    parser.add_argument('-k', '--keep', default=None, action='append',
+                        help='process just these segments; a segment is 2 timestamps and a name, e.g., start,end,s1')
 
 
 def parse_segment(segment_str: str) -> Segment | None:

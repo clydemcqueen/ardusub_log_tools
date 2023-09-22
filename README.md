@@ -14,10 +14,10 @@ tool.py --recurse .
 
 ## Requirements
 
-ardusub_log_tools requires Python 3.10.
+ardusub_log_tools requires Python 3.10 or 3.11.
 Other requirements are listed in [requirements.txt](requirements.txt).
 
-### A note on BAD_DATA messages
+## A note on BAD_DATA messages
 
 Some BlueOS-generated messages in QGC-generated tlog files may have bad CRC values. These messages will show
 up as type=BAD_DATA. See [this discussion for the cause(es) and fix(es)](https://github.com/bluerobotics/BlueOS/issues/1740).
@@ -27,42 +27,106 @@ export MAV_IGNORE_CRC=1
 show_types.py *.tlog
 ~~~
 
-## Special tools
+## Segments
 
-### map_maker.py
+Some of the tlog tools support `--keep start_time,end_time,name` options, which is a way to specify which parts of the
+file you are interested in processing. Only these messages between `start_time` and `end_time` are processed; the rest
+of the file is ignored.
 
-map_maker builds Leaflet (interactive HTML) maps from GPS coordinates found in some csv files
-as well as the GPS information in MAVLink (.tlog) files.
+The timestamps must be specified in Unix time (seconds since January 1st, 1970 UTC).
+
+If you provide multiple tlog files they are logically concatenated, which allows a segment to span multiple files.
+
+Tools that generate files will generate one file per segment, and the name of the segment will appear in the file name.
+
+The following bash script that shows how 4 segments are processed from several tlog files:
+~~~
+#!/bin/bash
+
+export SEGMENT1="--keep 1694812410,1694813075,transect1"
+export SEGMENT2="--keep 1694813405,1694814090,transect2"
+export SEGMENT3="--keep 1694814995,1694815740,transect3"
+export SEGMENT4="--keep 1694816175,1694816945,transect4"
+
+export SEGMENTS="$SEGMENT1 $SEGMENT2 $SEGMENT3 $SEGMENT4"
+
+echo "Segments are:"
+echo $SEGMENTS
+
+echo "#############"
+echo "Exploding (tlog_merge.py)"
+echo "#############"
+tlog_merge.py --types GLOBAL_POSITION_INT,GPS_GLOBAL_ORIGIN,VISION_POSITION_DELTA,LOCAL_POSITION_NED \
+    --no-merge --explode --rate $SEGMENTS *.tlog
+
+echo "#############"
+echo "Making maps (tlog_map_maker)"
+echo "#############"
+tlog_map_maker.py $SEGMENTS *.tlog
+
+echo "#############"
+echo "Plotting position (plot_local_position)"
+echo "#############"
+plot_local_position.py $SEGMENTS *.tlog
+~~~
+
+## Mapping and plotting
+
+### tlog_map_maker.py
 
 ~~~
-$ map_maker.py --help
-usage: map_maker.py [-h] [-r] [-v] [--lat LAT] [--lon LON] [--zoom ZOOM] [--types TYPES] [--hdop-max HDOP_MAX] path [path ...]
+$ tlog_map_maker.py --help
+usage: tlog_map_maker.py [-h] [-r] [-k KEEP] [-v] [--lat LAT] [--lon LON] [--zoom ZOOM] [--types TYPES] [--hdop-max HDOP_MAX] path [path ...]
 
-Read csv, tlog or txt files and build Leaflet (interactive HTML) maps from GPS coordinates.
+Read tlog files and build Leaflet (interactive HTML) maps from GPS coordinates.
 
-For csv files:
-    Latitude column header should be 'gps.lat' or 'lat'
-    Longitude column header should be 'gps.lon' or 'lon'
-
-For tlog files, these messages are read:
-    GPS_RAW_INT -- sensor data sent from ArduSub to QGC, will appear as a blue line, should be close to the csv file
+By default, read these messages:
+    GPS_RAW_INT -- sensor data sent from ArduSub to QGC, will appear as a blue line
     GLOBAL_POSITION_INT -- the filtered position estimate, green line
     GPS_INPUT -- sensor data sent from ugps-extension to ArduSub, not filtered, red line
 
-For txt files, look for NMEA 0183 GGA messages of the form r'\$[A-Z]+', e.g., $GPGGA.
+Supports segments.
 
 positional arguments:
   path
 
 options:
-  -h, --help           show this help message and exit
-  -r, --recurse        enter directories looking for tlog, csv and txt files
-  -v, --verbose        print a lot more information
-  --lat LAT            center the map at this latitude, default is mean of all points
-  --lon LON            center the map at this longitude, default is mean of all points
-  --zoom ZOOM          initial zoom, default is 18
-  --types TYPES        comma separated list of message types, the default is GPS_RAW_INT and GPS_GLOBAL_INT
-  --hdop-max HDOP_MAX  reject GPS_INPUT messages where hdop exceeds this limit, default 100.0 (no limit)
+  -h, --help            show this help message and exit
+  -r, --recurse         enter directories looking for files
+  -k KEEP, --keep KEEP  process just these segments; a segment is 2 timestamps and a name, e.g., start,end,s1
+  -v, --verbose         print a lot more information
+  --lat LAT             center the map at this latitude, default is mean of all points
+  --lon LON             center the map at this longitude, default is mean of all points
+  --zoom ZOOM           initial zoom, default is 18
+  --types TYPES         comma separated list of message types
+  --hdop-max HDOP_MAX   reject GPS_INPUT messages where hdop exceeds this limit, default 100.0 (no limit)
+~~~
+
+### map_maker.py
+
+~~~
+$ map_maker.py --help
+usage: map_maker.py [-h] [-r] [-v] [--lat LAT] [--lon LON] [--zoom ZOOM] path [path ...]
+
+Read csv and txt files and build Leaflet (interactive HTML) maps from GPS coordinates.
+
+For csv files:
+    Latitude column header should be 'gps.lat' or 'lat'
+    Longitude column header should be 'gps.lon' or 'lon'
+
+For txt files:
+    Look for NMEA 0183 GGA messages of the form $[A-Z]+ at the end of a line of text
+
+positional arguments:
+  path
+
+options:
+  -h, --help     show this help message and exit
+  -r, --recurse  enter directories looking for csv and txt files
+  -v, --verbose  print a lot more information
+  --lat LAT      center the map at this latitude, default is mean of all points
+  --lon LON      center the map at this longitude, default is mean of all points
+  --zoom ZOOM    initial zoom, default is 18
 ~~~
 
 ### plot_local_position.py
@@ -72,17 +136,140 @@ The plots are saved as PDF files.
 
 ~~~
 $ plot_local_position.py --help
-usage: plot_local_position.py [-h] [-r] path [path ...]
+usage: plot_local_position.py [-h] [-r] [-k KEEP] path [path ...]
 
 Look for LOCATION_POSITION_NED messages in tlog files, plot x and y, and write PDF files.
+
+Supports segments.
 
 positional arguments:
   path
 
 options:
-  -h, --help     show this help message and exit
-  -r, --recurse  enter directories looking for tlog files
+  -h, --help            show this help message and exit
+  -r, --recurse         enter directories looking for files
+  -k KEEP, --keep KEEP  process just these segments; a segment is 2 timestamps and a name, e.g., start,end,s1
 ~~~
+
+## Generating csv files
+
+### tlog_merge.py
+
+Read MAVLink messages from a tlog file (telemetry log) and merge the messages into a single, wide csv file. The merge
+operation does a forward-fill (data is copied from the previous row), so the resulting merged csv file may be
+substantially larger than the sum of the per-type csv files.
+
+Thie tool can also write multiple csv files, one per type, using the `--explode` option. 
+
+This example will open a tlog file, read in a set of tables that I find useful, calculate the data rates and report on
+any gaps in the data, and then write a series of csv files. Each csv file will correspond to a table type, a sysid and a
+compid, so you may see multiple csv files per table type:
+~~~
+$ tlog_merge.py --explode --no-merge --rate --split-source '2023-09-04 09-03-22.tlog'
+Processing 1 files
+Looking for these types: ['AHRS', 'AHRS2', 'ATTITUDE', 'BATTERY_STATUS', 'EKF_STATUS_REPORT', 'GLOBAL_POSITION_INT', 'GLOBAL_VISION_POSITION_ESTIMATE',
+'GPS2_RAW', 'GPS_GLOBAL_ORIGIN', 'GPS_RAW_INT', 'HEARTBEAT', 'LOCAL_POSITION_NED', 'POWER_STATUS', 'RANGEFINDER', 'RAW_IMU', 'RC_CHANNELS', 'SCALED_IMU2',
+'SCALED_PRESSURE', 'SCALED_PRESSURE2', 'SERVO_OUTPUT_RAW', 'SET_GPS_GLOBAL_ORIGIN', 'SYS_STATUS', 'SYSTEM_TIME', 'TIMESYNC', 'VFR_HUD', 'VISION_POSITION_DELTA']
+===================
+Reading 2023-09-04 09-03-22.tlog
+WIRE_PROTOCOL_VERSION 2.0
+Parsing messages
+...
+$ ls *.csv
+'2023-09-04 09-03-22_AHRS_1_1.csv'                 '2023-09-04 09-03-22_HEARTBEAT_1_1.csv'           '2023-09-04 09-03-22_SERVO_OUTPUT_RAW_1_1.csv'
+'2023-09-04 09-03-22_AHRS2_1_1.csv'                '2023-09-04 09-03-22_HEARTBEAT_255_190.csv'       '2023-09-04 09-03-22_SET_GPS_GLOBAL_ORIGIN_1_197.csv'
+'2023-09-04 09-03-22_ATTITUDE_1_1.csv'             '2023-09-04 09-03-22_LOCAL_POSITION_NED_1_1.csv'  '2023-09-04 09-03-22_SYS_STATUS_1_1.csv'
+'2023-09-04 09-03-22_BATTERY_STATUS_1_1.csv'       '2023-09-04 09-03-22_POWER_STATUS_1_1.csv'        '2023-09-04 09-03-22_SYSTEM_TIME_1_1.csv'
+'2023-09-04 09-03-22_EKF_STATUS_REPORT_1_1.csv'    '2023-09-04 09-03-22_RANGEFINDER_1_1.csv'         '2023-09-04 09-03-22_SYSTEM_TIME_255_190.csv'
+'2023-09-04 09-03-22_GLOBAL_POSITION_INT_1_1.csv'  '2023-09-04 09-03-22_RAW_IMU_1_1.csv'             '2023-09-04 09-03-22_TIMESYNC_1_1.csv'
+'2023-09-04 09-03-22_GPS_GLOBAL_ORIGIN_1_1.csv'    '2023-09-04 09-03-22_RC_CHANNELS_1_1.csv'         '2023-09-04 09-03-22_VFR_HUD_1_1.csv'
+'2023-09-04 09-03-22_HEARTBEAT_1_194.csv'          '2023-09-04 09-03-22_SCALED_IMU2_1_1.csv'         '2023-09-04 09-03-22_VISION_POSITION_DELTA_1_197.csv'
+'2023-09-04 09-03-22_HEARTBEAT_1_197.csv'          '2023-09-04 09-03-22_SCALED_PRESSURE_1_1.csv'
+~~~
+
+Parameters:
+~~~
+$ tlog_merge.py --help
+usage: tlog_merge.py [-h] [-r] [-k KEEP] [-v] [--explode] [--no-merge] [--types TYPES] [--max-msgs MAX_MSGS] [--max-rows MAX_ROWS] [--rate] [--sysid SYSID]
+                     [--compid COMPID] [--split-source] [--system-time] [--surftrak]
+                     path [path ...]
+
+Read MAVLink messages from a tlog file (telemetry log) and merge the messages into a single, wide csv file. The merge
+operation does a forward-fill (data is copied from the previous row), so the resulting merged csv file may be
+substantially larger than the sum of the per-type csv files.
+
+HEARTBEAT.mode is a combination of HEARTBEAT.base_mode and HEARTBEAT.custom_mode with these values:
+    -10             disarmed
+      0             armed, stabilize
+      1             armed, acro
+      2             armed, alt_hold
+      3             armed, auto
+      4             armed, guided
+      7             armed, circle
+      9             armed, surface
+     16             armed, pos_hold
+     19             armed, manual
+     20             armed, motor detect
+     21             armed, rng_hold
+
+Supports segments.
+
+positional arguments:
+  path
+
+options:
+  -h, --help            show this help message and exit
+  -r, --recurse         enter directories looking for files
+  -k KEEP, --keep KEEP  process just these segments; a segment is 2 timestamps and a name, e.g., start,end,s1
+  -v, --verbose         print a lot more information
+  --explode             write a csv file for each message type
+  --no-merge            do not merge tables, useful if you also select --explode
+  --types TYPES         comma separated list of message types, the default is a set of useful types
+  --max-msgs MAX_MSGS   stop after processing this number of messages (default 500K)
+  --max-rows MAX_ROWS   stop if the merged table exceeds this number of rows (default 500K)
+  --rate                calculate rate for each message type
+  --sysid SYSID         select source system id (default is all source systems)
+  --compid COMPID       select source component id (default is all source components)
+  --split-source        split messages by source (sysid, compid)
+  --system-time         experimental: use ArduSub SYSTEM_TIME.time_boot_ms rather than QGC timestamp
+  --surftrak            experimental: surftrak-specific analysis, see code
+~~~
+
+### BIN_merge.py
+
+Similar to tlog_merge.py, BIN_merge.py opens Dataflash (.BIN) files and merges the messages into a single, wide csv
+file. The merge operation does a forward-fill (data is copied from the previous row), so the resulting merged csv file
+may be substantially larger than the sum of the per-type csv files.
+
+Parameters:
+~~~
+$ BIN_merge.py -h
+usage: BIN_merge.py [-h] [-r] [-v] [--explode] [--no-merge] [--types TYPES] [--max-msgs MAX_MSGS] [--max-rows MAX_ROWS] path [path ...]
+
+Read ArduSub dataflash messages from a BIN file and merge the messages into a single, wide csv file. The merge
+operation does a forward-fill (data is copied from the previous row), so the resulting merged csv file may be
+substantially larger than the sum of the per-type csv files.
+
+BIN_merge.py can also write multiple csv files, one per type, using the --explode option.
+
+You can examine the contents of a single table using the --explode, --no-merge and --types options:
+BIN_merge.py --explode --no-merge --types GPS 000011.BIN
+
+positional arguments:
+  path
+
+options:
+  -h, --help           show this help message and exit
+  -r, --recurse        enter directories looking for BIN files
+  -v, --verbose        print a lot more information
+  --explode            write a csv file for each message type
+  --no-merge           do not merge tables, useful if you also select --explode
+  --types TYPES        comma separated list of message types, the default is a set of useful types
+  --max-msgs MAX_MSGS  stop after processing this number of messages (default 500K)
+  --max-rows MAX_ROWS  stop if the merged table exceeds this number of rows (default 500K)
+~~~
+
+## General tools
 
 ### show_types.py
 
@@ -159,160 +346,31 @@ options:
   -r, --recurse  enter directories looking for tlog and BIN files
 ~~~
 
-## Tools that open MAVLink (.tlog) files
-
 ### tlog_info.py
+
+Read tlog files and report on a few interesting things.
 
 ~~~
 $ tlog_info.py --help
-usage: tlog_info.py [-h] [-r] path [path ...]
+usage: tlog_info.py [-h] [-r] [-k KEEP] path [path ...]
 
-Read MAVLink messages from a tlog file (telemetry log) and report on anything interesting.
+Read MAVLink messages from a tlog file (telemetry log) and report on a few interesting things.
 
-positional arguments:
-  path
-
-options:
-  -h, --help     show this help message and exit
-  -r, --recurse  enter directories looking for tlog files
-~~~
-
-### tlog_merge.py
-
-tlog_merge.py can also write multiple csv files, one per type, using the --explode option.
-
-For example, you can examine the contents of a single table using the --explode, --no-merge and --types options together:
-~~~
-tlog_merge.py --explode --no-merge --types LOCAL_POSITION_NED '2023-09-04 09-03-22.tlog'
-~~~
-
-This command will open a tlog file, read in a set of tables that I find useful, calculate the data rates and report on
-any gaps in the data, and then write a series of csv files. Each csv file will correspond to a table type, a sysid and a
-compid, so you may see multiple csv files per table type:
-~~~
-$ tlog_merge.py --explode --no-merge --rate --split-source '2023-09-04 09-03-22.tlog'
-Processing 1 files
-Looking for these types: ['AHRS', 'AHRS2', 'ATTITUDE', 'BATTERY_STATUS', 'EKF_STATUS_REPORT', 'GLOBAL_POSITION_INT', 'GLOBAL_VISION_POSITION_ESTIMATE',
-'GPS2_RAW', 'GPS_GLOBAL_ORIGIN', 'GPS_RAW_INT', 'HEARTBEAT', 'LOCAL_POSITION_NED', 'POWER_STATUS', 'RANGEFINDER', 'RAW_IMU', 'RC_CHANNELS', 'SCALED_IMU2',
-'SCALED_PRESSURE', 'SCALED_PRESSURE2', 'SERVO_OUTPUT_RAW', 'SET_GPS_GLOBAL_ORIGIN', 'SYS_STATUS', 'SYSTEM_TIME', 'TIMESYNC', 'VFR_HUD', 'VISION_POSITION_DELTA']
-===================
-Reading 2023-09-04 09-03-22.tlog
-WIRE_PROTOCOL_VERSION 2.0
-Parsing messages
-...
-$ ls *.csv
-'2023-09-04 09-03-22_AHRS_1_1.csv'                 '2023-09-04 09-03-22_HEARTBEAT_1_1.csv'           '2023-09-04 09-03-22_SERVO_OUTPUT_RAW_1_1.csv'
-'2023-09-04 09-03-22_AHRS2_1_1.csv'                '2023-09-04 09-03-22_HEARTBEAT_255_190.csv'       '2023-09-04 09-03-22_SET_GPS_GLOBAL_ORIGIN_1_197.csv'
-'2023-09-04 09-03-22_ATTITUDE_1_1.csv'             '2023-09-04 09-03-22_LOCAL_POSITION_NED_1_1.csv'  '2023-09-04 09-03-22_SYS_STATUS_1_1.csv'
-'2023-09-04 09-03-22_BATTERY_STATUS_1_1.csv'       '2023-09-04 09-03-22_POWER_STATUS_1_1.csv'        '2023-09-04 09-03-22_SYSTEM_TIME_1_1.csv'
-'2023-09-04 09-03-22_EKF_STATUS_REPORT_1_1.csv'    '2023-09-04 09-03-22_RANGEFINDER_1_1.csv'         '2023-09-04 09-03-22_SYSTEM_TIME_255_190.csv'
-'2023-09-04 09-03-22_GLOBAL_POSITION_INT_1_1.csv'  '2023-09-04 09-03-22_RAW_IMU_1_1.csv'             '2023-09-04 09-03-22_TIMESYNC_1_1.csv'
-'2023-09-04 09-03-22_GPS_GLOBAL_ORIGIN_1_1.csv'    '2023-09-04 09-03-22_RC_CHANNELS_1_1.csv'         '2023-09-04 09-03-22_VFR_HUD_1_1.csv'
-'2023-09-04 09-03-22_HEARTBEAT_1_194.csv'          '2023-09-04 09-03-22_SCALED_IMU2_1_1.csv'         '2023-09-04 09-03-22_VISION_POSITION_DELTA_1_197.csv'
-'2023-09-04 09-03-22_HEARTBEAT_1_197.csv'          '2023-09-04 09-03-22_SCALED_PRESSURE_1_1.csv'
-~~~
-
-Parameters:
-~~~
-$ tlog_merge.py --help
-usage: tlog_merge.py [-h] [-r] [-v] [--explode] [--no-merge] [--types TYPES] [--max-msgs MAX_MSGS] [--max-rows MAX_ROWS] [--rate]
-                     [--sysid SYSID] [--compid COMPID] [--system-time] [--surftrak] [--split-source]
-                     path [path ...]
-
-Read MAVLink messages from a tlog file (telemetry log) and merge the messages into a single, wide csv file. The merge
-operation does a forward-fill (data is copied from the previous row), so the resulting merged csv file may be
-substantially larger than the sum of the per-type csv files.
-
-HEARTBEAT.mode is a combination of HEARTBEAT.base_mode and HEARTBEAT.custom_mode with these values:
-    -10             disarmed
-      0             armed, stabilize
-      1             armed, acro
-      2             armed, alt_hold
-      3             armed, auto
-      4             armed, guided
-      7             armed, circle
-      9             armed, surface
-     16             armed, pos_hold
-     19             armed, manual
-     20             armed, motor detect
-     21             armed, rng_hold
+Supports segments.
 
 positional arguments:
   path
 
 options:
-  -h, --help           show this help message and exit
-  -r, --recurse        enter directories looking for tlog files
-  -v, --verbose        print a lot more information
-  --explode            write a csv file for each message type
-  --no-merge           do not merge tables, useful if you also select --explode
-  --types TYPES        comma separated list of message types, the default is a set of useful types
-  --max-msgs MAX_MSGS  stop after processing this number of messages (default 500K)
-  --max-rows MAX_ROWS  stop if the merged table exceeds this number of rows (default 500K)
-  --rate               calculate rate for each message type
-  --sysid SYSID        select source system id (default is all source systems)
-  --compid COMPID      select source component id (default is all source components)
-  --system-time        Experimental: use ArduSub SYSTEM_TIME.time_boot_ms rather than QGC timestamp
-  --surftrak           Experimental: surftrak-specific analysis, see code
-  --split-source       Experimental: split messages by source (sysid, compid)
+  -h, --help            show this help message and exit
+  -r, --recurse         enter directories looking for files
+  -k KEEP, --keep KEEP  process just these segments; a segment is 2 timestamps and a name, e.g., start,end,s1
 ~~~
 
-### tlog_param.py
-
-~~~
-$ tlog_param.py --help
-usage: tlog_param.py [-h] [-r] path [path ...]
-
-Read MAVLink PARAM_VALUE messages from a tlog file (telemetry log), reconstruct the parameter state of a
-vehicle, and write the parameters to a QGC-compatible params file.
-
-positional arguments:
-  path
-
-options:
-  -h, --help     show this help message and exit
-  -r, --recurse  enter directories looking for tlog files
-~~~
-
-### tlog_scan.py
-
-~~~
-$ tlog_scan.py --help
-usage: tlog_scan.py [-h] [-r] [--types TYPES] path [path ...]
-
-Read MAVLink messages from a tlog file (telemetry log) and report on any pymavlink crashes.
-
-positional arguments:
-  path
-
-options:
-  -h, --help     show this help message and exit
-  -r, --recurse  enter directories looking for tlog files
-  --types TYPES  comma separated list of message types
-~~~
-
-### tlog_bad_data.py
-
-~~~
-$ tlog_bad_data.py -h
-usage: tlog_bad_data.py [-h] [-r] [-v] path [path ...]
-
-Read MAVLink messages from a tlog file (telemetry log) and report on BAD_DATA messages.
-
-positional arguments:
-  path
-
-options:
-  -h, --help     show this help message and exit
-  -r, --recurse  enter directories looking for tlog files
-  -v, --verbose  print a lot more information
-~~~
-
-## Tools that open Dataflash (.BIN) files 
 
 ### BIN_info.py
 
-BIN_info opens Dataflash (.BIN) files and reports on anything interesting.
+BIN_info opens Dataflash (.BIN) files and reports on a few interesting things.
 
 Sample output:
 ~~~
@@ -364,7 +422,7 @@ Parameters:
 $ BIN_info.py -h
 usage: BIN_info.py [-h] [-r] path [path ...]
 
-Read dataflash messages from a BIN file and report on anything interesting.
+Read dataflash messages from a BIN file and report on a few interesting things.
 
 positional arguments:
   path
@@ -374,45 +432,23 @@ options:
   -r, --recurse  enter directories looking for BIN files
 ~~~
 
-### BIN_merge.py
+### tlog_param.py
 
-BIN_merge opens Dataflash (.BIN) files and merges the messages into a single, wide csv file. The merge
-operation does a forward-fill (data is copied from the previous row), so the resulting merged csv file may be
-substantially larger than the sum of the per-type csv files.
+Generate QGC-compatible parameter files from tlog files.
 
-BIN_merge.py can also write multiple csv files, one per type, using the --explode option.
-
-For example, you can examine the contents of a single table using the --explode, --no-merge and --types options together:
 ~~~
-BIN_merge.py --explode --no-merge --types GPS 000011.BIN
-~~~
+$ tlog_param.py --help
+usage: tlog_param.py [-h] [-r] path [path ...]
 
-Parameters:
-~~~
-$ BIN_merge.py -h
-usage: BIN_merge.py [-h] [-r] [-v] [--explode] [--no-merge] [--types TYPES] [--max-msgs MAX_MSGS] [--max-rows MAX_ROWS] path [path ...]
-
-Read ArduSub dataflash messages from a BIN file and merge the messages into a single, wide csv file. The merge
-operation does a forward-fill (data is copied from the previous row), so the resulting merged csv file may be
-substantially larger than the sum of the per-type csv files.
-
-BIN_merge.py can also write multiple csv files, one per type, using the --explode option.
-
-You can examine the contents of a single table using the --explode, --no-merge and --types options:
-BIN_merge.py --explode --no-merge --types GPS 000011.BIN
+Read MAVLink PARAM_VALUE messages from a tlog file (telemetry log), reconstruct the parameter state of a
+vehicle, and write the parameters to a QGC-compatible params file.
 
 positional arguments:
   path
 
 options:
-  -h, --help           show this help message and exit
-  -r, --recurse        enter directories looking for BIN files
-  -v, --verbose        print a lot more information
-  --explode            write a csv file for each message type
-  --no-merge           do not merge tables, useful if you also select --explode
-  --types TYPES        comma separated list of message types, the default is a set of useful types
-  --max-msgs MAX_MSGS  stop after processing this number of messages (default 500K)
-  --max-rows MAX_ROWS  stop if the merged table exceeds this number of rows (default 500K)
+  -h, --help     show this help message and exit
+  -r, --recurse  enter directories looking for tlog files
 ~~~
 
 ## Tools for working with Waterlinked UGPS systems
@@ -461,6 +497,14 @@ options:
   --heading HEADING  WL UGPS antenna heading
   --zoom ZOOM        initial zoom, default is 18
 ~~~
+
+## MAVLink debugging tools
+
+These might be useful when debugging tlog files or pymavlink.
+
+* tlog_scan.py: report on any pymavlink crashes
+* tlog_bad_data.py: report on BAD_DATA messages
+* tlog_backwards.py: read the timestamps and note when time appears to go backwards
 
 ## Timestamp notes
 

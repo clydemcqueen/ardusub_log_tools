@@ -7,7 +7,8 @@ For csv files:
     Latitude column header should be 'gps.lat' or 'lat'
     Longitude column header should be 'gps.lon' or 'lon'
 
-For txt files, look for NMEA 0183 GGA messages of the form $[A-Z]+.
+For txt files:
+    Look for NMEA 0183 GGA messages of the form $[A-Z]+ at the end of a line of text
 """
 
 import argparse
@@ -164,8 +165,6 @@ def add_map_maker_args(parser: argparse.ArgumentParser):
                         help='center the map at this longitude, default is mean of all points')
     parser.add_argument('--zoom', default=18, type=int,
                         help='initial zoom, default is 18')
-    parser.add_argument('--hdop-max', default=100.0, type=float,
-                        help='reject GPS_INPUT messages where hdop exceeds this limit, default 100.0 (no limit)')
 
 
 def float_or_none(x):
@@ -181,8 +180,9 @@ def float_or_none(x):
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=__doc__)
     parser.add_argument('-r', '--recurse', action='store_true',
-                        help='enter directories looking for tlog, csv and txt files')
+                        help='enter directories looking for csv and txt files')
     parser.add_argument('path', nargs='+')
+    add_map_maker_args(parser)
     args = parser.parse_args()
 
     files = util.expand_path(args.path, args.recurse, ['.csv', '.txt'])

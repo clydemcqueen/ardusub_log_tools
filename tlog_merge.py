@@ -18,6 +18,8 @@ HEARTBEAT.mode is a combination of HEARTBEAT.base_mode and HEARTBEAT.custom_mode
      19             armed, manual
      20             armed, motor detect
      21             armed, rng_hold
+
+Supports segments.
 """
 
 import os
@@ -214,12 +216,12 @@ def main():
                         help='select source system id (default is all source systems)')
     parser.add_argument('--compid', type=int, default=0,
                         help='select source component id (default is all source components)')
-    parser.add_argument('--system-time', action='store_true',
-                        help='Experimental: use ArduSub SYSTEM_TIME.time_boot_ms rather than QGC timestamp')
-    parser.add_argument('--surftrak', action='store_true',
-                        help='Experimental: surftrak-specific analysis, see code')
     parser.add_argument('--split-source', action='store_true',
-                        help='Experimental: split messages by source (sysid, compid)')
+                        help='split messages by source (sysid, compid)')
+    parser.add_argument('--system-time', action='store_true',
+                        help='experimental: use ArduSub SYSTEM_TIME.time_boot_ms rather than QGC timestamp')
+    parser.add_argument('--surftrak', action='store_true',
+                        help='experimental: surftrak-specific analysis, see code')
     args = parser.parse_args()
 
     if args.types:

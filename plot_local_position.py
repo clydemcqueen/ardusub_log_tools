@@ -2,6 +2,8 @@
 
 """
 Look for LOCATION_POSITION_NED messages in tlog files, plot x and y, and write PDF files.
+
+Supports segments.
 """
 
 import argparse

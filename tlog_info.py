@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
 """
-Read MAVLink messages from a tlog file (telemetry log) and report on anything interesting.
+Read MAVLink messages from a tlog file (telemetry log) and report on a few interesting things.
+
+Supports segments.
 """
 
-from argparse import ArgumentParser
+import argparse
 
 import pymavlink.dialects.v20.ardupilotmega as apm
 
@@ -230,7 +232,7 @@ class TelemetryLogInfo:
 
 
 def main():
-    parser = ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=__doc__)
     add_segment_args(parser)
     args = parser.parse_args()
 
