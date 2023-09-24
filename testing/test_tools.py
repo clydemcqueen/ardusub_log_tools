@@ -11,33 +11,47 @@ import pytest
 
 import BIN_info
 import BIN_merge
-import plot_local_position
 import map_maker
+import plot_local_position
 import show_types
 import tlog_bad_data
 import tlog_info
+import tlog_map_maker
 import tlog_merge
 import tlog_param
 import tlog_scan
 import util
+from file_reader import FileReader
+from segment_reader import Segment, SegmentReader, parse_segment_args
 
 
 class TestTools:
 
     def test_dataflash_merge(self):
-        tool = BIN_merge.DataflashLogReader('testing/small.BIN', ['VIBE'], 10000, 10000, False)
+        tool = BIN_merge.DataflashLogReader('testing/small.BIN', ['VIBE'], 10000, 10000, False, False)
         tool.read()
         tool.write_merged_csv_file()
 
     def test_tlog_map_maker(self):
-        map_maker.build_map_from_tlog('testing/small.tlog', 'testing/small.html', False, [None, None], 18,
-                                      ['GLOBAL_POSITION_INT'], 10.0)
+        tlog_map_maker.build_map_from_tlog(FileReader('testing/small.tlog', ['GLOBAL_POSITION_INT']),
+                                           'testing/small.html', False, [None, None], 18, 10.0)
+
+    def test_tlog_map_maker_segment(self):
+        segment_reader = SegmentReader(Segment(1683220544, 1683220546, 'segment99'),
+                                       FileReader('testing/small.tlog', ['GLOBAL_POSITION_INT']), None)
+        tlog_map_maker.build_map_from_tlog(segment_reader, 'testing/segment99.html', False, [None, None], 18, 10.0)
 
     def test_nmea_map_maker(self):
         map_maker.build_map_from_txt('testing/nmea_log.txt', 'testing/nmea_log.html', False, [None, None], 18)
 
     def test_plot_local_position(self):
-        plot_local_position.plot_local_position('testing/small.tlog', 'testing/small.pdf')
+        plot_local_position.plot_local_position(FileReader('testing/small.tlog', plot_local_position.MSG_TYPES),
+                                                'testing/small.pdf')
+
+    def test_plot_local_position_segment(self):
+        segment_reader = SegmentReader(Segment(1683220544, 1683220546, 'segment1'),
+                                       FileReader('testing/small.tlog', plot_local_position.MSG_TYPES), None)
+        plot_local_position.plot_local_position(segment_reader, 'testing/segment1.pdf')
 
     def test_tlog_types(self):
         tool = show_types.TypeFinder('testing/small.tlog')
@@ -52,7 +66,7 @@ class TestTools:
         tool.read()
 
     def test_tlog_info(self):
-        tool = tlog_info.TelemetryLogInfo('testing/small.tlog')
+        tool = tlog_info.TelemetryLogInfo(FileReader('testing/small.tlog', tlog_info.MSG_TYPES))
         tool.read_and_report()
 
     def test_dataflash_info(self):
@@ -60,11 +74,18 @@ class TestTools:
         tool.read_and_report()
 
     def test_tlog_merge(self):
-        tool = tlog_merge.TelemetryLogReader('testing/small.tlog', ['GLOBAL_POSITION_INT'],
+        tool = tlog_merge.TelemetryLogReader(FileReader('testing/small.tlog', ['GLOBAL_POSITION_INT']),
                                              10000, 10000, False, 0, 0, False, False, True)
         tool.read_tlog()
         tool.add_rate_field()
         tool.write_merged_csv_file()
+
+    def test_tlog_merge_segment(self):
+        segment_reader = SegmentReader(Segment(1683220544, 1683220546, 'segment1'),
+                                       FileReader('testing/small.tlog', ['GLOBAL_POSITION_INT']), None)
+        tool = tlog_merge.TelemetryLogReader(segment_reader, 10000, 10000, False, 0, 0, False, False, True)
+        tool.read_tlog()
+        assert len(tool.tables['GLOBAL_POSITION_INT_1_1']) == 6
 
     def test_tlog_param(self):
         tool = tlog_param.TelemetryLogParam()
@@ -142,3 +163,10 @@ class TestTools:
 
         for rate, message in zip(rates, messages):
             assert pytest.approx(rate) == message['rate']
+
+    def test_parse_segment_args(self):
+        segments = parse_segment_args(['1683220546.0,1683220547.0,foo', '1683220546,1683220547', 'bar', 'fee,fie'])
+        assert len(segments) == 2
+        s1, s2 = segments
+        assert s1.start == 1683220546.0 and s1.end == 1683220547.0 and s1.name == 'foo'
+        assert s2.start == 1683220546.0 and s2.end == 1683220547.0 and s2.name == '1683220546_1683220547'

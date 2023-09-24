@@ -161,9 +161,11 @@ class DataflashLogReader(LogMerger):
                  msg_types: list[str],
                  max_msgs: int,
                  max_rows: int,
-                 verbose: bool):
+                 verbose: bool,
+                 raw: bool):
         super().__init__(infile, max_msgs, max_rows, verbose)
         self.msg_types = msg_types
+        self.raw = raw
 
     def read(self):
         self.tables = {}
@@ -178,6 +180,10 @@ class DataflashLogReader(LogMerger):
         while (msg := mlog.recv_match(blocking=False, type=self.msg_types)) is not None:
             msg_type = msg.get_type()
             raw_data = msg.to_dict()
+
+            # Hack: drop readings from the barometer inside the electronics tube
+            if not self.raw and msg_type == 'BARO' and raw_data['I'] == 0:
+                continue
 
             # This will pull from TimeUS, which is present in all (most?) records
             timestamp = getattr(msg, '_timestamp', 0.0)
@@ -216,6 +222,8 @@ def main():
                         help='stop after processing this number of messages (default 500K)')
     parser.add_argument('--max-rows', type=int, default=500000,
                         help='stop if the merged table exceeds this number of rows (default 500K)')
+    parser.add_argument('--raw', action='store_true',
+                        help='show all records; default is to drop BARO records where id==0')
     parser.add_argument('path', nargs='+')
     args = parser.parse_args()
     files = util.expand_path(args.path, args.recurse, '.BIN')
@@ -228,7 +236,7 @@ def main():
 
     for file in files:
         print('===================')
-        reader = DataflashLogReader(file, msg_types, args.max_msgs, args.max_rows, args.verbose)
+        reader = DataflashLogReader(file, msg_types, args.max_msgs, args.max_rows, args.verbose, args.raw)
         reader.read()
         if args.explode:
             reader.write_msg_csv_files()

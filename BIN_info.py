@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Read dataflash messages from a BIN file and report on anything interesting.
+Read dataflash messages from a BIN file and report on a few interesting things.
 """
 
 from argparse import ArgumentParser

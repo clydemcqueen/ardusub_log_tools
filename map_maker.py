@@ -1,18 +1,14 @@
 #!/usr/bin/env python3
 
 """
-Read csv, tlog or txt files and build Leaflet (interactive HTML) maps from GPS coordinates.
+Read csv and txt files and build Leaflet (interactive HTML) maps from GPS coordinates.
 
 For csv files:
     Latitude column header should be 'gps.lat' or 'lat'
     Longitude column header should be 'gps.lon' or 'lon'
 
-For tlog files, these messages are read:
-    GPS_RAW_INT -- sensor data sent from ArduSub to QGC, will appear as a blue line, should be close to the csv file
-    GLOBAL_POSITION_INT -- the filtered position estimate, green line
-    GPS_INPUT -- sensor data sent from ugps-extension to ArduSub, not filtered, red line
-
-For txt files, look for NMEA 0183 GGA messages of the form r'\$[A-Z]+', e.g., $GPGGA.
+For txt files:
+    Look for NMEA 0183 GGA messages of the form $[A-Z]+ at the end of a line of text
 """
 
 import argparse
@@ -24,9 +20,7 @@ from statistics import fmean
 import folium
 import pandas as pd
 import pynmea2
-from pymavlink import mavutil
 
-import table_types
 import util
 
 
@@ -118,48 +112,6 @@ def build_map_from_csv(infile, outfile, verbose, center, zoom):
         print('GPS information not found')
 
 
-def build_map_from_tlog(infile, outfile, verbose, center, zoom, msg_types, hdop_max):
-    # Create tables
-    tables: dict[str, table_types.Table] = {}
-    for msg_type in msg_types:
-        tables[msg_type] = table_types.Table.create_table(msg_type, verbose=verbose, hdop_max=hdop_max)
-
-    # Read tlog file, don't crash
-    mlog = mavutil.mavlink_connection(infile, robust_parsing=False, dialect='ardupilotmega')
-    try:
-        while True:
-            msg = mlog.recv_match(blocking=False, type=msg_types)
-            if msg is None:
-                break
-
-            msg_type = msg.get_type()
-            raw_data = msg.to_dict()
-            timestamp = getattr(msg, '_timestamp', 0.0)
-
-            # Clean up the data: add the timestamp, remove mavpackettype, and rename the keys
-            clean_data = {'timestamp': timestamp}
-            for key in raw_data.keys():
-                if key != 'mavpackettype':
-                    clean_data[f'{msg_type}.{key}'] = raw_data[key]
-
-            tables[msg_type].append(clean_data)
-
-    except Exception as e:
-        print(f'CRASH WITH ERROR "{e}", PARTIAL RESULTS')
-
-    mm = MapMaker(verbose, center, zoom)
-
-    # Build the map in a specific order
-    if 'GPS_RAW_INT' in msg_types and len(tables['GPS_RAW_INT']):
-        mm.add_table(tables['GPS_RAW_INT'], 'GPS_RAW_INT.lat_deg', 'GPS_RAW_INT.lon_deg', 'blue')
-    if 'GLOBAL_POSITION_INT' in msg_types and len(tables['GLOBAL_POSITION_INT']):
-        mm.add_table(tables['GLOBAL_POSITION_INT'], 'GLOBAL_POSITION_INT.lat_deg', 'GLOBAL_POSITION_INT.lon_deg', 'green')
-    if 'GPS_INPUT' in msg_types and len(tables['GPS_INPUT']):
-        mm.add_table(tables['GPS_INPUT'], 'GPS_INPUT.lat_deg', 'GPS_INPUT.lon_deg', 'red')
-
-    mm.write(outfile)
-
-
 def get_timestamp(line: str):
     match = re.search(r'^[^|]+', line)
     return datetime.strptime(match[0], '%Y-%m-%d %H:%M:%S.%f ')
@@ -204,6 +156,17 @@ def build_map_from_txt(infile, outfile, verbose, center, zoom):
         print("No GGA messages found")
 
 
+def add_map_maker_args(parser: argparse.ArgumentParser):
+    parser.add_argument('-v', '--verbose', action='store_true',
+                        help='print a lot more information')
+    parser.add_argument('--lat', default=None, type=float_or_none,
+                        help='center the map at this latitude, default is mean of all points')
+    parser.add_argument('--lon', default=None, type=float_or_none,
+                        help='center the map at this longitude, default is mean of all points')
+    parser.add_argument('--zoom', default=18, type=int,
+                        help='initial zoom, default is 18')
+
+
 def float_or_none(x):
     if x is None:
         return None
@@ -217,29 +180,13 @@ def float_or_none(x):
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=__doc__)
     parser.add_argument('-r', '--recurse', action='store_true',
-                        help='enter directories looking for tlog, csv and txt files')
-    parser.add_argument('-v', '--verbose', action='store_true',
-                        help='print a lot more information')
-    parser.add_argument('--lat', default=None, type=float_or_none,
-                        help='center the map at this latitude, default is mean of all points')
-    parser.add_argument('--lon', default=None, type=float_or_none,
-                        help='center the map at this longitude, default is mean of all points')
-    parser.add_argument('--zoom', default=18, type=int,
-                        help='initial zoom, default is 18')
-    parser.add_argument('--types', default=None,
-                        help='comma separated list of message types, the default is GPS_RAW_INT and GPS_GLOBAL_INT')
-    parser.add_argument('--hdop-max', default=100.0, type=float,
-                        help='reject GPS_INPUT messages where hdop exceeds this limit, default 100.0 (no limit)')
+                        help='enter directories looking for csv and txt files')
     parser.add_argument('path', nargs='+')
+    add_map_maker_args(parser)
     args = parser.parse_args()
-    files = util.expand_path(args.path, args.recurse, ['.csv', '.tlog', '.txt'])
-    print(f'Processing {len(files)} files')
 
-    if args.types:
-        msg_types = args.types.split(',')
-    else:
-        # The default doesn't include GPS_INPUT because of this bug: https://github.com/ArduPilot/pymavlink/issues/807
-        msg_types = ['GLOBAL_POSITION_INT', 'GPS_RAW_INT']
+    files = util.expand_path(args.path, args.recurse, ['.csv', '.txt'])
+    print(f'Processing {len(files)} files')
 
     for infile in files:
         print('-------------------')
@@ -250,8 +197,6 @@ def main():
 
         if ext == '.csv':
             build_map_from_csv(infile, outfile, args.verbose, [args.lat, args.lon], args.zoom)
-        elif ext == '.tlog':
-            build_map_from_tlog(infile, outfile, args.verbose, [args.lat, args.lon], args.zoom, msg_types, args.hdop_max)
         else:
             build_map_from_txt(infile, outfile, args.verbose, [args.lat, args.lon], args.zoom)
 

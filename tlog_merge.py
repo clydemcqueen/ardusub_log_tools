@@ -18,6 +18,8 @@ HEARTBEAT.mode is a combination of HEARTBEAT.base_mode and HEARTBEAT.custom_mode
      19             armed, manual
      20             armed, motor detect
      21             armed, rng_hold
+
+Supports segments.
 """
 
 import os
@@ -28,11 +30,9 @@ os.environ['MAVLINK20'] = '1'
 
 import argparse
 
-from pymavlink import mavutil
-
 import table_types
-import util
 from log_merger import LogMerger
+from segment_reader import add_segment_args, choose_reader_list
 
 # Tables that look generally interesting
 PERHAPS_USEFUL_MSG_TYPES = [
@@ -97,8 +97,7 @@ SURFTRAK_MSG_TYPES = [
 
 class TelemetryLogReader(LogMerger):
     def __init__(self,
-                 infile: str,
-                 msg_types: list[str],
+                 reader,
                  max_msgs: int,
                  max_rows: int,
                  verbose: bool,
@@ -107,8 +106,8 @@ class TelemetryLogReader(LogMerger):
                  surftrak: bool,
                  system_time: bool,
                  split_source: bool):
-        super().__init__(infile, max_msgs, max_rows, verbose)
-        self.msg_types = msg_types
+        super().__init__(reader.name, max_msgs, max_rows, verbose)
+        self.reader = reader
         self.sysid = sysid
         self.compid = compid
         self.surftrak = surftrak
@@ -119,13 +118,8 @@ class TelemetryLogReader(LogMerger):
     def read_tlog(self):
         self.tables = {}
 
-        print(f'Reading {self.infile}')
-        mlog = mavutil.mavlink_connection(self.infile, robust_parsing=True, dialect='ardupilotmega')
-        print(f'WIRE_PROTOCOL_VERSION {mlog.WIRE_PROTOCOL_VERSION}')
-
-        print('Parsing messages')
         msg_count = 0
-        while (msg := mlog.recv_match(blocking=False, type=self.msg_types)) is not None:
+        for msg in self.reader:
             sysid = msg.get_srcSystem()
             compid = msg.get_srcComponent()
 
@@ -203,8 +197,7 @@ class TelemetryLogReader(LogMerger):
 
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=__doc__)
-    parser.add_argument('-r', '--recurse', action='store_true',
-                        help='enter directories looking for tlog files')
+    add_segment_args(parser)
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='print a lot more information')
     parser.add_argument('--explode', action='store_true',
@@ -223,17 +216,13 @@ def main():
                         help='select source system id (default is all source systems)')
     parser.add_argument('--compid', type=int, default=0,
                         help='select source component id (default is all source components)')
-    parser.add_argument('--system-time', action='store_true',
-                        help='Experimental: use ArduSub SYSTEM_TIME.time_boot_ms rather than QGC timestamp')
-    parser.add_argument('--surftrak', action='store_true',
-                        help='Experimental: surftrak-specific analysis, see code')
     parser.add_argument('--split-source', action='store_true',
-                        help='Experimental: split messages by source (sysid, compid)')
-    parser.add_argument('path', nargs='+')
+                        help='split messages by source (sysid, compid)')
+    parser.add_argument('--system-time', action='store_true',
+                        help='experimental: use ArduSub SYSTEM_TIME.time_boot_ms rather than QGC timestamp')
+    parser.add_argument('--surftrak', action='store_true',
+                        help='experimental: surftrak-specific analysis, see code')
     args = parser.parse_args()
-    # print(f'Starting paths: {args.path}')
-    files = util.expand_path(args.path, args.recurse, '.tlog')
-    print(f'Processing {len(files)} files')
 
     if args.types:
         msg_types = args.types.split(',')
@@ -250,10 +239,11 @@ def main():
 
     print(f'Looking for these types: {msg_types}')
 
-    for file in files:
+    readers = choose_reader_list(args, msg_types)
+    for reader in readers:
         print('===================')
-        tlog_reader = TelemetryLogReader(file, msg_types, args.max_msgs, args.max_rows, args.verbose,
-                                         args.sysid, args.compid, args.surftrak, args.system_time, args.split_source)
+        tlog_reader = TelemetryLogReader(reader, args.max_msgs, args.max_rows, args.verbose, args.sysid,
+                                         args.compid, args.surftrak, args.system_time, args.split_source)
 
         tlog_reader.read_tlog()
 
