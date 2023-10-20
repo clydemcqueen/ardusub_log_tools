@@ -5,7 +5,7 @@ Read MAVLink PARAM_VALUE messages from a tlog file (telemetry log), reconstruct 
 write the parameters to a QGC-compatible params file.
 """
 
-import os
+import time
 from argparse import ArgumentParser
 
 import numpy as np
@@ -69,14 +69,19 @@ def firmware_version_type_str(firmware_version_type: int) -> str:
     return ''
 
 
+def is_int(param_type: int) -> bool:
+    return mav_common.MAV_PARAM_TYPE_UINT8 <= param_type <= mav_common.MAV_PARAM_TYPE_INT64
+
+
 class Param:
-    def __init__(self, param_id: str, param_value: float, value_type: int):
-        self.id = param_id
-        self.value = param_value
-        self.type = value_type
+    def __init__(self, msg: mav_common.MAVLink_param_value_message):
+        self.id = msg.param_id
+        self.value = msg.param_value
+        self.type = msg.param_type
+        self.when = time.asctime(time.localtime(getattr(msg, '_timestamp', 0.0)))
 
     def is_int(self) -> bool:
-        return mav_common.MAV_PARAM_TYPE_UINT8 <= self.type <= mav_common.MAV_PARAM_TYPE_INT64
+        return is_int(self.type)
 
     def value_int(self) -> int:
         if self.is_int():
@@ -113,28 +118,53 @@ class Param:
         return None
 
 
+def print_change(old_param: Param | None, new_param: Param | None):
+    """
+    Note the change
+    """
+    param_id = new_param.id if new_param else old_param.id
+    if param_id in NOISY_PARAMS:
+        return
+
+    param_type = new_param.type if new_param else old_param.type
+    param_when = new_param.when if new_param else 'REMOVED'
+
+    if is_int(param_type):
+        old_param_str = f'{old_param.value_int()}' if old_param else 'ADDED'
+        new_param_str = f'{new_param.value_int()}' if new_param else ''
+    else:
+        old_param_str = f'{old_param.value :.6f}' if old_param else 'ADDED'
+        new_param_str = f'{new_param.value :.6f}' if new_param else ''
+
+    print(f'{param_when} {param_id :18s} {old_param_str} -> {new_param_str}')
+
+
 class TelemetryLogParam:
-    def __init__(self):
+    def __init__(self, infile: str, print_intra_file_changes):
+        self.infile = infile
         self.params: dict[str, Param] = {}
         self.autopilot_version: str = ''
         self.git_hash: str = ''
+        mlog = mavutil.mavlink_connection(infile, robust_parsing=False, dialect='ardupilotmega')
 
-    def handle_param(self, msg: mav_common.MAVLink_param_value_message):
-        new_param = Param(msg.param_id, msg.param_value, msg.param_type)
+        while (msg := mlog.recv_match(blocking=False, type=['PARAM_VALUE', 'AUTOPILOT_VERSION'])) is not None:
+            if msg.get_type() == 'PARAM_VALUE':
+                self.handle_param(msg, print_intra_file_changes)
+            else:
+                self.handle_version(msg)
+
+    def handle_param(self, msg: mav_common.MAVLink_param_value_message, print_intra_file_changes: bool):
+        new_param = Param(msg)
 
         if new_param.id in self.params:
             old_param = self.params[new_param.id]
 
-            if new_param.type != old_param.type:
-                print(f'ERROR: {old_param.id} changed type from {old_param.type} to {new_param.type}')
+            if print_intra_file_changes and new_param.type != old_param.type:
+                print(f'ERROR: {old_param.id} type changed from {old_param.type} to {new_param.type}')
 
             if new_param.value != old_param.value:
-                # Note the change
-                if new_param.id not in NOISY_PARAMS:
-                    if old_param.is_int():
-                        print(f'{new_param.id} was {old_param.value_int()}, changed to {new_param.value_int()}')
-                    else:
-                        print(f'{new_param.id} was {old_param.value}, changed to {new_param.value}')
+                if print_intra_file_changes:
+                    print_change(old_param, new_param)
 
                 # Update the value (not the type)
                 old_param.value = new_param.value
@@ -152,16 +182,7 @@ class TelemetryLogParam:
         self.autopilot_version = f'{major}.{minor}.{path} {firmware_version_type_str(version_type)}'
         self.git_hash = bytes(msg.flight_custom_version).decode('utf-8')
 
-    def read(self, infile: str):
-        mlog = mavutil.mavlink_connection(infile, robust_parsing=False, dialect='ardupilotmega')
-
-        while (msg := mlog.recv_match(blocking=False, type=['PARAM_VALUE', 'AUTOPILOT_VERSION'])) is not None:
-            if msg.get_type() == 'PARAM_VALUE':
-                self.handle_param(msg)
-            else:
-                self.handle_version(msg)
-
-    def write(self, outfile: str):
+    def write_params_file(self, outfile: str):
         """
         Write a QGC-compatible params file
 
@@ -193,24 +214,54 @@ class TelemetryLogParam:
         f.close()
 
 
+def print_changes(previous_file: TelemetryLogParam, current_file: TelemetryLogParam):
+    """
+    Compare to a previous tlog file
+    """
+    if not len(previous_file.params) or not len(current_file.params):
+        print('Nothing to compare')
+        return
+
+    # Print UNSET -> param and param -> param
+    for _, param in sorted(current_file.params.items()):
+        if param.id not in previous_file.params:
+            print_change(None, param)
+        elif param.value != previous_file.params[param.id].value:
+            print_change(previous_file.params[param.id], param)
+
+    # Print param -> UNSET
+    for _, param in sorted(previous_file.params.items()):
+        if param.id not in current_file.params:
+            print_change(param, None)
+
+
 def main():
     parser = ArgumentParser(description=__doc__)
-    parser.add_argument('-r', '--recurse', help='enter directories looking for tlog files', action='store_true')
+    parser.add_argument('-r', '--recurse',
+                        help='enter directories looking for tlog files',
+                        action='store_true')
+    parser.add_argument('-c', '--changes',
+                        help='only show changes across files, do not write *.params files',
+                        action='store_true')
     parser.add_argument('path', nargs='+')
     args = parser.parse_args()
     files = util.expand_path(args.path, args.recurse, '.tlog')
     print(f'Processing {len(files)} files')
 
+    previous_file = None
     for infile in files:
         print('-------------------')
-        print(infile)
-        dirname, basename = os.path.split(infile)
-        root, ext = os.path.splitext(basename)
-        outfile = os.path.join(dirname, root + '.params')
+        print(f'Reading {infile}')
 
-        tlog_param = TelemetryLogParam()
-        tlog_param.read(infile)
-        tlog_param.write(outfile)
+        # If --changes is True, then print changes between files, but not changes w/in files
+        current_file = TelemetryLogParam(infile, not args.changes)
+
+        if args.changes:
+            if previous_file is not None:
+                print_changes(previous_file, current_file)
+            previous_file = current_file
+        else:
+            current_file.write_params_file(util.get_outfile_name(infile, ext='.params'))
 
 
 if __name__ == '__main__':

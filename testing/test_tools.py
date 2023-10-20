@@ -88,9 +88,8 @@ class TestTools:
         assert len(tool.tables['GLOBAL_POSITION_INT_1_1']) == 6
 
     def test_tlog_param(self):
-        tool = tlog_param.TelemetryLogParam()
-        tool.read('testing/small.tlog')
-        tool.write('testing/small.params')
+        tool = tlog_param.TelemetryLogParam('testing/small.tlog', True)
+        tool.write_params_file('testing/small.params')
 
     def test_tlog_scan(self):
         tool = tlog_scan.Scanner('testing/small.tlog', ['GLOBAL_POSITION_INT'])
