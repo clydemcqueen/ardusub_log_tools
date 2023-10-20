@@ -241,7 +241,6 @@ def main():
 
     readers = choose_reader_list(args, msg_types)
     for reader in readers:
-        print('===================')
         tlog_reader = TelemetryLogReader(reader, args.max_msgs, args.max_rows, args.verbose, args.sysid,
                                          args.compid, args.surftrak, args.system_time, args.split_source)
 
