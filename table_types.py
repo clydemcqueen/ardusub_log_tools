@@ -135,9 +135,10 @@ class GlobalPositionIntTable(Table):
         super().__init__(table_name)
 
     def append(self, row: dict):
-        # Convert degE7 to float
+        # Convert to degrees for convenience
         row[f'{self._table_name}.lat_deg'] = row[f'{self._table_name}.lat'] / 1.0e7
         row[f'{self._table_name}.lon_deg'] = row[f'{self._table_name}.lon'] / 1.0e7
+        row[f'{self._table_name}.hdg_deg'] = row[f'{self._table_name}.hdg'] / 100.0
         super().append(row)
 
 
@@ -264,9 +265,55 @@ class RCChannelsTable(Table):
         super().append(row)
 
 
+class Pose:
+    """Simple 6DoF pose"""
+
+    @staticmethod
+    def norm_angle(degrees: float) -> float:
+        """Normalize angle to [0, 360) degrees"""
+
+        while degrees >= 360:
+            degrees -= 360
+        while degrees < 0:
+            degrees += 360
+        return degrees
+
+    def __init__(self, orientation: tuple[float, float, float], position: tuple[float, float, float]):
+        self.orientation = orientation
+        self.position = position
+
+    def add_angle_delta(self, angle_delta):
+        # VISION_POSITION_DELTA.angle_delta should be radians, but there's a bug in the WL A50 DVL extension:
+        # https://github.com/bluerobotics/BlueOS-Water-Linked-DVL/issues/36
+        is_a50 = True
+        if is_a50:
+            self.orientation = (
+                Pose.norm_angle(self.orientation[0] + angle_delta[0]),
+                Pose.norm_angle(self.orientation[1] + angle_delta[1]),
+                Pose.norm_angle(self.orientation[2] + angle_delta[2])
+            )
+        else:
+            self.orientation = (
+                Pose.norm_angle(self.orientation[0] + math.degrees(angle_delta[0])),
+                Pose.norm_angle(self.orientation[1] + math.degrees(angle_delta[1])),
+                Pose.norm_angle(self.orientation[2] + math.degrees(angle_delta[2]))
+            )
+
+    def add_position_delta(self, position_delta):
+        # VISION_POSITION_DELTA.position_delta is in meters
+        self.position = (
+            self.position[0] + position_delta[0],
+            self.position[1] + position_delta[1],
+            self.position[2] + position_delta[2]
+        )
+
+
 class VisionPositionDeltaTable(Table):
     def __init__(self, table_name: str):
         super().__init__(table_name)
+
+        # Assume initial pose is flat (roll=0.0, pitch=0.0) facing north (yaw=0.0) at location (0.0, 0.0, 0.0)
+        self.pose = Pose((0.0, 0.0, 0.0), (0.0, 0.0, 0.0))
 
     def append(self, row: dict):
         # Flatten angle array
@@ -278,5 +325,18 @@ class VisionPositionDeltaTable(Table):
         row[f'{self._table_name}.x_delta'] = row[f'{self._table_name}.position_delta'][0]
         row[f'{self._table_name}.y_delta'] = row[f'{self._table_name}.position_delta'][1]
         row[f'{self._table_name}.z_delta'] = row[f'{self._table_name}.position_delta'][2]
+
+        # Accumulate deltas to build a pose
+        self.pose.add_angle_delta(row[f'{self._table_name}.angle_delta'])
+        self.pose.add_position_delta(row[f'{self._table_name}.position_delta'])
+
+        # Add pose fields
+        row[f'{self._table_name}.roll'] = self.pose.orientation[0]
+        row[f'{self._table_name}.pitch'] = self.pose.orientation[1]
+        row[f'{self._table_name}.yaw'] = self.pose.orientation[2]
+
+        row[f'{self._table_name}.x'] = self.pose.position[0]
+        row[f'{self._table_name}.y'] = self.pose.position[1]
+        row[f'{self._table_name}.z'] = self.pose.position[2]
 
         super().append(row)
