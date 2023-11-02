@@ -6,6 +6,10 @@ import pymavlink.dialects.v20.ardupilotmega as apm
 from file_reader import NamedReader, FileReader, FileReaderList, add_file_args
 
 
+class SegmentFormatException(Exception):
+    pass
+
+
 class Segment:
     """
     A segment is a collection of messages where the start < timestamp < end.
@@ -101,7 +105,7 @@ def add_segment_args(parser: argparse.ArgumentParser):
                         help='process just these segments; a segment is 2 timestamps and a name, e.g., start,end,s1')
 
 
-def parse_segment(segment_str: str) -> Segment | None:
+def parse_segment(segment_str: str) -> Segment:
     """
     Parse a --keep string and return a segment.
     """
@@ -113,24 +117,19 @@ def parse_segment(segment_str: str) -> Segment | None:
         name = None
     else:
         print(f'ERROR {segment_str} must be "start,end" or "start,end,name"')
-        return None
+        raise SegmentFormatException
 
     try:
         start = float(start_str)
     except ValueError:
         print(f'ERROR {start_str} must be a number')
-        return None
+        raise SegmentFormatException
 
     try:
         end = float(end_str)
     except ValueError:
         print(f'ERROR {end_str} must be a number')
-        return None
-
-    if start < 1e7 or end < 1e7:
-        # TODO implement time-since-start
-        print('Time-since-start not implemented yet')
-        return None
+        raise SegmentFormatException
 
     return Segment(start, end, name)
 
@@ -139,13 +138,14 @@ def parse_segment_args(keep_args) -> list[Segment]:
     """
     Parse a list of --keep arguments to produce a list of segments.
     """
-    results = []
-    if keep_args is not None:
-        for keep_arg in keep_args:
-            segment = parse_segment(keep_arg)
-            if segment is not None:
-                results.append(segment)
-    return results
+    try:
+        results = []
+        if keep_args is not None:
+            for keep_arg in keep_args:
+                results.append(parse_segment(keep_arg))
+        return results
+    except SegmentFormatException:
+        exit(1)
 
 
 def choose_reader_list(args, types):

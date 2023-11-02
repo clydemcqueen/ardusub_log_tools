@@ -22,7 +22,7 @@ import tlog_param
 import tlog_scan
 import util
 from file_reader import FileReader
-from segment_reader import Segment, SegmentReader, parse_segment_args
+from segment_reader import SegmentFormatException, Segment, SegmentReader, parse_segment
 
 
 class TestTools:
@@ -88,9 +88,8 @@ class TestTools:
         assert len(tool.tables['GLOBAL_POSITION_INT_1_1']) == 6
 
     def test_tlog_param(self):
-        tool = tlog_param.TelemetryLogParam()
-        tool.read('testing/small.tlog')
-        tool.write('testing/small.params')
+        tool = tlog_param.TelemetryLogParam('testing/small.tlog', True)
+        tool.write_params_file('testing/small.params')
 
     def test_tlog_scan(self):
         tool = tlog_scan.Scanner('testing/small.tlog', ['GLOBAL_POSITION_INT'])
@@ -165,7 +164,13 @@ class TestTools:
             assert pytest.approx(rate) == message['rate']
 
     def test_parse_segment_args(self):
-        segments = parse_segment_args(['1683220546.0,1683220547.0,foo', '1683220546,1683220547', 'bar', 'fee,fie'])
+        segments = []
+        for keep_arg in ['1683220546.0,1683220547.0,foo', '1683220546,1683220547', 'bar', 'fee,fie']:
+            try:
+                segments.append(parse_segment(keep_arg))
+            except SegmentFormatException:
+                pass
+
         assert len(segments) == 2
         s1, s2 = segments
         assert s1.start == 1683220546.0 and s1.end == 1683220547.0 and s1.name == 'foo'

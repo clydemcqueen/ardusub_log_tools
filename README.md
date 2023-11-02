@@ -438,7 +438,7 @@ Generate QGC-compatible parameter files from tlog files.
 
 ~~~
 $ tlog_param.py --help
-usage: tlog_param.py [-h] [-r] path [path ...]
+usage: tlog_param.py [-h] [-r] [-c] path [path ...]
 
 Read MAVLink PARAM_VALUE messages from a tlog file (telemetry log), reconstruct the parameter state of a
 vehicle, and write the parameters to a QGC-compatible params file.
@@ -449,6 +449,7 @@ positional arguments:
 options:
   -h, --help     show this help message and exit
   -r, --recurse  enter directories looking for tlog files
+  -c, --changes  only show changes across files, do not write *.params files
 ~~~
 
 ## Tools for working with Waterlinked UGPS systems
