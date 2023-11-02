@@ -34,6 +34,7 @@ ALL_MSG_TYPES = [
     'FMT',
     'FMTU',
     'FTN',
+    'GPA',
     'GPS',
     'IMU',
     'MAG',
@@ -63,6 +64,7 @@ ALL_MSG_TYPES = [
     'XKT',
     'XKV1',
     'XKV2',
+    'XKFD',  # Not on by default for ArduSub, need to add a compiler flag
 ]
 
 # Stuff that looks kinda interesting
@@ -97,6 +99,7 @@ PERHAPS_USEFUL_MSG_TYPES = [
     'RCIN',
     'RCOU',
     'RFND',
+    'XKFD',  # Not on by default for ArduSub, need to add a compiler flag
 ]
 
 # Useful for surftrak testing
@@ -109,6 +112,31 @@ SURFTRAK_MSG_TYPES = [
     'RCIN',
     'RCOU',
     'RFND',
+]
+
+EKF_SPLIT_CORE_MSG_TYPES = [
+    'XKF1',  # EKF3 estimator outputs
+    'XKF2',  # EKF3 estimator secondary outputs
+    'XKF3',  # EKF3 innovations
+    'XKF4',  # EKF3 variances
+    'XKFS',  # EKF3 sensor selection
+    'XKQ',   # EKF3 quaternion defining the rotation from NED to XYZ (autopilot) axes
+    'XKT',   # EKF3 timing information
+    'XKTV',  # EKF3 Yaw Estimator States
+]
+
+EKF_MSG_TYPES = [
+    *EKF_SPLIT_CORE_MSG_TYPES,
+    'XKF5',  # EKF3 Sensor innovations (primary core) and general dumping ground
+    'XKV1',  # EKF3 State variances (primary core)
+    'XKV2',  # more EKF3 State Variances (primary core)
+]
+
+# Useful for testing UGPS + DVL fusion
+FUSION_MSG_TYPES = [
+    'GPS',
+    'MAVC',
+    'XKFD',  # Not on by default for ArduSub, need to add a compiler flag
 ]
 
 
@@ -169,8 +197,6 @@ class DataflashLogReader(LogMerger):
 
     def read(self):
         self.tables = {}
-        for msg_type in self.msg_types:
-            self.tables[msg_type] = DataflashTable.create_table(msg_type)
 
         print(f'Reading {self.infile}')
         mlog = mavutil.mavlink_connection(self.infile, robust_parsing=False, dialect='ardupilotmega')
@@ -185,6 +211,11 @@ class DataflashLogReader(LogMerger):
             if not self.raw and msg_type == 'BARO' and raw_data['I'] == 0:
                 continue
 
+            # Hack: split some EKF tables into _core0, _core1, etc.
+            table_name = msg_type
+            if msg_type in EKF_SPLIT_CORE_MSG_TYPES:
+                table_name = f'{msg_type}_core{msg.C}'
+
             # This will pull from TimeUS, which is present in all (most?) records
             timestamp = getattr(msg, '_timestamp', 0.0)
 
@@ -192,9 +223,13 @@ class DataflashLogReader(LogMerger):
             clean_data = {'timestamp': timestamp}
             for key in raw_data.keys():
                 if key != 'mavpackettype':
-                    clean_data[f'{msg_type}.{key}'] = raw_data[key]
+                    clean_data[f'{table_name}.{key}'] = raw_data[key]
 
-            self.tables[msg_type].append(clean_data)
+            if table_name not in self.tables:
+                print(f'adding {table_name}')
+                self.tables[table_name] = DataflashTable.create_table(table_name)
+
+            self.tables[table_name].append(clean_data)
 
             msg_count += 1
             if msg_count > self.max_msgs:

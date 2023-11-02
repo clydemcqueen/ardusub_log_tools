@@ -18,6 +18,10 @@ import util
 from map_maker import MapMaker, add_map_maker_args
 from segment_reader import add_segment_args, choose_reader_list
 
+# The list order is also the z-order in the map
+GPS_MSG_TYPES = ['GPS_INPUT', 'GPS_RAW_INT', 'GLOBAL_POSITION_INT']
+GPS_MSG_COLORS = ['#999999', '#777777', '#0000AA']
+
 
 def build_map_from_tlog(reader, outfile, verbose, center, zoom, hdop_max):
     tables: dict[str, table_types.Table] = {}
@@ -34,19 +38,15 @@ def build_map_from_tlog(reader, outfile, verbose, center, zoom, hdop_max):
                 clean_data[f'{msg_type}.{key}'] = raw_data[key]
 
         if msg_type not in tables:
-            tables[msg_type] = table_types.Table.create_table(msg_type, verbose=verbose, hdop_max=hdop_max)
+            tables[msg_type] = table_types.Table.create_table(msg_type, verbose=verbose, hdop_max=hdop_max, filter=True)
 
         tables[msg_type].append(clean_data)
 
     mm = MapMaker(verbose, center, zoom)
 
-    # Build the map in a specific order
-    if 'GPS_RAW_INT' in tables and len(tables['GPS_RAW_INT']):
-        mm.add_table(tables['GPS_RAW_INT'], 'GPS_RAW_INT.lat_deg', 'GPS_RAW_INT.lon_deg', 'blue')
-    if 'GLOBAL_POSITION_INT' in tables and len(tables['GLOBAL_POSITION_INT']):
-        mm.add_table(tables['GLOBAL_POSITION_INT'], 'GLOBAL_POSITION_INT.lat_deg', 'GLOBAL_POSITION_INT.lon_deg', 'green')
-    if 'GPS_INPUT' in tables and len(tables['GPS_INPUT']):
-        mm.add_table(tables['GPS_INPUT'], 'GPS_INPUT.lat_deg', 'GPS_INPUT.lon_deg', 'red')
+    for msg_type, msg_color in zip(GPS_MSG_TYPES, GPS_MSG_COLORS):
+        if msg_type in tables and len(tables[msg_type]):
+            mm.add_table(tables[msg_type], f'{msg_type}.lat_deg', f'{msg_type}.lon_deg', msg_color)
 
     mm.write(outfile)
 
@@ -64,7 +64,7 @@ def main():
     if args.types is None:
         # GPS_INPUT may result in a pymavlink crash, see https://github.com/ArduPilot/pymavlink/issues/807
         # Workaround: `export MAV_IGNORE_CRC=1`
-        msg_types = ['GLOBAL_POSITION_INT', 'GPS_RAW_INT', 'GPS_INPUT']
+        msg_types = GPS_MSG_TYPES
     else:
         msg_types = args.types.split(',')
 

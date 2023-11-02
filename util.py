@@ -1,6 +1,8 @@
 import glob
 import os
 
+MAX_RATE = 100.0
+
 
 def add_rate_field(messages: list[dict], half_n: int, max_gap: float, field_name: str):
     """
@@ -54,11 +56,11 @@ def add_rate_field(messages: list[dict], half_n: int, max_gap: float, field_name
             # Avoid edge cases: divide by 0; very high rates; time going backwards
             # This might happen if timestamps repeat or are very close to each other
             if denominator < 0.01:
-                print(f'{denominator} < 0.01 computing {field_name}[{i}].rate, clip to 50')
-                messages[i][field_name] = 50.0
-            elif numerator / denominator > 50.0:
-                print(f'{field_name}[{i}].rate > 50, clip to 50')
-                messages[i][field_name] = 50.0
+                print(f'{denominator} < 0.01 computing {field_name}[{i}].rate, clip to {MAX_RATE}')
+                messages[i][field_name] = MAX_RATE
+            elif numerator / denominator > MAX_RATE:
+                print(f'{field_name}[{i}].rate > {MAX_RATE}, clip to {MAX_RATE}')
+                messages[i][field_name] = MAX_RATE
             else:
                 messages[i][field_name] = numerator / denominator
 
