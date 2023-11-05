@@ -145,6 +145,8 @@ class DataflashTable:
     def create_table(msg_type: str):
         if msg_type == 'RCIN':
             return RCINTable()
+        elif msg_type == 'PSCD':
+            return PSCDTable()
         else:
             return DataflashTable(msg_type)
 
@@ -180,6 +182,28 @@ class RCINTable(DataflashTable):
         # Rename a few fields for ease-of-use
         for item in RCINTable.RC_MAP:
             row[f'RCIN.C{item[0]}_{item[1]}'] = row.pop(f'RCIN.C{item[0]}')
+        super().append(row)
+
+
+class PSCDTable(DataflashTable):
+    def __init__(self):
+        super().__init__('PSCD')
+
+    MAP = [
+        ('TPD', 'TargetPos'),
+        ('PD', 'Pos'),
+        ('DVD', 'DesiredVel'),
+        ('TVD', 'TargetVel'),
+        ('VD', 'Vel'),
+        ('DAD', 'DesiredAccel'),
+        ('TAD', 'TargetAccel'),
+        ('AD', 'Accel')
+    ]
+
+    def append(self, row: dict):
+        # Rename a few fields for ease-of-use
+        for item in PSCDTable.MAP:
+            row[f'PSCD.{item[0]}_{item[1]}'] = row.pop(f'PSCD.{item[0]}')
         super().append(row)
 
 
@@ -252,7 +276,7 @@ def main():
     parser.add_argument('--no-merge', action='store_true',
                         help='do not merge tables, useful if you also select --explode')
     parser.add_argument('--types', default=None,
-                        help='comma separated list of message types, the default is a set of useful types')
+                        help='comma separated list of message types, the default is a small set of useful types')
     parser.add_argument('--max-msgs', type=int, default=500000,
                         help='stop after processing this number of messages (default 500K)')
     parser.add_argument('--max-rows', type=int, default=500000,
@@ -267,7 +291,8 @@ def main():
     if args.types:
         msg_types = args.types.split(',')
     else:
-        msg_types = PERHAPS_USEFUL_MSG_TYPES
+        msg_types = SURFTRAK_MSG_TYPES
+    print(f'Looking for {len(msg_types)} types: {msg_types}')
 
     for file in files:
         print('===================')
