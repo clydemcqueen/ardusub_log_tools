@@ -3,10 +3,10 @@
 """
 Read tlog files and build Leaflet (interactive HTML) maps from GPS coordinates.
 
-By default, read these messages:
-    GPS_RAW_INT -- sensor data sent from ArduSub to QGC, will appear as a blue line
-    GLOBAL_POSITION_INT -- the filtered position estimate, green line
-    GPS_INPUT -- sensor data sent from ugps-extension to ArduSub, not filtered, red line
+By default, read these messages and draw them bottom-to-top:
+    GPS_INPUT -- sensor data sent from ugps-extension to ArduSub, light grey line
+    GPS_RAW_INT -- sensor data sent from ArduSub to QGC, slightly darker grey line
+    GLOBAL_POSITION_INT -- the filtered position estimate, blue line
 
 Supports segments.
 """

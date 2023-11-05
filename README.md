@@ -80,10 +80,10 @@ usage: tlog_map_maker.py [-h] [-r] [-k KEEP] [-v] [--lat LAT] [--lon LON] [--zoo
 
 Read tlog files and build Leaflet (interactive HTML) maps from GPS coordinates.
 
-By default, read these messages:
-    GPS_RAW_INT -- sensor data sent from ArduSub to QGC, will appear as a blue line
-    GLOBAL_POSITION_INT -- the filtered position estimate, green line
-    GPS_INPUT -- sensor data sent from ugps-extension to ArduSub, not filtered, red line
+By default, read these messages and draw them bottom-to-top:
+    GPS_INPUT -- sensor data sent from ugps-extension to ArduSub, light grey line
+    GPS_RAW_INT -- sensor data sent from ArduSub to QGC, slightly darker grey line
+    GLOBAL_POSITION_INT -- the filtered position estimate, blue line
 
 Supports segments.
 
@@ -264,9 +264,10 @@ options:
   -v, --verbose        print a lot more information
   --explode            write a csv file for each message type
   --no-merge           do not merge tables, useful if you also select --explode
-  --types TYPES        comma separated list of message types, the default is a set of useful types
+  --types TYPES        comma separated list of message types, the default is a small set of useful types
   --max-msgs MAX_MSGS  stop after processing this number of messages (default 500K)
   --max-rows MAX_ROWS  stop if the merged table exceeds this number of rows (default 500K)
+  --raw                show all records; default is to drop BARO records where id==0
 ~~~
 
 ## General tools
