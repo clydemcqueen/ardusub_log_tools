@@ -18,7 +18,8 @@ class Table:
             verbose: bool = False,
             hdop_max: float = 100.0,
             table_name: str | None = None,
-            filter: bool = False):
+            filter: bool = False,
+            surftrak: bool = False):
         # table_name can be different from msg_type, e.g., HEARTBEAT_255_0 if split_source is True
         if table_name is None:
             table_name = msg_type
@@ -38,7 +39,7 @@ class Table:
         elif msg_type == 'GPS2_RAW':
             return GPS2RawTable(table_name, hdop_max)
         elif msg_type == 'NAMED_VALUE_FLOAT':
-            return NamedValueFloatTable(table_name)
+            return NamedValueFloatTable(table_name, surftrak)
         elif msg_type == 'RC_CHANNELS':
             return RCChannelsTable(table_name)
         elif msg_type == 'VISION_POSITION_DELTA':
@@ -208,8 +209,9 @@ class GPS2RawTable(Table):
 
 
 class NamedValueFloatTable(Table):
-    def __init__(self, table_name: str):
+    def __init__(self, table_name: str, surftrak):
         super().__init__(table_name)
+        self.surftrak = surftrak
 
     def get_one_named_value_float_type(self, input_df, name: str):
         # Get a subset of rows
@@ -236,11 +238,11 @@ class NamedValueFloatTable(Table):
 
             # Re-arrange the data so it appears like it does in the QGC-generated csv file. Since the timestamps are
             # fine-grained this may result in an explosion of data, so let's just do this for a few key columns.
-            if verbose:
-                print('Pulling out Lights2 and PilotGain and rearranging')
-            lights2_df = self.get_one_named_value_float_type(named_value_float_df, 'Lights2')
-            pilot_gain_df = self.get_one_named_value_float_type(named_value_float_df, 'PilotGain')
-            self._df = pd.merge_ordered(lights2_df, pilot_gain_df, on='timestamp', fill_method='ffill')
+            interesting_fields = ['RFTarget'] if self.surftrak else ['Lights2', 'PilotGain']
+            print(f'Save these NAMED_VALUE_FLOAT fields: {interesting_fields}')
+            for interesting_field in interesting_fields:
+                df = self.get_one_named_value_float_type(named_value_float_df, interesting_field)
+                self._df = df if self._df is None else pd.merge_ordered(self._df, df)
 
             if verbose:
                 if self._df.empty:
