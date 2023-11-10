@@ -18,7 +18,7 @@ class Table:
             verbose: bool = False,
             hdop_max: float = 100.0,
             table_name: str | None = None,
-            filter: bool = False,
+            filter_bad: bool = False,
             surftrak: bool = False):
         # table_name can be different from msg_type, e.g., HEARTBEAT_255_0 if split_source is True
         if table_name is None:
@@ -35,7 +35,7 @@ class Table:
         elif msg_type == 'GPS_INPUT':
             return GPSInputTable(table_name, verbose, hdop_max)
         elif msg_type == 'GPS_RAW_INT':
-            return GPSRawIntTable(table_name, hdop_max, filter)
+            return GPSRawIntTable(table_name, hdop_max, filter_bad)
         elif msg_type == 'GPS2_RAW':
             return GPS2RawTable(table_name, hdop_max)
         elif msg_type == 'NAMED_VALUE_FLOAT':
@@ -168,10 +168,10 @@ class GPSInputTable(Table):
 
 
 class GPSRawIntTable(Table):
-    def __init__(self, table_name: str, hdop_max: float, filter: bool):
+    def __init__(self, table_name: str, hdop_max: float, filter_bad: bool):
         super().__init__(table_name)
         self._hdop_max = hdop_max
-        self._filter = filter
+        self._filter_bad = filter_bad
 
     def append(self, row: dict):
         # Convert degE7 to float
@@ -179,10 +179,10 @@ class GPSRawIntTable(Table):
         row[f'{self._table_name}.lon_deg'] = row[f'{self._table_name}.lon'] / 1.0e7
 
         # ArduSub warm up sends zillions of sensor messages with bad fix_type and eph; don't bother printing these
-        if self._filter and row[f'{self._table_name}.fix_type'] < 3:
+        if self._filter_bad and row[f'{self._table_name}.fix_type'] < 3:
             return
 
-        if self._filter and row[f'{self._table_name}.eph'] > self._hdop_max:
+        if self._filter_bad and row[f'{self._table_name}.eph'] > self._hdop_max:
             return
 
         super().append(row)
