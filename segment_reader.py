@@ -104,8 +104,11 @@ def add_segment_args(parser: argparse.ArgumentParser):
     Add args for working with multiple files and multiple segments.
     """
     add_file_args(parser)
-    parser.add_argument('-k', '--keep', default=None, action='append',
-                        help='process just these segments; a segment is 2 timestamps and a name, e.g., start,end,s1')
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('-k', '--keep', default=None, action='append',
+                       help='process just these segments; a segment is 2 timestamps and a name, e.g., start,end,s1')
+    group.add_argument('-a', '--all', default=None, action='store_true',
+                       help='keep all (combining all tlog files)')
 
 
 def parse_segment(segment_str: str) -> Segment:
@@ -137,15 +140,22 @@ def parse_segment(segment_str: str) -> Segment:
     return Segment(start, end, name)
 
 
-def parse_segment_args(keep_args) -> list[Segment]:
+ALL_START = 0
+ALL_END = 2552399285  # 2050 should be far enough
+
+
+def parse_segment_args(args) -> list[Segment]:
     """
-    Parse a list of --keep arguments to produce a list of segments.
+    Parse segment arguments (--all, --keep) and return a list of segments.
     """
+    if args.all:
+        return [Segment(ALL_START, ALL_END, 'all')]
+
     try:
         results = []
-        if keep_args is not None:
-            for keep_arg in keep_args:
-                results.append(parse_segment(keep_arg))
+        if args.keep is not None:
+            for keep in args.keep:
+                results.append(parse_segment(keep))
         return results
     except SegmentFormatException:
         exit(1)
@@ -155,7 +165,7 @@ def choose_reader_list(args, types):
     """
     If there are segments return a SegmentReaderList, otherwise return a FileReaderList.
     """
-    segments = parse_segment_args(args.keep)
+    segments = parse_segment_args(args)
     if len(segments) > 0:
         return SegmentReaderList(args, segments, types)
     else:
