@@ -58,6 +58,9 @@ class SegmentReader(NamedReader):
                 # Get the next file reader, this might raise StopIteration, we do not intercept
                 self._file_reader = next(self._file_readers)
 
+                # Try again
+                continue
+
             timestamp = getattr(msg, '_timestamp', 0.0)
 
             # Ignore messages before the segment start
