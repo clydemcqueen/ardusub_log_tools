@@ -10,6 +10,7 @@ import argparse
 
 import pymavlink.dialects.v20.ardupilotmega as apm
 
+import table_types
 from segment_reader import add_segment_args, choose_reader_list
 
 MSG_TYPES = ['HEARTBEAT', 'STATUSTEXT', 'SYSTEM_TIME', 'SYS_STATUS']
@@ -45,45 +46,6 @@ class SensorInfo:
 
 
 class CompInfo:
-    @staticmethod
-    def sys_name(sys_id: int) -> str:
-        if sys_id == 1:
-            return 'Vehicle'
-        elif sys_id == 255:
-            return 'QGroundControl or similar'
-        else:
-            return 'unknown'
-
-    @staticmethod
-    def comp_name(comp_id: int) -> str:
-        return apm.enums['MAV_COMPONENT'][comp_id].name.lower()
-
-    @staticmethod
-    def state_name(state_id: int) -> str:
-        return apm.enums['MAV_STATE'][state_id].name.lower()
-
-    @staticmethod
-    def ardusub_name(state_id: int) -> str:
-        if state_id == apm.MAV_STATE_CRITICAL:
-            return 'CRITICAL, FAILSAFE was triggered'
-        elif state_id == apm.MAV_STATE_ACTIVE:
-            return 'active, sub was armed'
-        elif state_id == apm.MAV_STATE_STANDBY:
-            return 'standby, sub was disarmed'
-        else:
-            return 'unknown'
-
-    @staticmethod
-    def status_severity_name(severity: int) -> str:
-        if severity == apm.MAV_SEVERITY_CRITICAL:
-            return 'CRITICAL'
-        elif severity == apm.MAV_SEVERITY_WARNING:
-            return 'WARNING'
-        elif severity == apm.MAV_SEVERITY_INFO:
-            return 'info'
-        else:
-            return 'unknown'
-
     def __init__(self, sys_id: int, comp_id: int):
         self._sys_id = sys_id
         self._comp_id = comp_id
@@ -155,7 +117,7 @@ class CompInfo:
 
             # If ArduSub component then provide more info
             if self._sys_id == 1 and self._comp_id == 1:
-                print(f'                    {count:8d} {CompInfo.ardusub_name(si[0]):20}')
+                print(f'                    {count:8d} {table_types.ardusub_name(si[0]):20}')
 
         minutes = total // 60
         print(f'                    {total:8d} Total heartbeat messages, approx {minutes} minutes')
@@ -166,7 +128,7 @@ class CompInfo:
 
             print('                severities')
             for si in sorted(self._status_severities.items()):
-                print(f'                    {si[1]:8d} {CompInfo.status_severity_name(si[0])}')
+                print(f'                    {si[1]:8d} {table_types.status_severity_name(si[0])}')
 
             print('                strings')
             num_ardusub_versions = 0
@@ -225,9 +187,9 @@ class TelemetryLogInfo:
 
         # Print results
         for si in sorted(systems.items()):
-            print(f'    System = {CompInfo.sys_name(si[0])}')
+            print(f'    System = {table_types.sys_name(si[0])}')
             for ci in sorted(si[1].items()):
-                print(f'        Component = {CompInfo.comp_name(ci[0])}')
+                print(f'        Component = {table_types.comp_name(ci[0])}')
                 ci[1].report()
 
 

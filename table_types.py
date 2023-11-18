@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
+import enum
 import math
 
 import pandas as pd
+import pymavlink.dialects.v20.ardupilotmega as apm
 
 import util
 
@@ -9,6 +11,99 @@ import util
 # DISTANCE_SENSOR from BlueOS is off by ~450s, so it can't be trusted
 # Good readings from messages from ArduSub (RC_CHANNELS, SYSTEM_TIME, possibly others)
 # tables_with_time_boot_ms = []
+
+
+# Sub modes: https://mavlink.io/en/messages/ardupilotmega.html#SUB_MODE
+# Plus a few more
+class Mode(enum.IntEnum):
+    DISARMED = -10
+    STABILIZE = 0
+    ACRO = 1
+    ALT_HOLD = 2
+    AUTO = 3
+    GUIDED = 4
+    CIRCLE = 7
+    SURFACE = 9
+    POS_HOLD = 16
+    MANUAL = 19
+    MOTOR_DETECT = 20
+    RNG_HOLD = 21
+
+
+MODE_NAMES = {
+    -10: 'DISARMED',
+    0: 'STABILIZE',
+    1: 'ACRO',
+    2: 'ALT_HOLD',
+    3: 'AUTO',
+    4: 'GUIDED',
+    7: 'CIRCLE',
+    9: 'SURFACE',
+    16: 'POS_HOLD',
+    19: 'MANUAL',
+    20: 'MOTOR_DETECT',
+    21: 'RNG_HOLD',
+}
+
+
+def is_armed(base_mode: int) -> bool:
+    # base_mode is a bitfield, 128 == armed
+    return base_mode >= 128
+
+
+def get_mode(base_mode: int, custom_mode: int) -> int:
+    if is_armed(base_mode):
+        return Mode.DISARMED
+    else:
+        return custom_mode
+
+
+def mode_name(mode: int) -> str:
+    if mode in MODE_NAMES:
+        return MODE_NAMES[mode]
+    else:
+        return f'mode {mode}'
+
+
+def sys_name(sys_id: int) -> str:
+    if sys_id == 1:
+        return 'Vehicle'
+    elif sys_id == 255:
+        return 'QGroundControl or similar'
+    else:
+        return 'unknown'
+
+
+def comp_name(comp_id: int) -> str:
+    return apm.enums['MAV_COMPONENT'][comp_id].name.lower()
+
+
+def state_name(state_id: int) -> str:
+    return apm.enums['MAV_STATE'][state_id].name.lower()
+
+
+def ardusub_name(state_id: int) -> str:
+    if state_id == apm.MAV_STATE_CRITICAL:
+        return 'CRITICAL, FAILSAFE was triggered'
+    elif state_id == apm.MAV_STATE_ACTIVE:
+        return 'active, sub was armed'
+    elif state_id == apm.MAV_STATE_STANDBY:
+        return 'standby, sub was disarmed'
+    else:
+        return 'unknown'
+
+
+def status_severity_name(severity: int) -> str:
+    if severity == apm.MAV_SEVERITY_CRITICAL:
+        return 'CRITICAL'
+    elif severity == apm.MAV_SEVERITY_ERROR:
+        return 'ERROR'
+    elif severity == apm.MAV_SEVERITY_WARNING:
+        return 'WARNING'
+    elif severity == apm.MAV_SEVERITY_INFO:
+        return 'INFO'
+    else:
+        return f'severity {severity}'
 
 
 class Table:
@@ -110,21 +205,14 @@ class BatteryStatusTable(Table):
 
 
 class HeartbeatTable(Table):
-    MODE_DISARMED = -10
-
     def __init__(self, table_name: str):
         super().__init__(table_name)
 
     def is_armed(self, row):
-        # base_mode is a bitfield, 128 == armed
-        # Sub modes: https://mavlink.io/en/messages/ardupilotmega.html#SUB_MODE
-        return row[f'{self._table_name}.base_mode'] >= 128
+        return is_armed(row[f'{self._table_name}.base_mode'])
 
     def get_mode(self, row):
-        if not self.is_armed(row):
-            return HeartbeatTable.MODE_DISARMED
-        else:
-            return row[f'{self._table_name}.custom_mode']
+        return get_mode(row[f'{self._table_name}.base_mode'], row[f'{self._table_name}.custom_mode'])
 
     def append(self, row: dict):
         row[f'{self._table_name}.mode'] = self.get_mode(row)
