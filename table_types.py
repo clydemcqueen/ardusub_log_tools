@@ -136,6 +136,11 @@ class GlobalPositionIntTable(Table):
         super().__init__(table_name)
 
     def append(self, row: dict):
+        # Latitude and longitude are (0, 0) before the origin is set
+        # This makes graphing a pain, so drop these rows
+        if row[f'{self._table_name}.lat'] == 0 and row[f'{self._table_name}.lon'] == 0:
+            return
+
         # Convert to degrees for convenience
         row[f'{self._table_name}.lat_deg'] = row[f'{self._table_name}.lat'] / 1.0e7
         row[f'{self._table_name}.lon_deg'] = row[f'{self._table_name}.lon'] / 1.0e7
