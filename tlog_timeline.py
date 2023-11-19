@@ -20,6 +20,23 @@ MSG_TYPES = ['HEARTBEAT', 'STATUSTEXT', 'COMMAND_LONG', 'COMMAND_ACK']
 # Ignore these commands
 IGNORE_CMDS = [511, 512, 521, 522, 525, 527, 2504, 2505]
 
+# Highlight these modes
+AUTO_MODES = [
+    table_types.Mode.ACRO,
+    table_types.Mode.AUTO,
+    table_types.Mode.GUIDED,
+    table_types.Mode.CIRCLE,
+    table_types.Mode.SURFACE,
+    table_types.Mode.MOTOR_DETECT,
+]
+
+# A few ANSI codes
+ANSI_CODES = {
+    'BOLD': '\033[1m',
+    'UNDERLINE': '\033[4m',
+    'END': '\033[0m',
+}
+
 
 def mav_cmd_name(cmd: int) -> str:
     if cmd in apm.enums["MAV_CMD"]:
@@ -30,8 +47,10 @@ def mav_cmd_name(cmd: int) -> str:
 
 class Timeline:
     def __init__(self, reader):
-        # Report on mode changes
-        self.current_mode = table_types.Mode.DISARMED
+        # Track base_mode and custom mode and report on changes
+        self.base_mode = apm.MAV_MODE_PREFLIGHT
+        self.custom_mode = table_types.Mode.UNKNOWN
+        self.system_status = apm.MAV_STATE_UNINIT
 
         for msg in reader:
             ts = getattr(msg, '_timestamp', 0.0)
@@ -47,30 +66,30 @@ class Timeline:
             elif msg_type == 'COMMAND_ACK':
                 self.process_command_ack(msg)
 
-    def report(self, msg_str):
-        print(f'{self.prefix}{msg_str}')
+    def report(self, msg_str, ansi_code=None):
+        if ansi_code is None:
+            print(f'{self.prefix}{msg_str}')
+        else:
+            print(f'{self.prefix}{ANSI_CODES[ansi_code]}{msg_str}{ANSI_CODES["END"]}')
 
     # TODO note gaps (when QGC wasn't running)
     def process_heartbeat(self, msg):
         # Focus on the autopilot
         if msg.get_srcSystem() == 1 and msg.get_srcComponent() == 1:
-            # TODO look at joystick inputs for mode changes
-            # TODO perhaps split arm/disarm and mode
-            heartbeat_mode = table_types.get_mode(msg.base_mode, msg.custom_mode)
-            if self.current_mode != heartbeat_mode:
-                msg_mode_name = table_types.mode_name(heartbeat_mode)
-                if self.current_mode == table_types.Mode.DISARMED:
-                    self.report(f'HEARTBEAT ARMED {msg_mode_name}')
-                elif heartbeat_mode == table_types.Mode.DISARMED:
-                    self.report('HEARTBEAT DISARMED')
-                else:
-                    self.report(f'HEARTBEAT mode is {msg_mode_name}')
-                self.current_mode = heartbeat_mode
+            if (msg.base_mode != self.base_mode or
+                    msg.custom_mode != self.custom_mode or
+                    self.system_status != msg.system_status):
+                armed_str = 'ARMED' if table_types.is_armed(msg.base_mode) else 'DISARMED'
+                state_str = 'CRITICAL' if msg.system_status == apm.MAV_STATE_CRITICAL else ''
+                ansi_code = 'BOLD' if msg.custom_mode in AUTO_MODES else None
+                self.report(f'{armed_str} {table_types.mode_name(msg.custom_mode)} {state_str}', ansi_code)
+                self.base_mode = msg.base_mode
+                self.custom_mode = msg.custom_mode
+                self.system_status = msg.system_status
 
     def process_status_text(self, msg):
         self.report(f'{table_types.status_severity_name(msg.severity)}: {msg.text}')
 
-    # TODO MAV_CMD_COMPONENT_ARM_DISARM should change self.mode
     def process_command_long(self, msg):
         if msg.command not in IGNORE_CMDS:
             self.report(f'Command:  {mav_cmd_name(msg.command)}, param1 {msg.param1}')
