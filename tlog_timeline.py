@@ -17,7 +17,8 @@ from tlog_param import Param
 
 
 # Process these messages to build the timeline
-MSG_TYPES = ['HEARTBEAT', 'STATUSTEXT', 'COMMAND_LONG', 'COMMAND_ACK', 'PARAM_SET']
+# TODO show MISSION_ information
+MSG_TYPES = ['HEARTBEAT', 'STATUSTEXT', 'COMMAND_LONG', 'COMMAND_ACK', 'PARAM_SET', 'GPS_GLOBAL_ORIGIN']
 
 # Ignore these commands
 IGNORE_CMDS = [511, 512, 521, 522, 525, 527, 2504, 2505]
@@ -76,6 +77,8 @@ class Timeline:
                 self.process_command_ack(msg)
             elif msg_type == 'PARAM_SET':
                 self.process_param_set(msg)
+            elif msg_type == 'GPS_GLOBAL_ORIGIN':
+                self.process_gps_global_origin(msg)
 
     def report(self, msg_str, ansi_code=None):
         if ansi_code is None:
@@ -91,9 +94,10 @@ class Timeline:
                     msg.custom_mode != self.custom_mode or
                     self.system_status != msg.system_status):
                 armed_str = 'ARMED' if table_types.is_armed(msg.base_mode) else 'DISARMED'
+                mode_str = f'{table_types.mode_name(msg.custom_mode)} ({msg.custom_mode})'
                 state_str = 'CRITICAL' if msg.system_status == apm.MAV_STATE_CRITICAL else ''
                 ansi_code = 'BOLD' if msg.custom_mode in AUTO_MODES else None
-                self.report(f'{armed_str} {table_types.mode_name(msg.custom_mode)} {state_str}', ansi_code)
+                self.report(f'{armed_str} {mode_str} {state_str}', ansi_code)
                 self.base_mode = msg.base_mode
                 self.custom_mode = msg.custom_mode
                 self.system_status = msg.system_status
@@ -116,6 +120,12 @@ class Timeline:
             self.report(f'Set param {param.id} to {param.value_str()}', 'BOLD')
         else:
             self.report(f'Set param {param.id} to {comment} ({param.value_str()})', 'BOLD')
+
+    def process_gps_global_origin(self, msg):
+        lat = msg.latitude / 1.0e7
+        lon = msg.longitude / 1.0e7
+        alt = msg.altitude / 1000.0
+        self.report(f'Global origin set to ({lat}, {lon}), altitude {alt} above mean sea level', 'BOLD')
 
 
 def main():
