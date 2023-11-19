@@ -13,9 +13,11 @@ import pymavlink.dialects.v20.ardupilotmega as apm
 
 import table_types
 from segment_reader import add_segment_args, choose_reader_list
+from tlog_param import Param
+
 
 # Process these messages to build the timeline
-MSG_TYPES = ['HEARTBEAT', 'STATUSTEXT', 'COMMAND_LONG', 'COMMAND_ACK']
+MSG_TYPES = ['HEARTBEAT', 'STATUSTEXT', 'COMMAND_LONG', 'COMMAND_ACK', 'PARAM_SET']
 
 # Ignore these commands
 IGNORE_CMDS = [511, 512, 521, 522, 525, 527, 2504, 2505]
@@ -45,6 +47,13 @@ def mav_cmd_name(cmd: int) -> str:
         return f'unknown command {cmd}'
 
 
+def mav_result_name(result: int) -> str:
+    if result in apm.enums["MAV_RESULT"]:
+        return f'{apm.enums["MAV_RESULT"][result].name} ({result})'
+    else:
+        return f'unknown result {result}'
+
+
 class Timeline:
     def __init__(self, reader):
         # Track base_mode and custom mode and report on changes
@@ -65,6 +74,8 @@ class Timeline:
                 self.process_command_long(msg)
             elif msg_type == 'COMMAND_ACK':
                 self.process_command_ack(msg)
+            elif msg_type == 'PARAM_SET':
+                self.process_param_set(msg)
 
     def report(self, msg_str, ansi_code=None):
         if ansi_code is None:
@@ -96,7 +107,15 @@ class Timeline:
 
     def process_command_ack(self, msg):
         if msg.command not in IGNORE_CMDS:
-            self.report(f'Response: {mav_cmd_name(msg.command)}, result {msg.result}')
+            self.report(f'Response: {mav_cmd_name(msg.command)}, {mav_result_name(msg.result)}')
+
+    def process_param_set(self, msg):
+        param = Param(msg)
+        comment = param.comment()
+        if comment is None:
+            self.report(f'Set param {param.id} to {param.value_str()}', 'BOLD')
+        else:
+            self.report(f'Set param {param.id} to {comment} ({param.value_str()})', 'BOLD')
 
 
 def main():
