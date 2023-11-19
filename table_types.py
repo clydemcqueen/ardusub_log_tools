@@ -16,7 +16,8 @@ import util
 # Sub modes: https://mavlink.io/en/messages/ardupilotmega.html#SUB_MODE
 # Plus a few more
 class Mode(enum.IntEnum):
-    DISARMED = -10
+    DISARMED = -10  # Helpful if we have a single state representing armed status + mode
+    UNKNOWN = -9
     STABILIZE = 0
     ACRO = 1
     ALT_HOLD = 2
@@ -32,6 +33,7 @@ class Mode(enum.IntEnum):
 
 MODE_NAMES = {
     -10: 'DISARMED',
+    -9: 'UNKNOWN',
     0: 'STABILIZE',
     1: 'ACRO',
     2: 'ALT_HOLD',
@@ -51,11 +53,11 @@ def is_armed(base_mode: int) -> bool:
     return base_mode >= 128
 
 
-def get_mode(base_mode: int, custom_mode: int) -> int:
+def combined_mode(base_mode: int, custom_mode: int) -> int:
     if is_armed(base_mode):
-        return Mode.DISARMED
-    else:
         return custom_mode
+    else:
+        return Mode.DISARMED
 
 
 def mode_name(mode: int) -> str:
@@ -212,7 +214,7 @@ class HeartbeatTable(Table):
         return is_armed(row[f'{self._table_name}.base_mode'])
 
     def get_mode(self, row):
-        return get_mode(row[f'{self._table_name}.base_mode'], row[f'{self._table_name}.custom_mode'])
+        return combined_mode(row[f'{self._table_name}.base_mode'], row[f'{self._table_name}.custom_mode'])
 
     def append(self, row: dict):
         row[f'{self._table_name}.mode'] = self.get_mode(row)
