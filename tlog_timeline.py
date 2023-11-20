@@ -4,6 +4,24 @@
 Read MAVLink messages from a tlog file (telemetry log) and generate a timeline.
 
 Supports segments.
+
+EKF status bits:
+  const             EKF_CONST_POS_MODE      Not enough information to estimate xy position
+  att               EKF_ATTITUDE            Good estimate for attitude (roll, pitch yaw)
+  pos_xy rel        EKF_POS_HORIZ_REL       Good estimate for relative xy position
+  pos_xy abs        EKF_POS_HORIZ_ABS       Good estimate for absolute xy position
+  pos_xy pred_rel   EKF_PRED_POS_HORIZ_REL  Good prediction for relative xy position
+  pos_xy pred_abs   EKF_PRED_POS_HORIZ_ABS  Good prediction for absolute xy position
+  pos_z abs         EKF_POS_VERT_ABS        Good estimate for absolute z position
+  pos_z agl         EKF_POS_VERT_AGL        Good estimate for z position "above ground level"
+  vel xy            EKF_VELOCITY_HORIZ      Good estimate for xy velocity
+  vel z             EKF_VELOCITY_VERT       Good estimate for z velocity
+
+Example EKF status reports:
+
+SITL (GPS):                           att pos_xy: [rel abs pred_rel pred_abs] pos_z: [abs agl] vel: [xy z]
+Sub with just a barometer:      const att pos_xy: [                         ] pos_z: [abs agl] vel: [xy z]
+Sub with a DVL:                       att pos_xy: [rel     pred_rel         ] pos_z: [abs agl] vel: [xy z]
 """
 
 import argparse
@@ -17,8 +35,9 @@ from tlog_param import Param
 
 
 # Process these messages to build the timeline
-# TODO show MISSION_ information
-MSG_TYPES = ['HEARTBEAT', 'STATUSTEXT', 'COMMAND_LONG', 'COMMAND_ACK', 'PARAM_SET', 'GPS_GLOBAL_ORIGIN']
+MSG_TYPES = [
+    'HEARTBEAT', 'STATUSTEXT', 'COMMAND_LONG', 'COMMAND_ACK', 'PARAM_SET', 'GPS_GLOBAL_ORIGIN',
+    'EKF_STATUS_REPORT', 'MISSION_CLEAR_ALL',]
 
 # Ignore these commands
 IGNORE_CMDS = [511, 512, 521, 522, 525, 527, 2504, 2505]
@@ -56,11 +75,15 @@ def mav_result_name(result: int) -> str:
 
 
 class Timeline:
-    def __init__(self, reader):
+    def __init__(self, reader, ansi):
+        # Enable / disable ansi codes
+        self.ansi = ansi
+
         # Track base_mode and custom mode and report on changes
         self.base_mode = apm.MAV_MODE_PREFLIGHT
         self.custom_mode = table_types.Mode.UNKNOWN
         self.system_status = apm.MAV_STATE_UNINIT
+        self.ekf_status_flags = apm.EKF_UNINITIALIZED
 
         for msg in reader:
             ts = getattr(msg, '_timestamp', 0.0)
@@ -79,12 +102,17 @@ class Timeline:
                 self.process_param_set(msg)
             elif msg_type == 'GPS_GLOBAL_ORIGIN':
                 self.process_gps_global_origin(msg)
+            elif msg_type == 'EKF_STATUS_REPORT':
+                self.process_ekf_status_report(msg)
+            else:
+                # Catch all
+                self.report(msg_type)
 
     def report(self, msg_str, ansi_code=None):
-        if ansi_code is None:
-            print(f'{self.prefix}{msg_str}')
-        else:
+        if self.ansi and ansi_code is not None:
             print(f'{self.prefix}{ANSI_CODES[ansi_code]}{msg_str}{ANSI_CODES["END"]}')
+        else:
+            print(f'{self.prefix}{msg_str}')
 
     # TODO note gaps (when QGC wasn't running)
     def process_heartbeat(self, msg):
@@ -127,16 +155,42 @@ class Timeline:
         alt = msg.altitude / 1000.0
         self.report(f'Global origin set to ({lat}, {lon}), altitude {alt} above mean sea level', 'BOLD')
 
+    def process_ekf_status_report(self, msg):
+        if msg.flags != self.ekf_status_flags:
+            if msg.flags & apm.EKF_UNINITIALIZED:
+                self.report('EKF uninitialized', 'BOLD')
+            elif msg.flags == 0:
+                self.report('EKF initialized', 'BOLD')
+            else:
+                s = f'EKF status: {msg.flags :4}'
+                s += f' {"const" if msg.flags & apm.EKF_CONST_POS_MODE else "" :5}'
+                s += f' {"att" if msg.flags & apm.EKF_ATTITUDE else "" :3}'
+                s += ' pos_xy: ['
+                s += f'{"rel" if msg.flags & apm.EKF_POS_HORIZ_REL else "" :3}'
+                s += f' {"abs" if msg.flags & apm.EKF_POS_HORIZ_ABS else "" :3}'
+                s += f' {"pred_rel" if msg.flags & apm.EKF_PRED_POS_HORIZ_REL else "" :8}'
+                s += f' {"pred_abs" if msg.flags & apm.EKF_PRED_POS_HORIZ_ABS else "" :8}'
+                s += '] pos_z: ['
+                s += f'{"abs" if msg.flags & apm.EKF_POS_VERT_ABS else "" :3}'
+                s += f' {"agl" if msg.flags & apm.EKF_POS_VERT_AGL else "" :3}'
+                s += '] vel: ['
+                s += f'{"xy" if msg.flags & apm.EKF_VELOCITY_HORIZ else "" :2}'
+                s += f' {"z" if msg.flags & apm.EKF_VELOCITY_VERT else "" :1}'
+                s += ']'
+                self.report(s, 'BOLD')
+            self.ekf_status_flags = msg.flags
+
 
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=__doc__)
     add_segment_args(parser)
+    parser.add_argument('--ansi', action='store_true', help='add ANSI colors to several messages')
     args = parser.parse_args()
 
     readers = choose_reader_list(args, MSG_TYPES)
     for reader in readers:
         print(f'Results for {reader.name}')
-        Timeline(reader)
+        Timeline(reader, args.ansi)
 
 
 if __name__ == '__main__':
