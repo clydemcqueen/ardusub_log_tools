@@ -46,7 +46,8 @@ def add_rate_field(messages: list[dict], half_n: int, max_gap: float, field_name
             messages[i][field_name] = 0.0
 
             # Reset the window
-            wl = wr = i
+            wl = i
+            wr = i + 1 if i < len(messages) else i
             while wr < len(messages) and wr - wl - 1 < half_n and not is_gap_right(wr):
                 wr += 1
         else:
