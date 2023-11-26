@@ -1,7 +1,12 @@
+import datetime
 import glob
 import os
 
 MAX_RATE = 100.0
+
+
+def time_str(timestamp: float) -> str:
+    return datetime.datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
 
 
 def add_rate_field(messages: list[dict], half_n: int, max_gap: float, field_name: str):
@@ -35,10 +40,12 @@ def add_rate_field(messages: list[dict], half_n: int, max_gap: float, field_name
         if wr < len(messages) and not is_gap_right(wr - 1):
             wr += 1
 
+        ts_i = messages[i]['timestamp']
+
         if is_gap_right(i):
-            gap_len = messages[i + 1]['timestamp'] - messages[i]['timestamp']
+            gap_len = messages[i + 1]['timestamp'] - ts_i
             total_gaps += gap_len
-            print(f'NOTE: {gap_len :.2f}s gap detected while generating {field_name}')
+            print(f'NOTE: {gap_len :.2f}s gap detected at ts {ts_i :.2f} while generating {field_name}')
 
             # Set the rate to 0.0 on either side of the segment
             messages[i][field_name] = 0.0
