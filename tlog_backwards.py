@@ -2,11 +2,13 @@
 
 """
 Read MAVLink messages from a tlog file (telemetry log) and check to see if time goes backwards.
+
+Supports segments.
 """
 
 from argparse import ArgumentParser
 
-from file_reader import add_file_args, FileReaderList
+from segment_reader import add_segment_args, choose_reader_list
 
 
 def check_timestamps(reader):
@@ -28,10 +30,11 @@ def check_timestamps(reader):
 
 def main():
     parser = ArgumentParser(description=__doc__)
-    add_file_args(parser)
+    add_segment_args(parser)
     parser.add_argument('--types', default=None, help='comma separated list of message types, default is all types')
     args = parser.parse_args()
-    readers = FileReaderList(args, args.types)
+    msg_types = None if args.types is None else args.types.split(',')
+    readers = choose_reader_list(args, msg_types)
     for reader in readers:
         check_timestamps(reader)
 
