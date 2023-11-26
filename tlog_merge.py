@@ -177,7 +177,8 @@ class TelemetryLogReader(LogMerger):
 
             # Make sure the table exists
             if table_name not in self.tables:
-                self.tables[table_name] = table_types.Table.create_table(msg_type, table_name=table_name, surftrak=self.surftrak)
+                self.tables[table_name] = table_types.Table.create_table(msg_type, table_name=table_name,
+                                                                         filter_bad=True, surftrak=self.surftrak)
 
             # Append the message to the table
             self.tables[table_name].append(clean_data)

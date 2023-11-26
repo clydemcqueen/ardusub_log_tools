@@ -112,7 +112,6 @@ class Table:
     @staticmethod
     def create_table(
             msg_type: str,
-            verbose: bool = False,
             hdop_max: float = 100.0,
             table_name: str | None = None,
             filter_bad: bool = False,
@@ -128,13 +127,13 @@ class Table:
         elif msg_type == 'HEARTBEAT':
             return HeartbeatTable(table_name)
         elif msg_type == 'GLOBAL_POSITION_INT':
-            return GlobalPositionIntTable(table_name)
+            return GPSTable(msg_type, table_name, hdop_max, filter_bad)
         elif msg_type == 'GPS_INPUT':
-            return GPSInputTable(table_name, verbose, hdop_max)
+            return GPSTable(msg_type, table_name, hdop_max, filter_bad)
         elif msg_type == 'GPS_RAW_INT':
-            return GPSRawIntTable(table_name, hdop_max, filter_bad)
+            return GPSTable(msg_type, table_name, hdop_max, filter_bad)
         elif msg_type == 'GPS2_RAW':
-            return GPS2RawTable(table_name, hdop_max)
+            return GPSTable(msg_type, table_name, hdop_max, filter_bad)
         elif msg_type == 'NAMED_VALUE_FLOAT':
             return NamedValueFloatTable(table_name, surftrak)
         elif msg_type == 'RC_CHANNELS':
@@ -221,84 +220,51 @@ class HeartbeatTable(Table):
         super().append(row)
 
 
-class GlobalPositionIntTable(Table):
-    def __init__(self, table_name: str):
+class GPSTable(Table):
+    """
+    Handle GPS messages: GPS_INPUT, GPS_RAW_INT, GPS2_RAW, GLOBAL_POSITION_INT
+    Interesting fields:
+    lat             All (degE7)
+    lon             All (degE7)
+    fix_type        GPS_INPUT, GPS_RAW_INT, GPS2_RAW
+    hdop            GPS_INPUT
+    eph             GPS_RAW_INT, GPS2_RAW (hdop * 100)
+    hdg             GLOBAL_POSITION_INT (cdeg)
+    yaw             GPS_INPUT (MAVLink 2 extension) (cdeg)
+    alt             GLOBAL_POSITION_INT (mm), GPS_INPUT (m)
+    relative_alt    GLOBAL_POSITION_INT
+    """
+    def __init__(self, msg_type: str, table_name: str, hdop_max: float, filter_bad: bool):
         super().__init__(table_name)
-
-    def append(self, row: dict):
-        # Latitude and longitude are (0, 0) before the origin is set
-        # This makes graphing a pain, so drop these rows
-        if row[f'{self._table_name}.lat'] == 0 and row[f'{self._table_name}.lon'] == 0:
-            return
-
-        # Convert to degrees for convenience
-        row[f'{self._table_name}.lat_deg'] = row[f'{self._table_name}.lat'] / 1.0e7
-        row[f'{self._table_name}.lon_deg'] = row[f'{self._table_name}.lon'] / 1.0e7
-        row[f'{self._table_name}.hdg_deg'] = row[f'{self._table_name}.hdg'] / 100.0
-        super().append(row)
-
-
-class GPSInputTable(Table):
-    def __init__(self, table_name: str, verbose: bool, hdop_max: float):
-        super().__init__(table_name)
-        self._verbose = verbose
-        self._hdop_max = hdop_max
-
-    def append(self, row: dict):
-        # Convert degE7 to float
-        row[f'{self._table_name}.lat_deg'] = row[f'{self._table_name}.lat'] / 1.0e7
-        row[f'{self._table_name}.lon_deg'] = row[f'{self._table_name}.lon'] / 1.0e7
-
-        if row[f'{self._table_name}.fix_type'] < 3:
-            if self._verbose:
-                print(f'{self._table_name}.fix_type < 3, lat {row["{self._table_name}.lat_deg"]}, lon {row["{self._table_name}.lon_deg"]}, fix_type {row["{self._table_name}.fix_type"]}')
-            return
-
-        if row[f'{self._table_name}.hdop'] > self._hdop_max:
-            if self._verbose:
-                print(f'{self._table_name}.hdop > {self._hdop_max}, lat {row["{self._table_name}.lat_deg"]}, lon {row["{self._table_name}.lon_deg"]}, hdop {row["{self._table_name}.hdop"]}')
-            return
-
-        super().append(row)
-
-
-class GPSRawIntTable(Table):
-    def __init__(self, table_name: str, hdop_max: float, filter_bad: bool):
-        super().__init__(table_name)
+        self._msg_type = msg_type
         self._hdop_max = hdop_max
         self._filter_bad = filter_bad
 
     def append(self, row: dict):
-        # Convert degE7 to float
-        row[f'{self._table_name}.lat_deg'] = row[f'{self._table_name}.lat'] / 1.0e7
-        row[f'{self._table_name}.lon_deg'] = row[f'{self._table_name}.lon'] / 1.0e7
+        def field(f: str):
+            return f'{self._table_name}.{f}'
 
-        # ArduSub warm up sends zillions of sensor messages with bad fix_type and eph; don't bother printing these
-        if self._filter_bad and row[f'{self._table_name}.fix_type'] < 3:
-            return
+        # Warm up messages have lat=0, lon=0, fix_type<3, hdop>max, etc.
+        # This makes graphing a pain, so drop these rows
+        if self._filter_bad:
+            if row[field('lat')] == 0 and row[field('lon')] == 0:
+                return
+            if field('fix_type') in row and row[field('fix_type')] < 3:
+                return
+            if field('hdop') in row and row[field('hdop')] > self._hdop_max:
+                return
+            if field('eph') in row and row[field('eph')] / 100.0 > self._hdop_max:
+                return
 
-        if self._filter_bad and row[f'{self._table_name}.eph'] > self._hdop_max:
-            return
-
-        super().append(row)
-
-
-class GPS2RawTable(Table):
-    def __init__(self, table_name: str, hdop_max: float):
-        super().__init__(table_name)
-        self._hdop_max = hdop_max
-
-    def append(self, row: dict):
-        # Convert degE7 to float
-        row[f'{self._table_name}.lat_deg'] = row[f'{self._table_name}.lat'] / 1.0e7
-        row[f'{self._table_name}.lon_deg'] = row[f'{self._table_name}.lon'] / 1.0e7
-
-        # ArduSub warm up sends zillions of sensor messages with bad fix_type and eph; don't bother printing these
-        if row[f'{self._table_name}.fix_type'] < 3:
-            return
-
-        if row[f'{self._table_name}.eph'] > self._hdop_max:
-            return
+        # Convert to degrees and meters for convenience
+        row[field('lat_deg')] = row[field('lat')] / 1.0e7
+        row[field('lon_deg')] = row[field('lon')] / 1.0e7
+        if self._msg_type == 'GLOBAL_POSITION_INT':
+            row[field('hdg_deg')] = row[field('hdg')] / 100.0
+            row[field('alt_m')] = row[field('alt')] / 1000.0
+            row[field('relative_alt_m')] = row[field('relative_alt')] / 1000.0
+        if field('yaw') in row:
+            row[field('yaw_deg')] = row[field('yaw')] / 100.0
 
         super().append(row)
 

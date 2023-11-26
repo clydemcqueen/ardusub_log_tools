@@ -38,7 +38,7 @@ def build_map_from_tlog(reader, outfile, verbose, center, zoom, hdop_max):
                 clean_data[f'{msg_type}.{key}'] = raw_data[key]
 
         if msg_type not in tables:
-            tables[msg_type] = table_types.Table.create_table(msg_type, verbose=verbose, hdop_max=hdop_max, filter_bad=True)
+            tables[msg_type] = table_types.Table.create_table(msg_type, hdop_max=hdop_max, filter_bad=True)
 
         tables[msg_type].append(clean_data)
 
