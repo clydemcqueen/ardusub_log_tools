@@ -3,6 +3,7 @@ import argparse
 import pymavlink.dialects.v20.ardupilotmega as apm
 from pymavlink import mavutil
 
+import util
 from util import expand_path
 
 
@@ -20,6 +21,9 @@ class FileReader(NamedReader):
         super().__init__(path)
         self._types = types
         self._conn = mavutil.mavlink_connection(path, dialect='ardupilotmega')
+        self._count = 0
+        self._first_ts = None
+        self._last_ts = None
         print(f'Reading {path}, WIRE_PROTOCOL_VERSION {self._conn.WIRE_PROTOCOL_VERSION}')
 
     def __iter__(self):
@@ -27,9 +31,23 @@ class FileReader(NamedReader):
 
     def __next__(self) -> apm.MAVLink_message:
         msg = self._conn.recv_match(blocking=False, type=self._types)
+
         if msg is None:
+            if self._count == 0:
+                print('Empty file')
+            elif self._count == 1:
+                print(f'Single message, timestamp {self._first_ts :.2f}')
+            else:
+                print(f'Processed {self._count} messages '
+                      f'from {util.time_str(self._first_ts)} ({self._first_ts :.2f}) '
+                      f'to {util.time_str(self._last_ts)} ({self._last_ts :.2f}), '
+                      f'delta {self._last_ts - self._first_ts :.2f}s')
             raise StopIteration
         else:
+            self._count += 1
+            self._last_ts = getattr(msg, '_timestamp', 0.0)
+            if self._first_ts is None:
+                self._first_ts = self._last_ts
             return msg
 
 
