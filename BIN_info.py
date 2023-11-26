@@ -26,21 +26,29 @@ class DataflashLogInfo:
         gps_week = 0
         gps_week_ms = 0
 
-        while (msg := mlog.recv_match(blocking=False, type=['MSG', 'GPS'])) is not None:
-            raw_data = msg.to_dict()
-            msg_type = raw_data['mavpackettype']
+        count_orgn_records = 0
 
-            if msg_type == 'MSG':
-                message = raw_data['Message']
+        while (msg := mlog.recv_match(blocking=False, type=['MSG', 'GPS', 'ORGN'])) is not None:
+
+            if msg.get_type() == 'MSG':
+                message = msg.Message
                 if message not in self.message_counts:
                     self.message_counts[message] = 0
                 self.message_counts[message] += 1
 
-            elif msg_type == 'GPS' and gps_week == 0:
+            elif msg.get_type() == 'GPS' and gps_week == 0:
                 count_gps_records += 1
-                if raw_data['GWk'] > 0:
-                    gps_week = raw_data['GWk']
-                    gps_week_ms = raw_data['GMS']
+                if msg.GWk > 0:
+                    gps_week = msg.GWk
+                    gps_week_ms = msg.GMS
+
+            elif msg.get_type() == 'ORGN':
+                count_orgn_records += 1
+                origin_type = 'EKF origin' if msg.Type == 0 else 'AHRS home'
+                print(f'{origin_type} set after {msg.TimeUS / 1e6 :.1f} seconds: ({msg.Lat}, {msg.Lng}, {msg.Alt})')
+
+        if count_orgn_records == 0:
+            print('No ORGN records, origin was not set')
 
         if count_gps_records == 0:
             print('No GPS records, no datetime information')
