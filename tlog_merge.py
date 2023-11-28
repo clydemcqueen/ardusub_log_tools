@@ -106,7 +106,8 @@ class TelemetryLogReader(LogMerger):
                  compid: int,
                  surftrak: bool,
                  system_time: bool,
-                 split_source: bool):
+                 split_source: bool,
+                 raw: bool):
         super().__init__(reader.name, max_msgs, max_rows, verbose)
         self.reader = reader
         self.sysid = sysid
@@ -114,6 +115,7 @@ class TelemetryLogReader(LogMerger):
         self.surftrak = surftrak
         self.system_time = system_time
         self.split_source = split_source
+        self.raw = raw
         self.time_delta_s = None
 
     def read_tlog(self):
@@ -177,8 +179,8 @@ class TelemetryLogReader(LogMerger):
 
             # Make sure the table exists
             if table_name not in self.tables:
-                self.tables[table_name] = table_types.Table.create_table(msg_type, table_name=table_name,
-                                                                         filter_bad=True, surftrak=self.surftrak)
+                self.tables[table_name] = table_types.Table.create_table(
+                    msg_type, table_name=table_name, filter_bad=not self.raw, surftrak=self.surftrak)
 
             # Append the message to the table
             self.tables[table_name].append(clean_data)
@@ -222,6 +224,8 @@ def main():
                         help='split messages by source (sysid, compid)')
     parser.add_argument('--system-time', action='store_true',
                         help='experimental: use ArduSub SYSTEM_TIME.time_boot_ms rather than QGC timestamp')
+    parser.add_argument('--raw', action='store_true',
+                        help='show all GPS messages; default is to drop bad GPS messages')
     parser.add_argument('--surftrak', action='store_true',
                         help='experimental: surftrak-specific analysis, see code')
     args = parser.parse_args()
@@ -243,8 +247,9 @@ def main():
 
     readers = choose_reader_list(args, msg_types)
     for reader in readers:
-        tlog_reader = TelemetryLogReader(reader, args.max_msgs, args.max_rows, args.verbose, args.sysid,
-                                         args.compid, args.surftrak, args.system_time, args.split_source)
+        tlog_reader = TelemetryLogReader(
+            reader, args.max_msgs, args.max_rows, args.verbose, args.sysid, args.compid, args.surftrak,
+            args.system_time, args.split_source, args.raw)
 
         tlog_reader.read_tlog()
 

@@ -75,7 +75,7 @@ class TestTools:
 
     def test_tlog_merge(self):
         tool = tlog_merge.TelemetryLogReader(FileReader('testing/small.tlog', ['GLOBAL_POSITION_INT']),
-                                             10000, 10000, False, 0, 0, False, False, True)
+                                             10000, 10000, False, 0, 0, False, False, True, False)
         tool.read_tlog()
         tool.add_rate_field()
         tool.write_merged_csv_file()
@@ -83,7 +83,7 @@ class TestTools:
     def test_tlog_merge_segment(self):
         segment_reader = SegmentReader(Segment(1683220544, 1683220546, 'segment1'),
                                        FileReader('testing/small.tlog', ['GLOBAL_POSITION_INT']), None)
-        tool = tlog_merge.TelemetryLogReader(segment_reader, 10000, 10000, False, 0, 0, False, False, True)
+        tool = tlog_merge.TelemetryLogReader(segment_reader, 10000, 10000, False, 0, 0, False, False, True, False)
         tool.read_tlog()
         assert len(tool.tables['GLOBAL_POSITION_INT_1_1']) == 6
 
