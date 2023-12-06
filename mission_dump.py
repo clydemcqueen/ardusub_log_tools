@@ -126,7 +126,6 @@ class MissionReader:
         print(f'{self.prefix}{msg_str}')
 
 
-
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=__doc__)
     add_segment_args(parser)

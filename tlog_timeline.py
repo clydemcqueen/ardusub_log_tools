@@ -49,6 +49,7 @@ AUTO_MODES = [
     table_types.Mode.GUIDED,
     table_types.Mode.CIRCLE,
     table_types.Mode.SURFACE,
+    table_types.Mode.POS_HOLD,
     table_types.Mode.MOTOR_DETECT,
 ]
 
@@ -160,7 +161,7 @@ class Timeline:
             if msg.flags & apm.EKF_UNINITIALIZED:
                 self.report('EKF uninitialized', 'BOLD')
             elif msg.flags == 0:
-                self.report('EKF initialized', 'BOLD')
+                self.report('EKF initialized')
             else:
                 s = f'EKF status: {msg.flags :4}'
                 s += f' {"const" if msg.flags & apm.EKF_CONST_POS_MODE else "" :5}'
@@ -177,7 +178,7 @@ class Timeline:
                 s += f'{"xy" if msg.flags & apm.EKF_VELOCITY_HORIZ else "" :2}'
                 s += f' {"z" if msg.flags & apm.EKF_VELOCITY_VERT else "" :1}'
                 s += ']'
-                self.report(s, 'BOLD')
+                self.report(s)
             self.ekf_status_flags = msg.flags
 
 
