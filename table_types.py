@@ -124,6 +124,8 @@ class Table:
             return AHRS2Table(table_name)
         elif msg_type == 'BATTERY_STATUS':
             return BatteryStatusTable(table_name)
+        elif msg_type == 'DISTANCE_SENSOR':
+            return DistanceSensorTable(table_name)
         elif msg_type == 'HEARTBEAT':
             return HeartbeatTable(table_name)
         elif msg_type == 'GLOBAL_POSITION_INT':
@@ -202,6 +204,15 @@ class BatteryStatusTable(Table):
     def append(self, row: dict):
         # Grab the voltage of the first battery
         row[f'{self._table_name}.voltage'] = row[f'{self._table_name}.voltages'][0]
+        super().append(row)
+
+
+class DistanceSensorTable(Table):
+    def __init__(self, table_name: str):
+        super().__init__(table_name)
+
+    def append(self, row: dict):
+        row[f'{self._table_name}.current_distance_m'] = row[f'{self._table_name}.current_distance'] / 100.0
         super().append(row)
 
 
