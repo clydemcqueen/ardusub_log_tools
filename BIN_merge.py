@@ -145,8 +145,14 @@ class DataflashTable:
     def create_table(msg_type: str):
         if msg_type == 'RCIN':
             return RCINTable()
+        elif msg_type == 'PSCN':
+            return PSCxTable(msg_type, 'N', flip=False)
+        elif msg_type == 'PSCE':
+            return PSCxTable(msg_type, 'E', flip=False)
         elif msg_type == 'PSCD':
-            return PSCDTable()
+            return PSCxTable(msg_type, 'D', flip=False)
+        elif msg_type == 'PSCU':
+            return PSCxTable(msg_type, 'D', flip=True)
         else:
             return DataflashTable(msg_type)
 
@@ -185,25 +191,33 @@ class RCINTable(DataflashTable):
         super().append(row)
 
 
-class PSCDTable(DataflashTable):
-    def __init__(self):
-        super().__init__('PSCD')
+class PSCxTable(DataflashTable):
+    """
+    Works with PosControl tables PSCN (north), PSCE (east), PSCD (down) and the made-up table PSCU (up)
+    Suffix should be 'N', 'E', 'D'; this is used to change field names from short codes to log_PSCx struct field names
+    Flip means flip the sign, e.g., from down to up
+    """
+    def __init__(self, table_name: str, suffix:str, flip: bool):
+        super().__init__(table_name)
+        self._suffix = suffix
+        self._flip = flip
 
     MAP = [
-        ('TPD', 'TargetPos'),
-        ('PD', 'Pos'),
-        ('DVD', 'DesiredVel'),
-        ('TVD', 'TargetVel'),
-        ('VD', 'Vel'),
-        ('DAD', 'DesiredAccel'),
-        ('TAD', 'TargetAccel'),
-        ('AD', 'Accel')
+        # log_PSCx struct field       PosControl/InertialNav method     Underlying PosControl/InertialNav variable
+        ('TP', 'pos_target'),       # get_pos_target_cm().z             _pos_target.z
+        ('P',  'pos'),              # _inav.get_position_z_up_cm()      _relpos_cm.z
+        ('DV', 'vel_desired'),      # get_vel_desired_cms().z           _vel_desired.z
+        ('TV', 'vel_target'),       # get_vel_target_cms().z            _vel_target.z
+        ('V',  'vel'),              # _inav.get_velocity_z_up_cms()     _velocity_cm.z
+        ('DA', 'accel_desired'),    # _accel_desired.z                  _accel_desired.z
+        ('TA', 'accel_target'),     # get_accel_target_cmss().z         _accel_target.z
+        ('A',  'accel')             # get_z_accel_cmss()                -(_ahrs.get_accel_ef().z + GRAVITY_MSS) * 100.0
     ]
 
     def append(self, row: dict):
-        # Rename a few fields for ease-of-use
-        for item in PSCDTable.MAP:
-            row[f'PSCD.{item[0]}_{item[1]}'] = row.pop(f'PSCD.{item[0]}')
+        for item in PSCxTable.MAP:
+            field = row.pop(f'{self._msg_type}.{item[0]}{self._suffix}')
+            row[f'{self._msg_type}.{item[1]}'] = -field if self._flip else field
         super().append(row)
 
 
@@ -218,6 +232,14 @@ class DataflashLogReader(LogMerger):
         super().__init__(infile, max_msgs, max_rows, verbose)
         self.msg_types = msg_types
         self.raw = raw
+
+        # Make up the PSCU (position control 'up') table, a flipped version of PSCD
+        self.pscu = 'PSCU' in msg_types
+        if self.pscu:
+            if 'PSCD' in msg_types:
+                print('PSCD and PSCU both requested, dropping PSCD')
+            else:
+                msg_types.append('PSCD')
 
     def read(self):
         self.tables = {}
@@ -235,10 +257,15 @@ class DataflashLogReader(LogMerger):
             if not self.raw and msg_type == 'BARO' and raw_data['I'] == 0:
                 continue
 
-            # Hack: split some EKF tables into _core0, _core1, etc.
             table_name = msg_type
+
+            # Hack: split some EKF tables into _core0, _core1, etc.
             if msg_type in EKF_SPLIT_CORE_MSG_TYPES:
                 table_name = f'{msg_type}_core{msg.C}'
+
+            # Hack: make up the PSCU table
+            if msg_type == 'PSCD' and self.pscu:
+                table_name = 'PSCU'
 
             # This will pull from TimeUS, which is present in all (most?) records
             timestamp = getattr(msg, '_timestamp', 0.0)
