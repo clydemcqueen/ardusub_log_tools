@@ -13,6 +13,26 @@ import util
 # tables_with_time_boot_ms = []
 
 
+def norm_angle_d(degrees: float) -> float:
+    """Normalize angle to [-180, 180) degrees"""
+
+    while degrees >= 180:
+        degrees -= 360
+    while degrees < -180:
+        degrees += 360
+    return degrees
+
+
+def norm_angle_r(radians: float) -> float:
+    """Normalize angle to [-pi, pi) radians"""
+
+    while radians >= math.pi:
+        radians -= 2 * math.pi
+    while radians < -math.pi:
+        radians += 2 * math.pi
+    return radians
+
+
 # Sub modes: https://mavlink.io/en/messages/ardupilotmega.html#SUB_MODE
 # Plus a few more
 class Mode(enum.IntEnum):
@@ -342,16 +362,6 @@ class RCChannelsTable(Table):
 class Pose:
     """Simple 6DoF pose"""
 
-    @staticmethod
-    def norm_angle(degrees: float) -> float:
-        """Normalize angle to [0, 360) degrees"""
-
-        while degrees >= 360:
-            degrees -= 360
-        while degrees < 0:
-            degrees += 360
-        return degrees
-
     def __init__(self, orientation: tuple[float, float, float], position: tuple[float, float, float]):
         self.orientation = orientation
         self.position = position
@@ -359,18 +369,18 @@ class Pose:
     def add_angle_delta(self, angle_delta):
         # VISION_POSITION_DELTA.angle_delta should be radians, but there's a bug in the WL A50 DVL extension:
         # https://github.com/bluerobotics/BlueOS-Water-Linked-DVL/issues/36
-        is_a50 = True
-        if is_a50:
+        is_degrees = False
+        if is_degrees:
             self.orientation = (
-                Pose.norm_angle(self.orientation[0] + angle_delta[0]),
-                Pose.norm_angle(self.orientation[1] + angle_delta[1]),
-                Pose.norm_angle(self.orientation[2] + angle_delta[2])
+                norm_angle_d(self.orientation[0] + angle_delta[0]),
+                norm_angle_d(self.orientation[1] + angle_delta[1]),
+                norm_angle_d(self.orientation[2] + angle_delta[2])
             )
         else:
             self.orientation = (
-                Pose.norm_angle(self.orientation[0] + math.degrees(angle_delta[0])),
-                Pose.norm_angle(self.orientation[1] + math.degrees(angle_delta[1])),
-                Pose.norm_angle(self.orientation[2] + math.degrees(angle_delta[2]))
+                norm_angle_d(self.orientation[0] + math.degrees(angle_delta[0])),
+                norm_angle_d(self.orientation[1] + math.degrees(angle_delta[1])),
+                norm_angle_d(self.orientation[2] + math.degrees(angle_delta[2]))
             )
 
     def add_position_delta(self, position_delta):
@@ -390,10 +400,16 @@ class VisionPositionDeltaTable(Table):
         self.pose = Pose((0.0, 0.0, 0.0), (0.0, 0.0, 0.0))
 
     def append(self, row: dict):
-        # Flatten angle array
-        row[f'{self._table_name}.roll_delta'] = row[f'{self._table_name}.angle_delta'][0]
-        row[f'{self._table_name}.pitch_delta'] = row[f'{self._table_name}.angle_delta'][1]
-        row[f'{self._table_name}.yaw_delta'] = row[f'{self._table_name}.angle_delta'][2]
+        # Flatten angle array, and normalize while we're at it
+        is_degrees = False
+        if is_degrees:
+            row[f'{self._table_name}.roll_delta'] = norm_angle_d(row[f'{self._table_name}.angle_delta'][0])
+            row[f'{self._table_name}.pitch_delta'] = norm_angle_d(row[f'{self._table_name}.angle_delta'][1])
+            row[f'{self._table_name}.yaw_delta'] = norm_angle_d(row[f'{self._table_name}.angle_delta'][2])
+        else:
+            row[f'{self._table_name}.roll_delta'] = norm_angle_r(row[f'{self._table_name}.angle_delta'][0])
+            row[f'{self._table_name}.pitch_delta'] = norm_angle_r(row[f'{self._table_name}.angle_delta'][1])
+            row[f'{self._table_name}.yaw_delta'] = norm_angle_r(row[f'{self._table_name}.angle_delta'][2])
 
         # Flatten position array
         row[f'{self._table_name}.x_delta'] = row[f'{self._table_name}.position_delta'][0]
