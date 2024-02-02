@@ -78,7 +78,8 @@ class Param:
         self.id = msg.param_id
         self.value = msg.param_value
         self.type = msg.param_type
-        self.when = time.asctime(time.localtime(getattr(msg, '_timestamp', 0.0)))
+        timestamp = getattr(msg, '_timestamp', 0.0)
+        self.when = f'[{timestamp :.3f}] {time.asctime(time.localtime(timestamp))}'
 
     def is_int(self) -> bool:
         return is_int(self.type)

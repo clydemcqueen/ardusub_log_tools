@@ -257,6 +257,10 @@ class DataflashLogReader(LogMerger):
             if not self.raw and msg_type == 'BARO' and raw_data['I'] == 0:
                 continue
 
+            # Hack: drop AHR2 readings where Lat/Lng are 0
+            if not self.raw and msg_type == 'AHR2' and raw_data['Lat'] == 0:
+                continue
+
             table_name = msg_type
 
             # Hack: split some EKF tables into _core0, _core1, etc.
