@@ -62,7 +62,7 @@ class Mission:
         for seq, msg in sorted(self.mission_items.items()):
             param_str = f'{msg.param1 :7.2f} {msg.param2 :7.2f} {msg.param3 :7.2f} {msg.param4 :7.2f}'
             # TODO I'm confused by frames
-            xyz_str = f'{msg.x / 1.0e7 :7.2f} {msg.y / 1.0e7 :7.2f} {msg.z :7.2f}'
+            xyz_str = f'{msg.x / 1.0e7 :11.6f} {msg.y / 1.0e7 :11.6f} {msg.z :11.6f}'
             print(f'{seq :3}: frame {msg.frame} {mav_cmd_name(msg.command) :36} params {param_str :20}   xyz {xyz_str}')
 
 
