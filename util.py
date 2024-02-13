@@ -88,6 +88,7 @@ def add_rate_field(messages: list[dict], half_n: int, max_gap: float, field_name
 
 
 def expand_path(paths: list[str], recurse: bool, ext: str | list[str]) -> list[str]:
+    """Given a list of paths, return a sorted list of files. Use file globbing to handle -r."""
     files = set()
 
     if type(ext) is str:
