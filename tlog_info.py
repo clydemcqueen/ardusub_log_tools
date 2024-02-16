@@ -50,8 +50,11 @@ class CompInfo:
         self._sys_id = sys_id
         self._comp_id = comp_id
 
-        # Count # of unique HEARTBEAT.system_status values
-        self._heartbeat_states = {}
+        # Count heartbeats
+        self._heartbeat_count = 0
+
+        # Count autopilot heartbeats by combined mode (armed + mode)
+        self._mode_counter = table_types.ModeCounter()
 
         # Count # of unique STATUSTEXT.severity and .text values
         self._status_severities = {}
@@ -69,10 +72,8 @@ class CompInfo:
 
         if msg_type == 'HEARTBEAT':
 
-            state = data['system_status']
-            if state not in self._heartbeat_states:
-                self._heartbeat_states[state] = 0
-            self._heartbeat_states[state] += 1
+            self._heartbeat_count += 1
+            self._mode_counter.count(data)
 
         elif msg_type == 'STATUSTEXT':
 
@@ -110,17 +111,12 @@ class CompInfo:
     def report_heartbeat(self):
         print('            HEARTBEAT')
 
-        total = 0
-        for si in sorted(self._heartbeat_states.items()):
-            count = si[1]
-            total += count
+        if self._sys_id == 1 and self._comp_id == 1:
+            for i, count in sorted(self._mode_counter.modes.items()):
+                print(f'                    {count:8d} {i:20}')
 
-            # If ArduSub component then provide more info
-            if self._sys_id == 1 and self._comp_id == 1:
-                print(f'                    {count:8d} {table_types.ardusub_name(si[0]):20}')
-
-        minutes = total // 60
-        print(f'                    {total:8d} Total heartbeat messages, approx {minutes} minutes')
+        minutes = self._heartbeat_count // 60
+        print(f'                    {self._heartbeat_count:8d} Total heartbeat messages, approx {minutes} minutes')
 
     def report_statustext(self):
         if len(self._status_severities) > 0 or len(self._status_strings) > 0:

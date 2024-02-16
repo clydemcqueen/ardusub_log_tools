@@ -9,6 +9,7 @@ import glob
 import os
 
 import file_reader
+import table_types
 import util
 
 
@@ -20,11 +21,14 @@ class TelemetryLog:
         for msg in self._reader:
             # Only consider messages from the autopilot
             if msg.get_srcSystem() == 1 and msg.get_srcComponent() == 1:
-                dive.note_time(self._reader.name, getattr(msg, '_timestamp', 0.0), msg.time_boot_ms)
+                if msg.get_type() == 'SYSTEM_TIME':
+                    dive.note_time(self._reader.name, getattr(msg, '_timestamp', 0.0), msg.time_boot_ms)
+                else:  # HEARTBEAT
+                    dive.count_mode(msg)
 
     def report(self):
-        print(f'>>> First {util.time_str(self._reader.first_ts)} ({self._reader.first_ts})')
-        print(f'>>> Last {util.time_str(self._reader.last_ts)} ({self._reader.last_ts})')
+        print(f'>>> First: {util.time_str(self._reader.first_ts)} ({self._reader.first_ts :.2f})')
+        print(f'>>> Last:  {util.time_str(self._reader.last_ts)} ({self._reader.last_ts :.2f})')
 
 
 class ExpectedDataflashLog:
@@ -37,8 +41,18 @@ class ExpectedDataflashLog:
         self.last_time_boot_s = time_boot_s
         self.last_ts = ts
 
+        self.mode_counter = table_types.ModeCounter()
+
+    def count(self, heartbeat_msg):
+        self.mode_counter.count(heartbeat_msg.to_dict())
+
     def report(self):
         print(f'>>> Reference {self.name}, first {self.first_time_boot_s :.2f}s, last {self.last_time_boot_s :.2f}s')
+        print(f'--- First: {util.time_str(self.first_ts)} ({self.first_ts :.2f})')
+        print(f'--- Last:  {util.time_str(self.last_ts)} ({self.last_ts :.2f})')
+        print('--- Expected:')
+        for i, count in sorted(self.mode_counter.modes.items()):
+            print(f'    {count :8d} {i :20}')
 
 
 class DataflashLog:
@@ -119,9 +133,13 @@ class Dive:
             self._ex_df_logs[-1].last_ts = timestamp
             self._ex_df_logs[-1].last_time_boot_s = time_boot_s
 
+    def count_mode(self, heartbeat_msg):
+        if len(self._ex_df_logs) > 0:
+            self._ex_df_logs[-1].count(heartbeat_msg)
+
     def process_and_report(self):
         # SYSTEM_TIME is logged at a reasonable rate
-        readers = DiveReaderList(self._dir_path, 'tlog', types=['SYSTEM_TIME'])
+        readers = DiveReaderList(self._dir_path, 'tlog', types=['SYSTEM_TIME', 'HEARTBEAT'])
         for reader in readers:
             print(f'Reading {reader.name}')
             log = TelemetryLog(reader)
