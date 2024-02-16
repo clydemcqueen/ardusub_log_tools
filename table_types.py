@@ -104,7 +104,7 @@ def state_name(state_id: int) -> str:
     return apm.enums['MAV_STATE'][state_id].name.lower()
 
 
-def ardusub_name(state_id: int) -> str:
+def system_status_name(state_id: int) -> str:
     if state_id == apm.MAV_STATE_CRITICAL:
         return 'CRITICAL, FAILSAFE was triggered'
     elif state_id == apm.MAV_STATE_ACTIVE:
@@ -126,6 +126,18 @@ def status_severity_name(severity: int) -> str:
         return 'INFO'
     else:
         return f'severity {severity}'
+
+
+class ModeCounter:
+    """Count seconds spent in the various [combined] modes"""
+    def __init__(self):
+        self.modes = {}
+
+    def count(self, heartbeat_data: dict):
+        mode = mode_name(combined_mode(heartbeat_data['base_mode'], heartbeat_data['custom_mode']))
+        if mode not in self.modes:
+            self.modes[mode] = 0
+        self.modes[mode] += 1
 
 
 class Table:
