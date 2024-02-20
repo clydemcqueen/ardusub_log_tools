@@ -197,7 +197,7 @@ class PSCxTable(DataflashTable):
     Suffix should be 'N', 'E', 'D'; this is used to change field names from short codes to log_PSCx struct field names
     Flip means flip the sign, e.g., from down to up
     """
-    def __init__(self, table_name: str, suffix:str, flip: bool):
+    def __init__(self, table_name: str, suffix: str, flip: bool):
         super().__init__(table_name)
         self._suffix = suffix
         self._flip = flip
@@ -228,10 +228,14 @@ class DataflashLogReader(LogMerger):
                  max_msgs: int,
                  max_rows: int,
                  verbose: bool,
-                 raw: bool):
+                 raw: bool,
+                 start: float,
+                 stop: float):
         super().__init__(infile, max_msgs, max_rows, verbose)
         self.msg_types = msg_types
         self.raw = raw
+        self.start = start
+        self.stop = stop
 
         # Make up the PSCU (position control 'up') table, a flipped version of PSCD
         self.pscu = 'PSCU' in msg_types
@@ -257,8 +261,8 @@ class DataflashLogReader(LogMerger):
             if not self.raw and msg_type == 'BARO' and raw_data['I'] == 0:
                 continue
 
-            # Hack: drop AHR2 readings where Lat/Lng are 0
-            if not self.raw and msg_type == 'AHR2' and raw_data['Lat'] == 0:
+            # Hack: drop GPS and AHR2 readings where Lat/Lng are 0
+            if not self.raw and (msg_type == 'AHR2' or msg_type == 'GPS') and raw_data['Lat'] == 0:
                 continue
 
             table_name = msg_type
@@ -273,6 +277,12 @@ class DataflashLogReader(LogMerger):
 
             # This will pull from TimeUS, which is present in all (most?) records
             timestamp = getattr(msg, '_timestamp', 0.0)
+
+            # Hack: process just a segment
+            if self.start >= 0 and timestamp < self.start:
+                continue
+            if 0 < self.stop < timestamp:
+                continue
 
             # Clean up the data: add the timestamp, remove mavpackettype, and rename the keys
             clean_data = {'timestamp': timestamp}
@@ -314,6 +324,10 @@ def main():
                         help='stop if the merged table exceeds this number of rows (default 500K)')
     parser.add_argument('--raw', action='store_true',
                         help='show all records; default is to drop BARO records where id==0')
+    parser.add_argument('--start', type=float, default=-1.0,
+                        help='hack: segment start')
+    parser.add_argument('--stop', type=float, default=-1.0,
+                        help='hack: segment stop')
     parser.add_argument('path', nargs='+')
     args = parser.parse_args()
     files = util.expand_path(args.path, args.recurse, '.BIN')
@@ -327,7 +341,7 @@ def main():
 
     for file in files:
         print('===================')
-        reader = DataflashLogReader(file, msg_types, args.max_msgs, args.max_rows, args.verbose, args.raw)
+        reader = DataflashLogReader(file, msg_types, args.max_msgs, args.max_rows, args.verbose, args.raw, args.start, args.stop)
         reader.read()
         if args.explode:
             reader.write_msg_csv_files()

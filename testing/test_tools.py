@@ -28,7 +28,7 @@ from segment_reader import SegmentFormatException, Segment, SegmentReader, parse
 class TestTools:
 
     def test_dataflash_merge(self):
-        tool = BIN_merge.DataflashLogReader('testing/small.BIN', ['VIBE'], 10000, 10000, False, False)
+        tool = BIN_merge.DataflashLogReader('testing/small.BIN', ['VIBE'], 10000, 10000, False, False, -1.0, -1.0)
         tool.read()
         tool.write_merged_csv_file()
 
