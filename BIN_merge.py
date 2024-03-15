@@ -114,7 +114,8 @@ SURFTRAK_MSG_TYPES = [
     'RFND',
 ]
 
-EKF_SPLIT_CORE_MSG_TYPES = [
+# Messages types that can be split by the 'C' field
+SPLIT_CORE_MSG_TYPES = [
     'XKF1',  # EKF3 estimator outputs
     'XKF2',  # EKF3 estimator secondary outputs
     'XKF3',  # EKF3 innovations
@@ -125,18 +126,17 @@ EKF_SPLIT_CORE_MSG_TYPES = [
     'XKTV',  # EKF3 Yaw Estimator States
 ]
 
+# Messages types that can be split by the 'I' field
+SPLIT_INSTANCE_MSG_TYPES = [
+    'BARO',  # Barometer data
+    'MAG',   # Compass data
+]
+
 EKF_MSG_TYPES = [
-    *EKF_SPLIT_CORE_MSG_TYPES,
+    *SPLIT_CORE_MSG_TYPES,
     'XKF5',  # EKF3 Sensor innovations (primary core) and general dumping ground
     'XKV1',  # EKF3 State variances (primary core)
     'XKV2',  # more EKF3 State Variances (primary core)
-]
-
-# Useful for testing UGPS + DVL fusion
-FUSION_MSG_TYPES = [
-    'GPS',
-    'MAVC',
-    'XKFD',  # Not on by default for ArduSub, need to add a compiler flag
 ]
 
 
@@ -153,6 +153,10 @@ class DataflashTable:
             return PSCxTable(msg_type, 'D', flip=False)
         elif msg_type == 'PSCU':
             return PSCxTable(msg_type, 'D', flip=True)
+        elif msg_type == 'XKV1':
+            return XKV1Table(msg_type)
+        elif msg_type == 'XKV2':
+            return XKV2Table(msg_type)
         else:
             return DataflashTable(msg_type)
 
@@ -221,6 +225,61 @@ class PSCxTable(DataflashTable):
         super().append(row)
 
 
+def rename_fields(row: dict, map: list[tuple], msg_type: str) -> dict:
+    for item in map:
+        field = row.pop(f'{msg_type}.{item[0]}')
+        row[f'{msg_type}.{item[1]}'] = field
+    return row
+
+
+class XKV1Table(DataflashTable):
+    def __init__(self, table_name: str):
+        super().__init__(table_name)
+
+    MAP = [
+        ('V00', 'q0'),
+        ('V01', 'q1'),
+        ('V02', 'q2'),
+        ('V03', 'q3'),
+        ('V04', 'vel_N'),
+        ('V05', 'vel_E'),
+        ('V06', 'vel_D'),
+        ('V07', 'pos_N'),
+        ('V08', 'pos_E'),
+        ('V09', 'pos_D'),
+        ('V10', 'gyro_bias_X'),
+        ('V11', 'gyro_bias_Y'),
+    ]
+
+    def append(self, row: dict):
+        rename_fields(row, XKV1Table.MAP, self._msg_type)
+        super().append(row)
+
+
+class XKV2Table(DataflashTable):
+    def __init__(self, table_name: str):
+        super().__init__(table_name)
+
+    MAP = [
+        ('V12', 'gyro_bias_Z'),
+        ('V13', 'accel_bias_X'),
+        ('V14', 'accel_bias_Y'),
+        ('V15', 'accel_bias_Z'),
+        ('V16', 'earth_mag_N'),
+        ('V17', 'earth_mag_E'),
+        ('V18', 'earth_mag_D'),
+        ('V19', 'body_mag_X'),
+        ('V20', 'body_mag_Y'),
+        ('V21', 'body_mag_Z'),
+        ('V22', 'wind_vel_N'),
+        ('V23', 'wind_vel_E'),
+    ]
+
+    def append(self, row: dict):
+        rename_fields(row, XKV2Table.MAP, self._msg_type)
+        super().append(row)
+
+
 class DataflashLogReader(LogMerger):
     def __init__(self,
                  infile: str,
@@ -267,9 +326,11 @@ class DataflashLogReader(LogMerger):
 
             table_name = msg_type
 
-            # Hack: split some EKF tables into _core0, _core1, etc.
-            if msg_type in EKF_SPLIT_CORE_MSG_TYPES:
+            # Hack: split some tables into _core0, ... and _instance0, ...
+            if msg_type in SPLIT_CORE_MSG_TYPES:
                 table_name = f'{msg_type}_core{msg.C}'
+            elif msg_type in SPLIT_INSTANCE_MSG_TYPES:
+                table_name = f'{msg_type}_instance{msg.I}'
 
             # Hack: make up the PSCU table
             if msg_type == 'PSCD' and self.pscu:
@@ -318,6 +379,8 @@ def main():
                         help='do not merge tables, useful if you also select --explode')
     parser.add_argument('--types', default=None,
                         help='comma separated list of message types, the default is a small set of useful types')
+    parser.add_argument('--ekf', action='store_true',
+                        help='ignore --types, use all EKF types')
     parser.add_argument('--max-msgs', type=int, default=500000,
                         help='stop after processing this number of messages (default 500K)')
     parser.add_argument('--max-rows', type=int, default=500000,
@@ -333,7 +396,9 @@ def main():
     files = util.expand_path(args.path, args.recurse, '.BIN')
     print(f'Processing {len(files)} files')
 
-    if args.types:
+    if args.ekf:
+        msg_types = EKF_MSG_TYPES
+    elif args.types:
         msg_types = args.types.split(',')
     else:
         msg_types = SURFTRAK_MSG_TYPES
