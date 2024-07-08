@@ -9,6 +9,10 @@ def time_str(timestamp: float) -> str:
     return datetime.datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
 
 
+def time_us_str(time_us: int):
+    return datetime.datetime.fromtimestamp(time_us * 1e-6).strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+
+
 def add_rate_field(messages: list[dict], half_n: int, max_gap: float, field_name: str):
     """
     Calc message rate using the MAV timestamp (comes from QGC wall time) based on 2 * half_n intervals.
