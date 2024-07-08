@@ -148,13 +148,15 @@ class TelemetryLogParam:
         self.git_hash: str = ''
         mlog = mavutil.mavlink_connection(infile, robust_parsing=False, dialect='ardupilotmega')
 
-        while (msg := mlog.recv_match(blocking=False, type=['PARAM_VALUE', 'AUTOPILOT_VERSION'])) is not None:
+        while (msg := mlog.recv_match(blocking=False, type=['PARAM_VALUE', 'PARAM_SET', 'AUTOPILOT_VERSION'])) is not None:
             if msg.get_type() == 'PARAM_VALUE':
-                self.handle_param(msg, print_intra_file_changes)
+                self.handle_param_value(msg, print_intra_file_changes)
+            elif msg.get_type() == 'PARAM_SET':
+                self.handle_param_set(msg)
             else:
                 self.handle_version(msg)
 
-    def handle_param(self, msg: mav_common.MAVLink_param_value_message, print_intra_file_changes: bool):
+    def handle_param_value(self, msg: mav_common.MAVLink_param_value_message, print_intra_file_changes: bool):
         new_param = Param(msg)
 
         if new_param.id in self.params:
@@ -172,6 +174,9 @@ class TelemetryLogParam:
         else:
             # Add the param to the dict
             self.params[new_param.id] = new_param
+
+    def handle_param_set(self, msg: mav_common.MAVLink_param_set_message):
+        print(f'PARAM_SET ({msg.get_srcSystem()}, {msg.get_srcComponent()}) -> ({msg.target_system}, {msg.target_component}), param {msg.param_id}, new value {msg.param_value}')
 
     def handle_version(self, msg: mav_common.MAVLink_autopilot_version_message):
         flight_sw_version = msg.flight_sw_version
