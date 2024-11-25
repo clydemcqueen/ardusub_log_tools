@@ -129,6 +129,7 @@ SPLIT_CORE_MSG_TYPES = [
 # Messages types that can be split by the 'I' field
 SPLIT_INSTANCE_MSG_TYPES = [
     'BARO',  # Barometer data
+    'IMU',   # IMU data
     'MAG',   # Compass data
 ]
 
