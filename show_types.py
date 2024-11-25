@@ -38,6 +38,7 @@ DATAFLASH_DESC = {
     'FTN': 'Filter Tuning Message - per motor',
     'GPA': 'GPS accuracy information',
     'GPS': 'Information received from GNSS systems attached to the autopilot',
+    'GUIP': 'Guided mode target information',
     'IMU': 'Inertial Measurement Unit data',
     'MAG': 'Information received from compasses',
     'MAV': 'GCS MAVLink link statistics',
@@ -83,7 +84,37 @@ DATAFLASH_DESC = {
     'XKV2': 'more EKF3 State Variances (primary core)',
     'XKY0': 'EKF Yaw Estimator States',
     'XKY1': 'EKF Yaw Estimator Innovations',
+
+    # Replay, considered a "black box":
+    'RBOH':  'Replay body odometry data',
+    'RBRH':  'Replay Data Barometer Header',
+    'RBRI':  'Replay Data Barometer Instance',
+    'RFRF':  'Replay FRame data - Finished frame',
+    'RFRH':  'Replay FRame Header',
+    'RFRN':  'Replay FRame - aNother frame header',
+    'RGPH':  'Replay Data GPS Header',
+    'RGPI':  'Replay Data GPS Instance, infrequently changing data',
+    'RGPJ':  'Replay Data GPS Instance - rapidly changing data',
+    'RISH':  'Replay Inertial Sensor header',
+    'RISI':  'Replay Inertial Sensor instance data',
+    'RMGH':  'Replay Data Magnetometer Header',
+    'RMGI':  'Replay Data Magnetometer Instance',
+    'RRNH':  'Replay Data Rangefinder Header',
+    'RRNI':  'Replay Data Rangefinder Instance',
+    'RVOH':  'Replay Data Visual Odometry data',
 }
+
+
+def rate_str(count, tn, t0) -> str:
+    if t0 >= tn:
+        return ' N/A'
+    else:
+        rate = round(count / (tn - t0))
+        if rate > 1000:
+            # Some messages all come at once
+            return 'HIGH'
+        else:
+            return f'{rate:4d}'
 
 
 class TypeFinder:
@@ -94,8 +125,9 @@ class TypeFinder:
     def read(self):
         mlog = mavutil.mavlink_connection(self.filename, dialect='ardupilotmega')
 
-        # Count # of messages per type
-        msg_counts = {}
+        msg_count = {}  # Count
+        msg_t0 = {}     # First timestamp
+        msg_tn = {}     # Last timestamp
 
         # Don't crash reading a corrupt file
         try:
@@ -105,21 +137,28 @@ class TypeFinder:
                     break
 
                 msg_type = msg.get_type()
-
-                if msg_type not in msg_counts.keys():
-                    msg_counts[msg_type] = 0
-
-                msg_counts[msg_type] += 1
+                if msg_type not in msg_count.keys():
+                    msg_count[msg_type] = 1
+                    msg_tn[msg_type] = msg_t0[msg_type] = getattr(msg, '_timestamp', 0)
+                else:
+                    msg_count[msg_type] += 1
+                    msg_tn[msg_type] = getattr(msg, '_timestamp', 0)
 
         except Exception as e:
             print(f'CRASH WITH ERROR "{e}", SHOWING PARTIAL RESULTS')
 
-        for msg_type, msg_count in sorted(msg_counts.items()):
+        if self.is_dataflash:
+            print(' COUNT  RATE  TYPE  DESCRIPTION')
+        else:
+            print('TYPE                                  COUNT  RATE')
+
+        for msg_type, msg_count in sorted(msg_count.items()):
+            rate = rate_str(msg_count, msg_tn[msg_type], msg_t0[msg_type])
             if self.is_dataflash:
                 msg_desc = DATAFLASH_DESC[msg_type] if msg_type in DATAFLASH_DESC else 'TODO -- update tool'
-                print(f'{msg_count:6d}  {msg_type:4}  {msg_desc:82}')
+                print(f'{msg_count:6d}  {rate}  {msg_type:4}  {msg_desc:82}')
             else:
-                print(f'{msg_type:35} {msg_count:6d}')
+                print(f'{msg_type:35}  {msg_count:6d}  {rate}')
 
 
 def main():
