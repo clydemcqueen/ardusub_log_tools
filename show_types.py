@@ -58,6 +58,8 @@ DATAFLASH_DESC = {
     'PSCD': 'Position Control Down',
     'PSCE': 'Position Control East',
     'PSCN': 'Position Control North',
+    'PSOD': 'Position Control Offsets Down',
+    'PSOT': 'Position Control Offsets Terrain (Down)',
     'RATE': 'Desired and achieved vehicle attitude rates. Not logged in Fixed Wing Plane modes.',
     'RCI2': '(More) RC input channels to vehicle',
     'RCIN': 'RC input channels to vehicle',
