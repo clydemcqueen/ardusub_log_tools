@@ -4,7 +4,7 @@
 Read MAVLink PARAM_VALUE messages from a tlog file (telemetry log), reconstruct the parameter state of a vehicle, and
 write the parameters to a QGC-compatible params file.
 """
-
+import os
 import time
 from argparse import ArgumentParser
 
@@ -15,7 +15,7 @@ from pymavlink import mavutil
 import util
 
 # These parameters change all the time, so changes are uninteresting
-NOISY_PARAMS: list[str] = ['BARO1_GND_PRESS', 'BARO2_GND_PRESS']
+NOISY_PARAMS: list[str] = ['BARO1_GND_PRESS', 'BARO2_GND_PRESS', 'STAT_FLTTIME', 'STAT_RUNTIME']
 
 EK3_SRCn_POSXY = {
     0: 'None',
@@ -249,19 +249,33 @@ def main():
     parser.add_argument('-c', '--changes',
                         help='only show changes across files, do not write *.params files',
                         action='store_true')
+    parser.add_argument('-s', '--skip',
+                        help='skip one or more files, comma separated list of filenames',
+                        type=str, default='')
     parser.add_argument('path', nargs='+')
     args = parser.parse_args()
     files = util.expand_path(args.path, args.recurse, '.tlog')
     print(f'Processing {len(files)} files')
+    skip = args.skip.split(',')
 
     previous_file = None
     for infile in files:
         print('-------------------')
-        print(f'Reading {infile}')
+        _, basename = os.path.split(infile)
 
-        # If --changes is True, then print changes between files, but not changes w/in files
+        if basename in skip:
+            print(f'Skipping: {infile}')
+            continue
+
+        # The BlueOS file names have a prefix which screws up the sort order, drop for now
+        if args.changes and basename[5] == '-':
+            print(f'Skipping BlueOS-generated tlog: {infile}')
+            continue
+
+        print(f'Reading {infile}')
         current_file = TelemetryLogParam(infile, not args.changes)
 
+        # If --changes is True, then print changes between files, but not changes w/in files
         if args.changes:
             if previous_file is not None:
                 print_changes(previous_file, current_file)
