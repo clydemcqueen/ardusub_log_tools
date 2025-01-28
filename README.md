@@ -519,5 +519,15 @@ References:
 
 ## Other tools
 
+### MAVExplorer.py
+
+A terrific tool. Some nifty things it can do with tlog files:
+* `map GPS_INPUT GPS_RAW_INT GLOBAL_POSITION_INT` is basically the same as tlog_map_maker.py
+
+Nifty things it can do with BIN files:
+* `map GPS POS` will show a map comparing the GPS inputs to EKF outputs
+
+### References
+
 * https://github.com/waterlinked/examples
 * https://github.com/tridge/log_analysis
