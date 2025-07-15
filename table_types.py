@@ -235,6 +235,7 @@ class BatteryStatusTable(Table):
 
     def append(self, row: dict):
         # Grab the voltage of the first battery
+        # TODO AP will split the voltage across multiple rows if required, check for this
         row[f'{self._table_name}.voltage'] = row[f'{self._table_name}.voltages'][0]
         super().append(row)
 
