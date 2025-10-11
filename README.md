@@ -14,7 +14,7 @@ tool.py --recurse .
 
 ## Requirements
 
-ardusub_log_tools requires Python 3.10 or 3.11.
+ardusub_log_tools requires Python 3.12.
 Other requirements are listed in [requirements.txt](requirements.txt).
 
 ## A note on BAD_DATA messages
