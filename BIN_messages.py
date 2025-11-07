@@ -94,9 +94,8 @@ class LogEvent(Enum):
 
 
 class DataflashLogReader:
-    def __init__(self, infile: str, verbose: bool):
+    def __init__(self, infile: str):
         self._infile = infile
-        self._verbose = verbose
         self._messages = []
 
     def read(self):
@@ -123,8 +122,6 @@ class DataflashLogReader:
                 print(f'Error: unexpected message type {msg_type}')
 
             msg_count += 1
-            if self._verbose and msg_count % 20000 == 0:
-                print(f'{msg_count} messages')
 
         print(f'{msg_count} messages')
         self._messages.sort(key=lambda item: item['timestamp'])
@@ -132,15 +129,13 @@ class DataflashLogReader:
     def write_messages(self, filename: str):
         print(f'Messages and events for {filename}:')
         for item in self._messages:
-            print(f'  {item["timestamp"]:<10.6f} {item["message"]}')
+            print(f'  {item["timestamp"]:10.6f} {item["message"]}')
 
 
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=__doc__)
     parser.add_argument('-r', '--recurse', action='store_true',
                         help='enter directories looking for BIN files')
-    parser.add_argument('-v', '--verbose', action='store_true',
-                        help='print a lot more information')
     parser.add_argument('path', nargs='+')
     args = parser.parse_args()
     files = util.expand_path(args.path, args.recurse, '.BIN')
@@ -148,7 +143,7 @@ def main():
 
     for file in files:
         print('===================')
-        reader = DataflashLogReader(file, args.verbose)
+        reader = DataflashLogReader(file)
         reader.read()
         reader.write_messages(file)
 
