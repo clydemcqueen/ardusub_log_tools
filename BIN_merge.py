@@ -158,6 +158,8 @@ class DataflashTable:
             return XKV1Table(msg_type)
         elif msg_type == 'XKV2':
             return XKV2Table(msg_type)
+        elif msg_type.startswith('XKF4'):
+            return XKF4Table(msg_type)
         else:
             return DataflashTable(msg_type)
 
@@ -278,6 +280,17 @@ class XKV2Table(DataflashTable):
 
     def append(self, row: dict):
         rename_fields(row, XKV2Table.MAP, self._msg_type)
+        super().append(row)
+
+
+class XKF4Table(DataflashTable):
+    def __init__(self, table_name: str):
+        super().__init__(table_name)
+
+    def append(self, row: dict):
+        ss_field = f'{self._msg_type}.SS'
+        row[f'{self._msg_type}.const_pos'] = 1 if row[ss_field] & (1 << 7) else 0
+        row[f'{self._msg_type}.horiz_rel'] = 1 if row[ss_field] & (1 << 3) else 0
         super().append(row)
 
 
