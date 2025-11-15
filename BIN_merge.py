@@ -294,6 +294,46 @@ class XKF4Table(DataflashTable):
         super().append(row)
 
 
+class DataflashTableSTATUS(DataflashTable):
+    def __init__(self, tables: dict, verbose: bool):
+        super().__init__('STATUS')
+
+        print('Generating STATUS table')
+
+        frames = []
+
+        if 'MODE' in tables:
+            df = tables['MODE'].get_dataframe(verbose)[['timestamp', 'MODE.TimeUS', 'MODE.Mode']].copy()
+            df.rename(columns={'MODE.TimeUS': 'STATUS.TimeUS', 'MODE.Mode': 'STATUS.Mode'}, inplace=True)
+            df['STATUS.Source'] = 0
+            frames.append(df)
+
+        if 'ARM' in tables:
+            df = tables['ARM'].get_dataframe(verbose)[['timestamp', 'ARM.TimeUS', 'ARM.ArmState']].copy()
+            df.rename(columns={'ARM.TimeUS': 'STATUS.TimeUS', 'ARM.ArmState': 'STATUS.ArmState'}, inplace=True)
+            df['STATUS.Source'] = 1
+            frames.append(df)
+
+        if 'ERR' in tables:
+            df = tables['ERR'].get_dataframe(verbose)[
+                ['timestamp', 'ERR.TimeUS', 'ERR.Subsys', 'ERR.ECode']].copy()
+            df.rename(columns={'ERR.TimeUS': 'STATUS.TimeUS', 'ERR.Subsys': 'STATUS.ERR_Subsys',
+                               'ERR.ECode': 'STATUS.ERR_ECode'}, inplace=True)
+            df['STATUS.Source'] = 2
+            frames.append(df)
+
+        if 'EV' in tables:
+            df = tables['EV'].get_dataframe(verbose)[['timestamp', 'EV.TimeUS', 'EV.Id']].copy()
+            df.rename(columns={'EV.TimeUS': 'STATUS.TimeUS', 'EV.Id': 'STATUS.EV_Id'}, inplace=True)
+            df['STATUS.Source'] = 3
+            frames.append(df)
+
+        if frames:
+            status_df = pd.concat(frames)
+            status_df.sort_values(by=['timestamp'], inplace=True)
+            self._rows = status_df.to_dict('records')
+
+
 class DataflashLogReader(LogMerger):
     def __init__(self,
                  infile: str,
@@ -317,6 +357,20 @@ class DataflashLogReader(LogMerger):
                 print('PSCD and PSCU both requested, dropping PSCD')
             else:
                 msg_types.append('PSCD')
+
+        # Make up the STATUS table from MODE, ARM, ERR and EV
+        self.status = 'STATUS' in msg_types
+        if self.status:
+            msg_types.remove('STATUS')
+            print('STATUS is a synthetic table and requires MODE, ARM, ERR and EV')
+            if 'MODE' not in msg_types:
+                msg_types.append('MODE')
+            if 'ARM' not in msg_types:
+                msg_types.append('ARM')
+            if 'ERR' not in msg_types:
+                msg_types.append('ERR')
+            if 'EV' not in msg_types:
+                msg_types.append('EV')
 
     def read(self):
         self.tables = {}
@@ -422,6 +476,8 @@ def main():
         print('===================')
         reader = DataflashLogReader(file, msg_types, args.max_msgs, args.max_rows, args.verbose, args.raw, args.start, args.stop)
         reader.read()
+        if reader.status:
+            reader.tables['STATUS'] = DataflashTableSTATUS(reader.tables, args.verbose)
         if args.explode:
             reader.write_msg_csv_files()
         if not args.no_merge:
