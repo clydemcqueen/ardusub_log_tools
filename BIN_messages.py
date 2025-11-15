@@ -12,6 +12,82 @@ from pymavlink import mavutil
 import util
 
 
+class LogErrorSubsystem(Enum):
+    MAIN = 1
+    RADIO = 2
+    COMPASS = 3
+    OPTFLOW = 4
+    FAILSAFE_RADIO = 5
+    FAILSAFE_BATT = 6
+    FAILSAFE_GPS = 7
+    FAILSAFE_GCS = 8
+    FAILSAFE_FENCE = 9
+    FLIGHT_MODE = 10
+    GPS = 11
+    CRASH_CHECK = 12
+    FLIP = 13
+    AUTOTUNE = 14
+    PARACHUTES = 15
+    EKFCHECK = 16
+    FAILSAFE_EKFINAV = 17
+    BARO = 18
+    CPU = 19
+    FAILSAFE_ADSB = 20
+    TERRAIN = 21
+    NAVIGATION = 22
+    FAILSAFE_TERRAIN = 23
+    EKF_PRIMARY = 24
+    THRUST_LOSS_CHECK = 25
+    FAILSAFE_SENSORS = 26
+    FAILSAFE_LEAK = 27
+    PILOT_INPUT = 28
+    FAILSAFE_VIBE = 29
+    INTERNAL_ERROR = 30
+    FAILSAFE_DEADRECKON = 31
+
+
+log_error_code = {
+    # general error codes
+    'ERROR_RESOLVED': 0,
+    'FAILED_TO_INITIALISE': 1,
+    'UNHEALTHY': 4,
+    # subsystem specific error codes -- radio
+    'RADIO_LATE_FRAME': 2,
+    # subsystem specific error codes -- failsafe_thr, batt, gps
+    'FAILSAFE_RESOLVED': 0,
+    'FAILSAFE_OCCURRED': 1,
+    # subsystem specific error codes -- main
+    'MAIN_INS_DELAY': 1,
+    # subsystem specific error codes -- crash checker
+    'CRASH_CHECK_CRASH': 1,
+    'CRASH_CHECK_LOSS_OF_CONTROL': 2,
+    # subsystem specific error codes -- flip
+    'FLIP_ABANDONED': 2,
+    # subsystem specific error codes -- terrain
+    'MISSING_TERRAIN_DATA': 2,
+    # subsystem specific error codes -- navigation
+    'FAILED_TO_SET_DESTINATION': 2,
+    'RESTARTED_RTL': 3,
+    'FAILED_CIRCLE_INIT': 4,
+    'DEST_OUTSIDE_FENCE': 5,
+    'RTL_MISSING_RNGFND': 6,
+    # subsystem specific error codes -- internal_error
+    'INTERNAL_ERRORS_DETECTED': 1,
+
+    # parachute failed to deploy because of low altitude or landed
+    'PARACHUTE_TOO_LOW': 2,
+    'PARACHUTE_LANDED': 3,
+    # EKF check definitions
+    'EKFCHECK_BAD_VARIANCE': 2,
+    'EKFCHECK_VARIANCE_CLEARED': 0,
+    # Baro specific error codes
+    'BARO_GLITCH': 2,
+    'BAD_DEPTH': 3,  # sub-only
+    # GPS specific error codes
+    'GPS_GLITCH': 2,
+}
+
+
 class LogEvent(Enum):
     ARMED = 10
     DISARMED = 11
@@ -104,7 +180,7 @@ class DataflashLogReader:
 
         print('Parsing messages')
         msg_count = 0
-        while (msg := mlog.recv_match(blocking=False, type=['EV', 'MSG'])) is not None:
+        while (msg := mlog.recv_match(blocking=False, type=['EV', 'MSG', 'ERR'])) is not None:
             msg_type = msg.get_type()
             raw_data = msg.to_dict()
             timestamp = getattr(msg, '_timestamp', 0.0)
@@ -117,6 +193,15 @@ class DataflashLogReader:
                     self._messages.append({'timestamp': timestamp, 'message': f'Event: {event.name}'})
                 except ValueError:
                     print(f'Warning: unknown event ID {raw_data["Id"]}')
+            elif msg_type == 'ERR':
+                try:
+                    subsys = LogErrorSubsystem(raw_data['Subsys'])
+                    # There are duplicate error codes, so find all matching names
+                    ecode_names = [name for name, code in log_error_code.items() if code == raw_data['ECode']]
+                    self._messages.append({'timestamp': timestamp,
+                                           'message': f'Error: Subsys {subsys.name}, ECode {",".join(ecode_names)}'})
+                except ValueError:
+                    print(f'Warning: unknown subsystem ID {raw_data["Subsys"]}')
             else:
                 # Should not happen
                 print(f'Error: unexpected message type {msg_type}')
