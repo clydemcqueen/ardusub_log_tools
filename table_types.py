@@ -48,7 +48,7 @@ class Mode(enum.IntEnum):
     POS_HOLD = 16
     MANUAL = 19
     MOTOR_DETECT = 20
-    RNG_HOLD = 21
+    SURFTRAK = 21
 
 
 MODE_NAMES = {
@@ -64,7 +64,7 @@ MODE_NAMES = {
     16: 'POS_HOLD',
     19: 'MANUAL',
     20: 'MOTOR_DETECT',
-    21: 'RNG_HOLD',
+    21: 'SURFTRAK',
 }
 
 

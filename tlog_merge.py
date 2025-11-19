@@ -17,7 +17,7 @@ HEARTBEAT.mode is a combination of HEARTBEAT.base_mode and HEARTBEAT.custom_mode
      16             armed, pos_hold
      19             armed, manual
      20             armed, motor detect
-     21             armed, rng_hold
+     21             armed, surftrak
 
 Supports segments.
 """
