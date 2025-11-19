@@ -86,9 +86,16 @@ class Timeline:
         self.system_status = apm.MAV_STATE_UNINIT
         self.ekf_status_flags = apm.EKF_UNINITIALIZED
 
+        self.first_ts = None
+        print('Time                |   Since epoch | Elapsed : Message')
+
         for msg in reader:
             ts = getattr(msg, '_timestamp', 0.0)
-            self.prefix = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S') + f' ({ts :.2f}): '
+
+            if self.first_ts is None:
+                self.first_ts = ts
+
+            self.prefix = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S') + f' | {ts :.2f} | {ts - self.first_ts :7.2f} : '
 
             msg_type = msg.get_type()
             if msg_type == 'HEARTBEAT':
