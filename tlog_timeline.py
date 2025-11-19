@@ -58,7 +58,25 @@ ANSI_CODES = {
     'BOLD': '\033[1m',
     'UNDERLINE': '\033[4m',
     'END': '\033[0m',
+    'WHITE': '\033[37m',
+    'GREEN': '\033[32m',
+    'YELLOW': '\033[33m',
+    'CYAN': '\033[36m',
+    'MAGENTA': '\033[35m',
+    'BLUE': '\033[34m',
+    'RED': '\033[31m',
 }
+
+
+class ColorMap:
+    def __init__(self):
+        self.heartbeat = 'GREEN'
+        self.status_text = 'WHITE'
+        self.command_long = 'MAGENTA'
+        self.command_ack = 'MAGENTA'
+        self.param_set = 'CYAN'
+        self.gps_global_origin = 'BLUE'
+        self.ekf_status_report = 'YELLOW'
 
 
 def mav_cmd_name(cmd: int) -> str:
@@ -79,6 +97,7 @@ class Timeline:
     def __init__(self, reader, ansi):
         # Enable / disable ansi codes
         self.ansi = ansi
+        self.colors = ColorMap()
 
         # Track base_mode and custom mode and report on changes
         self.base_mode = apm.MAV_MODE_PREFLIGHT
@@ -132,43 +151,43 @@ class Timeline:
                 armed_str = 'ARMED' if table_types.is_armed(msg.base_mode) else 'DISARMED'
                 mode_str = f'{table_types.mode_name(msg.custom_mode)} ({msg.custom_mode})'
                 state_str = 'CRITICAL' if msg.system_status == apm.MAV_STATE_CRITICAL else ''
-                ansi_code = 'BOLD' if msg.custom_mode in AUTO_MODES else None
-                self.report(f'{armed_str} {mode_str} {state_str}', ansi_code)
+                self.report(f'{armed_str} {mode_str} {state_str}', self.colors.heartbeat)
                 self.base_mode = msg.base_mode
                 self.custom_mode = msg.custom_mode
                 self.system_status = msg.system_status
 
     def process_status_text(self, msg):
-        self.report(f'{table_types.status_severity_name(msg.severity)}: {msg.text}')
+        self.report(f'{table_types.status_severity_name(msg.severity)}: {msg.text}', self.colors.status_text)
 
     def process_command_long(self, msg):
         if msg.command not in IGNORE_CMDS:
-            self.report(f'Command:  {mav_cmd_name(msg.command)}, param1 {msg.param1}')
+            self.report(f'Command:  {mav_cmd_name(msg.command)}, param1 {msg.param1}', self.colors.command_long)
 
     def process_command_ack(self, msg):
         if msg.command not in IGNORE_CMDS:
-            self.report(f'Response: {mav_cmd_name(msg.command)}, {mav_result_name(msg.result)}')
+            self.report(f'Response: {mav_cmd_name(msg.command)}, {mav_result_name(msg.result)}', self.colors.command_ack)
 
     def process_param_set(self, msg):
         param = Param(msg)
         comment = param.comment()
         if comment is None:
-            self.report(f'Set param {param.id} to {param.value_str()}', 'BOLD')
+            self.report(f'Set param {param.id} to {param.value_str()}', self.colors.param_set)
         else:
-            self.report(f'Set param {param.id} to {comment} ({param.value_str()})', 'BOLD')
+            self.report(f'Set param {param.id} to {comment} ({param.value_str()})', self.colors.param_set)
 
     def process_gps_global_origin(self, msg):
         lat = msg.latitude / 1.0e7
         lon = msg.longitude / 1.0e7
         alt = msg.altitude / 1000.0
-        self.report(f'Global origin set to ({lat}, {lon}), altitude {alt} above mean sea level', 'BOLD')
+        self.report(f'Global origin set to ({lat}, {lon}), altitude {alt} above mean sea level',
+                    self.colors.gps_global_origin)
 
     def process_ekf_status_report(self, msg):
         if msg.flags != self.ekf_status_flags:
             if msg.flags & apm.EKF_UNINITIALIZED:
-                self.report('EKF uninitialized', 'BOLD')
+                self.report('EKF uninitialized', self.colors.ekf_status_report)
             elif msg.flags == 0:
-                self.report('EKF initialized')
+                self.report('EKF initialized', self.colors.ekf_status_report)
             else:
                 s = f'EKF status: {msg.flags :4}'
                 s += f' {"const" if msg.flags & apm.EKF_CONST_POS_MODE else "" :5}'
@@ -185,14 +204,14 @@ class Timeline:
                 s += f'{"xy" if msg.flags & apm.EKF_VELOCITY_HORIZ else "" :2}'
                 s += f' {"z" if msg.flags & apm.EKF_VELOCITY_VERT else "" :1}'
                 s += ']'
-                self.report(s)
+                self.report(s, self.colors.ekf_status_report)
             self.ekf_status_flags = msg.flags
 
 
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=__doc__)
     add_segment_args(parser)
-    parser.add_argument('--ansi', action='store_true', help='add ANSI colors to several messages')
+    parser.add_argument('--ansi', default=True, action=argparse.BooleanOptionalAction, help='add ANSI colors, use --no-ansi to disable')
     args = parser.parse_args()
 
     readers = choose_reader_list(args, MSG_TYPES)
