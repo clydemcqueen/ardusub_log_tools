@@ -85,16 +85,6 @@ PERHAPS_USEFUL_MSG_TYPES = [
     'VISION_POSITION_DELTA',
 ]
 
-# Useful for surftrak testing
-SURFTRAK_MSG_TYPES = [
-    'AHRS2',
-    'DISTANCE_SENSOR',
-    'HEARTBEAT',
-    'NAMED_VALUE_FLOAT',
-    'RANGEFINDER',
-    'RC_CHANNELS',
-]
-
 
 class TelemetryLogReader(LogMerger):
     def __init__(self,
@@ -104,7 +94,6 @@ class TelemetryLogReader(LogMerger):
                  verbose: bool,
                  sysid: int,
                  compid: int,
-                 surftrak: bool,
                  system_time: bool,
                  split_source: bool,
                  raw: bool):
@@ -112,7 +101,6 @@ class TelemetryLogReader(LogMerger):
         self.reader = reader
         self.sysid = sysid
         self.compid = compid
-        self.surftrak = surftrak
         self.system_time = system_time
         self.split_source = split_source
         self.raw = raw
@@ -133,18 +121,7 @@ class TelemetryLogReader(LogMerger):
                 continue
 
             msg_type = msg.get_type()
-
-            if self.surftrak:
-                # Focus on DISTANCE_SENSOR messages from BlueOS, not the "echo" messages from ArduSub
-                if msg_type == 'DISTANCE_SENSOR' and compid == 1:
-                    continue
-
-                # HEARTBEAT msgs from ArduSub show mode, which is useful
-                if msg_type == 'HEARTBEAT' and compid != 1:
-                    continue
-
             raw_data = msg.to_dict()
-
             qgc_s = getattr(msg, '_timestamp', 0.0)
 
             if self.system_time:
@@ -180,7 +157,7 @@ class TelemetryLogReader(LogMerger):
             # Make sure the table exists
             if table_name not in self.tables:
                 self.tables[table_name] = table_types.Table.create_table(
-                    msg_type, table_name=table_name, filter_bad=not self.raw, surftrak=self.surftrak)
+                    msg_type, table_name=table_name, filter_bad=not self.raw)
 
             # Append the message to the table
             self.tables[table_name].append(clean_data)
@@ -226,14 +203,10 @@ def main():
                         help='experimental: use ArduSub SYSTEM_TIME.time_boot_ms rather than QGC timestamp')
     parser.add_argument('--raw', action='store_true',
                         help='show all GPS messages; default is to drop bad GPS messages')
-    parser.add_argument('--surftrak', action='store_true',
-                        help='experimental: surftrak-specific analysis, see code')
     args = parser.parse_args()
 
     if args.types:
         msg_types = args.types.split(',')
-    elif args.surftrak:
-        msg_types = SURFTRAK_MSG_TYPES
     else:
         msg_types = PERHAPS_USEFUL_MSG_TYPES
 
@@ -248,7 +221,7 @@ def main():
     readers = choose_reader_list(args, msg_types)
     for reader in readers:
         tlog_reader = TelemetryLogReader(
-            reader, args.max_msgs, args.max_rows, args.verbose, args.sysid, args.compid, args.surftrak,
+            reader, args.max_msgs, args.max_rows, args.verbose, args.sysid, args.compid,
             args.system_time, args.split_source, args.raw)
 
         tlog_reader.read_tlog()

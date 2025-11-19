@@ -191,7 +191,7 @@ Parameters:
 ~~~
 $ tlog_merge.py --help
 usage: tlog_merge.py [-h] [-r] [-k KEEP] [-v] [--explode] [--no-merge] [--types TYPES] [--max-msgs MAX_MSGS] [--max-rows MAX_ROWS] [--rate] [--sysid SYSID]
-                     [--compid COMPID] [--split-source] [--system-time] [--surftrak]
+                     [--compid COMPID] [--split-source] [--system-time]
                      path [path ...]
 
 Read MAVLink messages from a tlog file (telemetry log) and merge the messages into a single, wide csv file. The merge
@@ -232,7 +232,6 @@ options:
   --compid COMPID       select source component id (default is all source components)
   --split-source        split messages by source (sysid, compid)
   --system-time         experimental: use ArduSub SYSTEM_TIME.time_boot_ms rather than QGC timestamp
-  --surftrak            experimental: surftrak-specific analysis, see code
 ~~~
 
 ### BIN_merge.py

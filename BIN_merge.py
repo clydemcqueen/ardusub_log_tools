@@ -102,18 +102,6 @@ PERHAPS_USEFUL_MSG_TYPES = [
     'XKFD',  # Not on by default for ArduSub, need to add a compiler flag
 ]
 
-# Useful for surftrak testing
-SURFTRAK_MSG_TYPES = [
-    'ARM',
-    'ATT',
-    'BAT',
-    'CTUN',
-    'MODE',
-    'RCIN',
-    'RCOU',
-    'RFND',
-]
-
 # Messages types that can be split by the 'C' field
 SPLIT_CORE_MSG_TYPES = [
     'XKF1',  # EKF3 estimator outputs
@@ -469,7 +457,7 @@ def main():
     elif args.types:
         msg_types = args.types.split(',')
     else:
-        msg_types = SURFTRAK_MSG_TYPES
+        msg_types = PERHAPS_USEFUL_MSG_TYPES
     print(f'Looking for {len(msg_types)} types: {msg_types}')
 
     for file in files:

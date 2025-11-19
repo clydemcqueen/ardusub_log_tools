@@ -146,8 +146,7 @@ class Table:
             msg_type: str,
             hdop_max: float = 100.0,
             table_name: str | None = None,
-            filter_bad: bool = False,
-            surftrak: bool = False):
+            filter_bad: bool = False):
         # table_name can be different from msg_type, e.g., HEARTBEAT_255_0 if split_source is True
         if table_name is None:
             table_name = msg_type
@@ -169,7 +168,7 @@ class Table:
         elif msg_type == 'GPS2_RAW':
             return GPSTable(msg_type, table_name, hdop_max, filter_bad)
         elif msg_type == 'NAMED_VALUE_FLOAT':
-            return NamedValueFloatTable(table_name, surftrak)
+            return NamedValueFloatTable(table_name)
         elif msg_type == 'RC_CHANNELS':
             return RCChannelsTable(table_name)
         elif msg_type == 'VISION_POSITION_DELTA':
@@ -314,9 +313,8 @@ class GPSTable(Table):
 
 
 class NamedValueFloatTable(Table):
-    def __init__(self, table_name: str, surftrak):
+    def __init__(self, table_name: str):
         super().__init__(table_name)
-        self.surftrak = surftrak
 
     def get_one_named_value_float_type(self, input_df, name: str):
         # Get a subset of rows
@@ -343,7 +341,7 @@ class NamedValueFloatTable(Table):
 
             # Re-arrange the data so it appears like it does in the QGC-generated csv file. Since the timestamps are
             # fine-grained this may result in an explosion of data, so let's just do this for a few key columns.
-            interesting_fields = ['RFTarget'] if self.surftrak else ['Lights2', 'PilotGain']
+            interesting_fields = ['RFTarget', 'PilotGain']
             print(f'Save these NAMED_VALUE_FLOAT fields: {interesting_fields}')
             for interesting_field in interesting_fields:
                 df = self.get_one_named_value_float_type(named_value_float_df, interesting_field)
