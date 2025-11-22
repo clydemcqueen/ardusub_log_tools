@@ -44,9 +44,9 @@ def filter_tlog(reader, msg_types, sysid, compid, max_msgs, verbose):
                 break
 
             # Filter by sysid and compid
-            if sysid > 0 and sysid != msg.get_srcSystem():
+            if sysid is not None and sysid != msg.get_srcSystem():
                 continue
-            if compid > 0 and compid != msg.get_srcComponent():
+            if compid is not None and compid != msg.get_srcComponent():
                 continue
 
             # Filter by message type
@@ -77,9 +77,9 @@ def main():
                         help='print a lot more information')
     parser.add_argument('--types', default=None,
                         help='comma separated list of message types, e.g., "ATTITUDE,RC_CHANNELS"')
-    parser.add_argument('--sysid', type=int, default=0,
+    parser.add_argument('--sysid', type=int, default=None,
                         help='select source system id, default is all systems')
-    parser.add_argument('--compid', type=int, default=0,
+    parser.add_argument('--compid', type=int, default=None,
                         help='select source component id, default is all components')
     parser.add_argument('--max-msgs', type=int, default=500000,
                         help='stop after keeping this number of messages, default is 500K')
