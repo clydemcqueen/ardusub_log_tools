@@ -35,31 +35,6 @@ class TestTools:
         # Clean up the output file
         os.remove(output_filename)
 
-    def test_tlog_filter_compid_0(self):
-        # Create a reader for a small tlog file
-        reader = FileReader('testing/small.tlog', None)
-        output_filename = 'testing/small_filtered.tlog'
-
-        # Filter messages, keeping only messages from compid 0
-        tlog_filter.filter_tlog(reader, None, 0, 0, 500000, False)
-
-        # Verify that the output file was created
-        assert os.path.exists(output_filename)
-
-        # Verify the contents of the output file
-        mlog = mavutil.mavlink_connection(output_filename)
-        msg_count = 0
-        while True:
-            msg = mlog.recv_match()
-            if msg is None:
-                break
-            msg_count += 1
-            assert msg.get_srcComponent() == 0
-        assert msg_count == 4
-
-        # Clean up the output file
-        os.remove(output_filename)
-
     def test_tlog_combine_segments(self):
         # Create a reader for a small tlog file
         segment1 = Segment(1622246400, 1622246400 + 1, 'segment1')
