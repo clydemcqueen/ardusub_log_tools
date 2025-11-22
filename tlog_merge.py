@@ -115,9 +115,9 @@ class TelemetryLogReader(LogMerger):
             compid = msg.get_srcComponent()
 
             # Filter by sysid and compid
-            if self.sysid > 0 and self.sysid != sysid:
+            if self.sysid is not None and self.sysid != sysid:
                 continue
-            if self.compid > 0 and self.compid != compid:
+            if self.compid is not None and self.compid != compid:
                 continue
 
             msg_type = msg.get_type()
@@ -193,9 +193,9 @@ def main():
                         help='stop if the merged table exceeds this number of rows (default 500K)')
     parser.add_argument('--rate', action='store_true',
                         help='calculate rate for each message type')
-    parser.add_argument('--sysid', type=int, default=0,
+    parser.add_argument('--sysid', type=int, default=None,
                         help='select source system id (default is all source systems)')
-    parser.add_argument('--compid', type=int, default=0,
+    parser.add_argument('--compid', type=int, default=None,
                         help='select source component id (default is all source components)')
     parser.add_argument('--split-source', action='store_true',
                         help='split messages by source (sysid, compid)')
