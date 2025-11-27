@@ -105,9 +105,13 @@ def expand_path(paths: list[str], recurse: bool, ext: str | list[str]) -> list[s
                 files.add(path)
         else:
             if recurse:
-                paths += glob.glob(path + '/*')
+                for e in ext:
+                    files.update(glob.glob(os.path.join(path, '**', f'*{e}'), recursive=True))
+            else:
+                for e in ext:
+                    files.update(glob.glob(os.path.join(path, f'*{e}')))
 
-    return sorted(files)
+    return sorted(list(files))
 
 
 def get_outfile_name(infile: str, suffix: str = '', ext: str = '.csv'):
@@ -115,3 +119,26 @@ def get_outfile_name(infile: str, suffix: str = '', ext: str = '.csv'):
     dirname, basename = os.path.split(infile)
     root, _ = os.path.splitext(basename)
     return os.path.join(dirname, root + suffix + ext)
+
+
+def get_rtc_shift(tlog_conn, rewind=False) -> float | None:
+    """
+    Find and return the offset between Unix time and time-since-boot in seconds. Similar to AP_RTC::rtc_shift.
+
+    Future: handle clock drift
+    """
+    offset = None
+
+    while True:
+        msg = tlog_conn.recv_match(blocking=False)
+        if msg is None:
+            break
+
+        if hasattr(msg, 'time_boot_ms'):
+            offset = getattr(msg, '_timestamp', 0) - msg.time_boot_ms / 1e3
+            break
+
+    if rewind:
+        tlog_conn.rewind()
+
+    return offset
