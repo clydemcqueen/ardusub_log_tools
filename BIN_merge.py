@@ -146,8 +146,12 @@ class DataflashTable:
             return XKV1Table(msg_type)
         elif msg_type == 'XKV2':
             return XKV2Table(msg_type)
+        elif msg_type.startswith('XKF1'):
+            return XKF1Table(msg_type)
         elif msg_type.startswith('XKF4'):
             return XKF4Table(msg_type)
+        elif msg_type.startswith('XKF5'):
+            return XKF5Table(msg_type)
         else:
             return DataflashTable(msg_type)
 
@@ -247,6 +251,18 @@ class XKV1Table(DataflashTable):
         super().append(row)
 
 
+class XKF1Table(DataflashTable):
+    def __init__(self, table_name: str):
+        super().__init__(table_name)
+
+    def append(self, row: dict):
+        # Add a PU (position up) field = -PD (position down)
+        pd_field = f'{self._msg_type}.PD'
+        if pd_field in row:
+            row[f'{self._msg_type}.PU'] = -row[pd_field]
+        super().append(row)
+
+
 class XKV2Table(DataflashTable):
     def __init__(self, table_name: str):
         super().__init__(table_name)
@@ -279,6 +295,18 @@ class XKF4Table(DataflashTable):
         ss_field = f'{self._msg_type}.SS'
         row[f'{self._msg_type}.const_pos'] = 1 if row[ss_field] & (1 << 7) else 0
         row[f'{self._msg_type}.horiz_rel'] = 1 if row[ss_field] & (1 << 3) else 0
+        super().append(row)
+
+
+class XKF5Table(DataflashTable):
+    def __init__(self, table_name: str):
+        super().__init__(table_name)
+
+    def append(self, row: dict):
+        # Add offset_up field as negative of offset (terrainState)
+        offset_field = f'{self._msg_type}.offset'
+        if offset_field in row:
+            row[f'{self._msg_type}.offset_up'] = -row[offset_field]
         super().append(row)
 
 
@@ -436,9 +464,9 @@ def main():
     parser.add_argument('--no-merge', action='store_true',
                         help='do not merge tables, useful if you also select --explode')
     parser.add_argument('--types', default=None,
-                        help='comma separated list of message types, the default is a small set of useful types')
+                        help='comma separated list of message types')
     parser.add_argument('--ekf', action='store_true',
-                        help='ignore --types, use all EKF types')
+                        help='add all ekf message types to the list of types')
     parser.add_argument('--max-msgs', type=int, default=500000,
                         help='stop after processing this number of messages (default 500K)')
     parser.add_argument('--max-rows', type=int, default=500000,
@@ -456,10 +484,12 @@ def main():
     files = util.expand_path(args.path, args.recurse, '.BIN')
     print(f'Processing {len(files)} files')
 
-    if args.ekf:
-        msg_types = EKF_MSG_TYPES
-    elif args.types:
+    if args.types:
         msg_types = args.types.split(',')
+        if args.ekf:
+            msg_types.extend(EKF_MSG_TYPES)
+    elif args.ekf:
+        msg_types = EKF_MSG_TYPES
     else:
         msg_types = PERHAPS_USEFUL_MSG_TYPES
     print(f'Looking for {len(msg_types)} types: {msg_types}')
@@ -471,6 +501,8 @@ def main():
         if rtc_shift is None:
             print('Failed to get RTC shift')
             rtc_shift = 0
+        else:
+            print(f'RTC shift is {rtc_shift}')
     else:
         rtc_shift = 0
 
