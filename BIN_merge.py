@@ -331,12 +331,14 @@ class DataflashLogReader(LogMerger):
                  verbose: bool,
                  raw: bool,
                  start: float,
-                 stop: float):
+                 stop: float,
+                 rtc_shift: float = 0.0):
         super().__init__(infile, max_msgs, max_rows, verbose)
         self.msg_types = msg_types
         self.raw = raw
         self.start = start
         self.stop = stop
+        self.rtc_shift = rtc_shift
 
         # Make up the PSCU (position control 'up') table, a flipped version of PSCD
         self.pscu = 'PSCU' in msg_types
@@ -392,8 +394,8 @@ class DataflashLogReader(LogMerger):
             if msg_type == 'PSCD' and self.pscu:
                 table_name = 'PSCU'
 
-            # This will pull from TimeUS, which is present in all (most?) records
-            timestamp = getattr(msg, '_timestamp', 0.0)
+            # This will pull from TimeUS, which is present in nearly all records
+            timestamp = getattr(msg, '_timestamp', 0.0) + self.rtc_shift
 
             # Hack: process just a segment
             if self.start >= 0 and timestamp < self.start:
@@ -444,9 +446,11 @@ def main():
     parser.add_argument('--raw', action='store_true',
                         help='show all records; default is to drop BARO records where id==0')
     parser.add_argument('--start', type=float, default=-1.0,
-                        help='hack: segment start')
+                        help='experiment: segment start')
     parser.add_argument('--stop', type=float, default=-1.0,
-                        help='hack: segment stop')
+                        help='experiment: segment stop')
+    parser.add_argument('--sync', default=None,
+                        help='experiment: provide a tlog file to establish an rtc_shift')
     parser.add_argument('path', nargs='+')
     args = parser.parse_args()
     files = util.expand_path(args.path, args.recurse, '.BIN')
@@ -460,9 +464,19 @@ def main():
         msg_types = PERHAPS_USEFUL_MSG_TYPES
     print(f'Looking for {len(msg_types)} types: {msg_types}')
 
+    if args.sync:
+        print(f'Experiment: adjust timestamps using an RTC shift from {args.sync}')
+        tlog_conn = mavutil.mavlink_connection(args.sync, robust_parsing=False)
+        rtc_shift = util.get_rtc_shift(tlog_conn)
+        if rtc_shift is None:
+            print('Failed to get RTC shift')
+            rtc_shift = 0
+    else:
+        rtc_shift = 0
+
     for file in files:
         print('===================')
-        reader = DataflashLogReader(file, msg_types, args.max_msgs, args.max_rows, args.verbose, args.raw, args.start, args.stop)
+        reader = DataflashLogReader(file, msg_types, args.max_msgs, args.max_rows, args.verbose, args.raw, args.start, args.stop, rtc_shift)
         reader.read()
         if reader.status:
             reader.tables['STATUS'] = DataflashTableSTATUS(reader.tables, args.verbose)
