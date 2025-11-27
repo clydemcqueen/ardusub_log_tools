@@ -125,9 +125,10 @@ def get_rtc_shift(tlog_conn, rewind=False) -> float | None:
     """
     Find and return the offset between Unix time and time-since-boot in seconds. Similar to AP_RTC::rtc_shift.
 
-    Future: handle clock drift
+    Scans the entire file (or until a limit) to find the minimum offset, which corresponds to the
+    message with the least latency.
     """
-    offset = None
+    min_offset = None
 
     while True:
         msg = tlog_conn.recv_match(blocking=False)
@@ -136,9 +137,10 @@ def get_rtc_shift(tlog_conn, rewind=False) -> float | None:
 
         if hasattr(msg, 'time_boot_ms'):
             offset = getattr(msg, '_timestamp', 0) - msg.time_boot_ms / 1e3
-            break
+            if min_offset is None or offset < min_offset:
+                min_offset = offset
 
     if rewind:
         tlog_conn.rewind()
 
-    return offset
+    return min_offset
