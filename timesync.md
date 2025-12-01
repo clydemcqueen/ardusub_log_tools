@@ -147,6 +147,11 @@ Strategy:
 * Apply `rtc_shift` to all `_timestamp` values for BIN messages.
 * Merge the two logs.
 
+You can improve on this strategy by scanning the entire tlog file and finding the lowest `timestamp - msg.time_boot_ms / 1e6` value.
+
 There is an implementation of this strategy in [dive_iter.py](dive_iter.py).
 
 The BIN_merge.py tool supports this strategy with the experimental `--sync` option.
+
+You can optimize this a bit more by using the [opt_rtc_shift.py](opt_rtc_shift.py) tool, though this is probably not necessary
+for most applications.
