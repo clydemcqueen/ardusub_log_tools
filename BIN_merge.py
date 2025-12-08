@@ -94,6 +94,7 @@ PERHAPS_USEFUL_MSG_TYPES = [
     'PARM',
     'PM',
     'PSCD',
+    'PSOT',
     'RATE',
     'RCI2',
     'RCIN',
@@ -142,6 +143,8 @@ class DataflashTable:
             return PSCxTable(msg_type, 'D', flip=False)
         elif msg_type == 'PSCU':
             return PSCxTable(msg_type, 'D', flip=True)
+        elif msg_type == 'PSOT':
+            return PSOTTable(msg_type)
         elif msg_type == 'XKV1':
             return XKV1Table(msg_type)
         elif msg_type == 'XKV2':
@@ -217,6 +220,33 @@ class PSCxTable(DataflashTable):
         for item in PSCxTable.MAP:
             field = row.pop(f'{self._msg_type}.{item[0]}{self._suffix}')
             row[f'{self._msg_type}.{item[1]}'] = -field if self._flip else field
+        super().append(row)
+
+
+class PSOTTable(DataflashTable):
+    """
+    Add U (up) fields to the PSOT "Position Control Offsets Terrain (Down)" table
+
+    Key and source of data as of AP 4.7:
+    log_PSOx struct field     Underlying PosControl variable
+    TPOT    pos_target_offset       -_pos_terrain_target_u_m
+    POT     pos_offset              -_pos_terrain_u_m
+    TVOT    vel_target_offset       0 (always)
+    VOT     vel_offset              -_vel_terrain_u_ms
+    TAOT    accel_target_offset     0 (always)
+    AOT     accel_offset            -_accel_terrain_u_mss
+
+    Might be interesting to do this for PSOx similar to PSCx, but start here
+    """
+
+    def __init__(self, table_name: str):
+        super().__init__(table_name)
+
+    def append(self, row: dict):
+        for field in ['AOT', 'POT', 'TAOT', 'TPOT', 'TVOT', 'VOT']:
+            d_field = f'{self._msg_type}.{field}'
+            if d_field in row:
+                row[f'{self._msg_type}.{field}_U'] = -row[d_field]
         super().append(row)
 
 
@@ -345,7 +375,7 @@ class DataflashTableSTATUS(DataflashTable):
             frames.append(df)
 
         if frames:
-            status_df = pd.concat(frames)
+            status_df: pd.DataFrame = pd.concat(frames)
             status_df.sort_values(by=['timestamp'], inplace=True)
             self._rows = status_df.to_dict('records')
 
