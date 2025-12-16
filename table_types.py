@@ -2,35 +2,17 @@
 import enum
 import math
 
+import numpy as np
 import pandas as pd
 import pymavlink.dialects.v20.ardupilotmega as apm
 
+import geometry
 import util
 
 # Look at tables with time_boot_ms fields. Findings:
 # DISTANCE_SENSOR from BlueOS is off by ~450s, so it can't be trusted
 # Good readings from messages from ArduSub (RC_CHANNELS, SYSTEM_TIME, possibly others)
 # tables_with_time_boot_ms = []
-
-
-def norm_angle_d(degrees: float) -> float:
-    """Normalize angle to [-180, 180) degrees"""
-
-    while degrees >= 180:
-        degrees -= 360
-    while degrees < -180:
-        degrees += 360
-    return degrees
-
-
-def norm_angle_r(radians: float) -> float:
-    """Normalize angle to [-pi, pi) radians"""
-
-    while radians >= math.pi:
-        radians -= 2 * math.pi
-    while radians < -math.pi:
-        radians += 2 * math.pi
-    return radians
 
 
 # Sub modes: https://mavlink.io/en/messages/ardupilotmega.html#SUB_MODE
@@ -370,74 +352,44 @@ class RCChannelsTable(Table):
         super().append(row)
 
 
-class Pose:
-    """Simple 6DoF pose"""
-
-    def __init__(self, orientation: tuple[float, float, float], position: tuple[float, float, float]):
-        self.orientation = orientation
-        self.position = position
-
-    def add_angle_delta(self, angle_delta):
-        # VISION_POSITION_DELTA.angle_delta should be radians, but there's a bug in the WL A50 DVL extension:
-        # https://github.com/bluerobotics/BlueOS-Water-Linked-DVL/issues/36
-        is_degrees = False
-        if is_degrees:
-            self.orientation = (
-                norm_angle_d(self.orientation[0] + angle_delta[0]),
-                norm_angle_d(self.orientation[1] + angle_delta[1]),
-                norm_angle_d(self.orientation[2] + angle_delta[2])
-            )
-        else:
-            self.orientation = (
-                norm_angle_d(self.orientation[0] + math.degrees(angle_delta[0])),
-                norm_angle_d(self.orientation[1] + math.degrees(angle_delta[1])),
-                norm_angle_d(self.orientation[2] + math.degrees(angle_delta[2]))
-            )
-
-    def add_position_delta(self, position_delta):
-        # VISION_POSITION_DELTA.position_delta is in meters
-        self.position = (
-            self.position[0] + position_delta[0],
-            self.position[1] + position_delta[1],
-            self.position[2] + position_delta[2]
-        )
-
-
 class VisionPositionDeltaTable(Table):
     def __init__(self, table_name: str):
         super().__init__(table_name)
 
         # Assume initial pose is flat (roll=0.0, pitch=0.0) facing north (yaw=0.0) at location (0.0, 0.0, 0.0)
-        self.pose = Pose((0.0, 0.0, 0.0), (0.0, 0.0, 0.0))
+        self.pose = geometry.Pose((0.0, 0.0, 0.0), (0.0, 0.0, 0.0))
 
     def append(self, row: dict):
+        angle_delta = np.array(row[f'{self._table_name}.angle_delta'])
+        position_delta = np.array(row[f'{self._table_name}.position_delta'])
+
         # Flatten angle array, and normalize while we're at it
         is_degrees = False
         if is_degrees:
-            row[f'{self._table_name}.roll_delta'] = norm_angle_d(row[f'{self._table_name}.angle_delta'][0])
-            row[f'{self._table_name}.pitch_delta'] = norm_angle_d(row[f'{self._table_name}.angle_delta'][1])
-            row[f'{self._table_name}.yaw_delta'] = norm_angle_d(row[f'{self._table_name}.angle_delta'][2])
+            row[f'{self._table_name}.roll_delta'], \
+            row[f'{self._table_name}.pitch_delta'], \
+            row[f'{self._table_name}.yaw_delta'] = (angle_delta + 180) % 360 - 180
         else:
-            row[f'{self._table_name}.roll_delta'] = norm_angle_r(row[f'{self._table_name}.angle_delta'][0])
-            row[f'{self._table_name}.pitch_delta'] = norm_angle_r(row[f'{self._table_name}.angle_delta'][1])
-            row[f'{self._table_name}.yaw_delta'] = norm_angle_r(row[f'{self._table_name}.angle_delta'][2])
+            row[f'{self._table_name}.roll_delta'], \
+            row[f'{self._table_name}.pitch_delta'], \
+            row[f'{self._table_name}.yaw_delta'] = (angle_delta + np.pi) % (2 * np.pi) - np.pi
 
         # Flatten position array
-        row[f'{self._table_name}.x_delta'] = row[f'{self._table_name}.position_delta'][0]
-        row[f'{self._table_name}.y_delta'] = row[f'{self._table_name}.position_delta'][1]
-        row[f'{self._table_name}.z_delta'] = row[f'{self._table_name}.position_delta'][2]
+        row[f'{self._table_name}.x_delta'], \
+        row[f'{self._table_name}.y_delta'], \
+        row[f'{self._table_name}.z_delta'] = position_delta
 
         # Accumulate deltas to build a pose
-        self.pose.add_angle_delta(row[f'{self._table_name}.angle_delta'])
-        self.pose.add_position_delta(row[f'{self._table_name}.position_delta'])
+        self.pose.add_angle_delta(angle_delta)
+        self.pose.add_position_delta(position_delta)
 
         # Add pose fields
-        row[f'{self._table_name}.roll'] = self.pose.orientation[0]
-        row[f'{self._table_name}.pitch'] = self.pose.orientation[1]
-        row[f'{self._table_name}.yaw'] = self.pose.orientation[2]
+        row[f'{self._table_name}.roll'], \
+        row[f'{self._table_name}.pitch'], \
+        row[f'{self._table_name}.yaw'] = self.pose.orientation
 
-        row[f'{self._table_name}.x'] = self.pose.position[0]
-        row[f'{self._table_name}.y'] = self.pose.position[1]
-        row[f'{self._table_name}.z'] = self.pose.position[2]
+        row[f'{self._table_name}.x'], \
+        row[f'{self._table_name}.y'], \
+        row[f'{self._table_name}.z'] = self.pose.position
 
         super().append(row)
