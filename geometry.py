@@ -1,8 +1,9 @@
 import numpy as np
+import transforms3d
 
 
 class Pose:
-    """Simple 6DoF pose"""
+    """Reconstruct the DVL pose from VISION_POSITION_DELTA messages."""
 
     def __init__(self, orientation: tuple[float, float, float], position: tuple[float, float, float]):
         self.orientation = np.array(orientation, dtype=np.float64)
@@ -26,17 +27,9 @@ class Pose:
         # Convert orientation (degrees) to radians
         r, p, y = np.radians(self.orientation)
 
-        cr, sr = np.cos(r), np.sin(r)
-        cp, sp = np.cos(p), np.sin(p)
-        cy, sy = np.cos(y), np.sin(y)
-
         # Body (FRD) to world (NED) rotation
         # R = Rz(y) * Ry(p) * Rx(r)
-        R = np.array([
-            [cp * cy, sr * sp * cy - cr * sy, cr * sp * cy + sr * sy],
-            [cp * sy, sr * sp * sy + cr * cy, cr * sp * sy - sr * cy],
-            [-sp,     sr * cp,                cr * cp]
-        ])
+        R = transforms3d.euler.euler2mat(r, p, y, axes='sxyz')
 
         # Rotate the delta
         self.position += R @ position_delta
