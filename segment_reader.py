@@ -79,12 +79,12 @@ class SegmentReaderList:
     Iterate over a list of segments.
     """
 
-    def __init__(self, args, segments, types: list[str] | None):
+    def __init__(self, args, segments, types: list[str] | None, ext: str = '.tlog'):
         print(f'Reading {len(segments)} segment(s)')
         self._segments_iter = iter(segments)
 
         # Get a list of file readers, and prime the pump by getting the first file reader
-        self._file_readers = FileReaderList(args, types)
+        self._file_readers = FileReaderList(args, types, ext)
         next(self._file_readers)
 
     def __iter__(self):
@@ -161,15 +161,15 @@ def parse_segment_args(args) -> list[Segment]:
         exit(1)
 
 
-def choose_reader_list(args, types):
+def choose_reader_list(args, types: list[str] | None, ext: str = '.tlog'):
     """
     If there are segments return a SegmentReaderList, otherwise return a FileReaderList.
     """
     segments = parse_segment_args(args)
     if len(segments) > 0:
-        return SegmentReaderList(args, segments, types)
+        return SegmentReaderList(args, segments, types, ext)
     else:
-        return FileReaderList(args, types)
+        return FileReaderList(args, types, ext)
 
 
 def build_segment_name(first_path: str, segment_name: str):
