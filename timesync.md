@@ -38,6 +38,8 @@ The WL UGPS extension sends `GPS_INPUT` messages, but [these do not contain UTC 
 
 The Raspberry Pi does not have a real-time clock. The Pi cleverly remembers the last-known time, so timestamps are monotonic,
 but time appears to fast-forward when the Pi connects to a network timeserver. Often this happens during boot, so you don't see it.
+But it can happen later, perhaps when the ROV is connected to the laptop. Watch out for log filenames that look wrong, or
+big jumps in timestamps.
 
 ### Topside Time
 
@@ -69,7 +71,7 @@ from the UNIX epoch (64-bits), rounded to the nearest millisecond. This is store
 
 QGroundControl opens a new tlog file when it starts up. If you reboot QGroundControl, it will open a new file.
 
-> TODO(clyde): describe the log file naming method
+QGroundControl names log files using the topside system time when the log is created, following the format `YYYY-MM-DD HH-mm-ss.tlog`.
 
 These MAVLink messages contain `time_boot_ms` fields with ArduPilot time:
 * ATTITUDE
@@ -89,7 +91,8 @@ Similar to QGroundControl, BlueOS writes the Raspberry Pi time in the tlog file 
 BlueOS opens a new tlog file when _the autopilot_ starts up. If you reboot the autopilot, it will open a new tlog file.
 This is quite useful, as it means that BlueOS creates time-aligned log pairs (see below).
 
-> TODO(clyde): describe the log file naming method
+BlueOS names log files using the Raspberry Pi time when the log is created, following the format `nnnnn-YYYY-MM-DD_HH-mm-ss.tlog`
+where `nnnnn` is the sequence number.
 
 ## Log Readers
 
