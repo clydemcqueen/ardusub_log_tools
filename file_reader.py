@@ -49,9 +49,10 @@ class FileReaderList:
     Iterate over a list of file readers.
     """
 
-    def __init__(self, args, types: list[str] | None):
-        paths = expand_path(args.path, args.recurse, '.tlog')
+    def __init__(self, args, types: list[str] | None, ext: str = '.tlog'):
+        paths = expand_path(args.path, args.recurse, ext)
         print(f'Reading {len(paths)} file(s)')
+        self._ext = ext
         self._types = types
         self._paths_iter = iter(paths)
         self._current = None
