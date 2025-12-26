@@ -141,9 +141,10 @@ def print_change(old_param: Param | None, new_param: Param | None):
 
 
 class TelemetryLogParam:
-    def __init__(self, infile: str, print_intra_file_changes):
+    def __init__(self, infile: str, print_intra_file_changes: bool, params: list[str] | None = None):
         self.infile = infile
         self.params: dict[str, Param] = {}
+        self.params_to_track = params
         self.autopilot_version: str = ''
         self.git_hash: str = ''
         mlog = mavutil.mavlink_connection(infile, robust_parsing=False, dialect='ardupilotmega')
@@ -158,6 +159,9 @@ class TelemetryLogParam:
 
     def handle_param_value(self, msg: mav_common.MAVLink_param_value_message, print_intra_file_changes: bool):
         new_param = Param(msg)
+
+        if self.params_to_track is not None and new_param.id not in self.params_to_track:
+            return
 
         if new_param.id in self.params:
             old_param = self.params[new_param.id]
@@ -176,7 +180,8 @@ class TelemetryLogParam:
             self.params[new_param.id] = new_param
 
     def handle_param_set(self, msg: mav_common.MAVLink_param_set_message):
-        print(f'PARAM_SET ({msg.get_srcSystem()}, {msg.get_srcComponent()}) -> ({msg.target_system}, {msg.target_component}), param {msg.param_id}, new value {msg.param_value}')
+        if self.params_to_track is None or msg.param_id in self.params_to_track:
+            print(f'PARAM_SET ({msg.get_srcSystem()}, {msg.get_srcComponent()}) -> ({msg.target_system}, {msg.target_component}), param {msg.param_id}, new value {msg.param_value}')
 
     def handle_version(self, msg: mav_common.MAVLink_autopilot_version_message):
         flight_sw_version = msg.flight_sw_version
@@ -224,7 +229,7 @@ def print_changes(previous_file: TelemetryLogParam, current_file: TelemetryLogPa
     """
     Compare to a previous tlog file
     """
-    if not len(previous_file.params) or not len(current_file.params):
+    if not len(previous_file.params) and not len(current_file.params):
         print('Nothing to compare')
         return
 
@@ -249,31 +254,40 @@ def main():
     parser.add_argument('-c', '--changes',
                         help='only show changes across files, do not write *.params files',
                         action='store_true')
-    parser.add_argument('-s', '--skip',
-                        help='skip one or more files, comma separated list of filenames',
-                        type=str, default='')
+    parser.add_argument('--blueos',
+                        help='only process BlueOS-generated tlog files (based on name pattern)',
+                        action='store_true')
+    parser.add_argument('--qgc',
+                        help='only process QGC-generated tlog files (based on name pattern)',
+                        action='store_true')
+    parser.add_argument('-p', '--params',
+                        help='track only these parameters, comma separated list of parameter names',
+                        type=str, default=None)
     parser.add_argument('path', nargs='+')
     args = parser.parse_args()
+    if args.blueos and args.qgc:
+        print('ERROR: --blueos and --qgc are mutually exclusive')
+        return
     files = util.expand_path(args.path, args.recurse, '.tlog')
+    print(f'Found {len(files)} files')
+    if args.blueos:
+        files = util.get_blueos_tlog_paths(files, args.recurse)
+    elif args.qgc:
+        files = util.get_qgc_tlog_paths(files, args.recurse)
     print(f'Processing {len(files)} files')
-    skip = args.skip.split(',')
 
     previous_file = None
     for infile in files:
         print('-------------------')
         _, basename = os.path.split(infile)
 
-        if basename in skip:
-            print(f'Skipping: {infile}')
-            continue
-
-        # The BlueOS file names have a prefix which screws up the sort order, drop for now
-        if args.changes and basename[5] == '-':
-            print(f'Skipping BlueOS-generated tlog: {infile}')
-            continue
+        if args.params is None:
+            params = None
+        else:
+            params = args.params.split(',')
 
         print(f'Reading {infile}')
-        current_file = TelemetryLogParam(infile, not args.changes)
+        current_file = TelemetryLogParam(infile, not args.changes, params)
 
         # If --changes is True, then print changes between files, but not changes w/in files
         if args.changes:
