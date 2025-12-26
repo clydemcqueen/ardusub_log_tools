@@ -8,3 +8,4 @@ testing/*.html
 testing/*.params
 testing/*.pdf
 venv/
+.venv/

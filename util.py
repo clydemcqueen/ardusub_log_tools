@@ -1,6 +1,7 @@
 import datetime
 import glob
 import os
+import re
 
 MAX_RATE = 100.0
 
@@ -112,6 +113,45 @@ def expand_path(paths: list[str], recurse: bool, ext: str | list[str]) -> list[s
                     files.update(glob.glob(os.path.join(path, f'*{e}')))
 
     return sorted(list(files))
+
+
+def filter_blueos_tlog_paths(paths: list[str]) -> list[str]:
+    """
+    Given a list of paths, return a list of BlueOS-generated tlog files, sorted by time.
+
+    The file names must match the pattern: `nnnnn-YYYY-MM-DD_HH-mm-ss.tlog`
+    The `nnnnn` prefix is not included in the sort key.
+    
+    This assumes that the folder structure is sortable by time, e.g., each folder contains
+    log files from 1 day, and the folders are named something like `YYYY_MM_DD_suffix`.
+    """
+    blueos_tlog_paths = [f for f in paths if re.match(r'^\d{5}-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.tlog$', os.path.basename(f))]
+    blueos_tlog_paths.sort(key=lambda f: os.path.basename(f).split('-', 1)[1])
+    return blueos_tlog_paths
+
+
+def get_blueos_tlog_paths(paths: list[str], recurse: bool) -> list[str]:
+    expanded_paths = expand_path(paths, recurse, '.tlog')
+    return filter_blueos_tlog_paths(expanded_paths)
+
+
+def filter_qgc_tlog_paths(paths: list[str]) -> list[str]:
+    """
+    Given a list of paths, return a list of QGC-generated tlog files, sorted by time.
+
+    The file names must match the pattern: `YYYY-MM-DD HH-mm-ss.tlog`
+    
+    This assumes that the folder structure is sortable by time, e.g., each folder contains
+    log files from 1 day, and the folders are named something like `YYYY_MM_DD_suffix`.
+    """
+    qgc_tlog_paths = [f for f in paths if re.match(r'^\d{4}-\d{2}-\d{2} \d{2}-\d{2}-\d{2}\.tlog$', os.path.basename(f))]
+    qgc_tlog_paths.sort(key=lambda f: os.path.basename(f))
+    return qgc_tlog_paths
+
+
+def get_qgc_tlog_paths(paths: list[str], recurse: bool) -> list[str]:
+    expanded_paths = expand_path(paths, recurse, '.tlog')
+    return filter_qgc_tlog_paths(expanded_paths)
 
 
 def get_outfile_name(infile: str, suffix: str = '', ext: str = '.csv'):
