@@ -18,7 +18,7 @@ fastcrc==0.3.3
     # via pymavlink
 folium==0.20.0
     # via -r requirements.in
-fonttools==4.60.1
+fonttools==4.60.2
     # via matplotlib
 idna==3.10
     # via requests
