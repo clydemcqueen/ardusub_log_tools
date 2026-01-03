@@ -61,7 +61,7 @@ def build_map_from_BIN(reader, outfile, verbose, center, zoom, hdop_max):
 
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=__doc__)
-    add_segment_args(parser)
+    add_segment_args(parser, '.BIN')
     add_map_maker_args(parser)
     parser.add_argument('--types', default=None,
                         help='comma separated list of message types')

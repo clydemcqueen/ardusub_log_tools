@@ -99,11 +99,11 @@ class SegmentReaderList:
         return SegmentReader(next(self._segments_iter), file_reader, self._file_readers)
 
 
-def add_segment_args(parser: argparse.ArgumentParser):
+def add_segment_args(parser: argparse.ArgumentParser, ext: str = '.tlog'):
     """
     Add args for working with multiple files and multiple segments.
     """
-    add_file_args(parser)
+    add_file_args(parser, ext)
     group = parser.add_mutually_exclusive_group()
     group.add_argument('-k', '--keep', default=None, action='append',
                        help='process just these segments; a segment is 2 timestamps and a name, e.g., start,end,s1')

@@ -3,7 +3,7 @@ import argparse
 import pymavlink.dialects.v20.ardupilotmega as apm
 from pymavlink import mavutil
 
-from util import expand_path
+from util import expand_path, filter_blueos_tlog_paths, filter_qgc_tlog_paths
 
 
 class NamedReader:
@@ -51,6 +51,13 @@ class FileReaderList:
 
     def __init__(self, args, types: list[str] | None, ext: str = '.tlog'):
         paths = expand_path(args.path, args.recurse, ext)
+
+        if ext == '.tlog':
+            if getattr(args, 'blueos', False):
+                paths = filter_blueos_tlog_paths(paths)
+            elif getattr(args, 'qgc', False):
+                paths = filter_qgc_tlog_paths(paths)
+
         print(f'Reading {len(paths)} file(s)')
         self._ext = ext
         self._types = types
@@ -71,9 +78,12 @@ class FileReaderList:
         return self._current
 
 
-def add_file_args(parser: argparse.ArgumentParser):
+def add_file_args(parser: argparse.ArgumentParser, ext: str = '.tlog'):
     """
     Add args for working with multiple files.
     """
     parser.add_argument('-r', '--recurse', action='store_true', help='enter directories looking for files')
+    if ext == '.tlog':
+        parser.add_argument('--blueos',action='store_true',help='only process BlueOS-generated tlog files (based on name pattern)')
+        parser.add_argument('--qgc',action='store_true',help='only process QGC-generated tlog files (based on name pattern)')
     parser.add_argument('path', nargs='+')
