@@ -1,4 +1,5 @@
 # POS DataFlash Message
+Commit: abe1721cf5
 
 **Purpose**: Logs the canonical vehicle position estimate from the AHRS (Attitude and Heading Reference System).
 **Location**: `libraries/AP_AHRS/LogStructure.h`

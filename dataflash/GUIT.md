@@ -1,6 +1,8 @@
 # GUIT
+Commit: abe1721cf5
 
 Experimental, from https://github.com/clydemcqueen/ardusub_surftrak/blob/guided_above_terrain/lua/transect3.lua
+This table is typically produced by a Lua script and contains surface tracking information.
 
 | Field | Units | Description |
 |---|---|---|

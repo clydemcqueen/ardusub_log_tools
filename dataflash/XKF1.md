@@ -1,14 +1,16 @@
 # XKF1
+Commit: abe1721cf5
 
 This table contains EKF3 state data for a specific core.
+**Location**: `libraries/AP_NavEKF3/LogStructure.h`
 
 | Field | Units | Description |
 |---|---|---|
 | TimeUS | us | Time since system boot |
 | Core | | EKF Core index (0, 1, 2...) |
-| Roll | cdeg | Roll angle |
-| Pitch | cdeg | Pitch angle |
-| Yaw | cdeg | Yaw angle |
+| Roll | deg | Roll angle |
+| Pitch | deg | Pitch angle |
+| Yaw | deg | Yaw angle |
 | VelN | m/s | Velocity North |
 | VelE | m/s | Velocity East |
 | VelD | m/s | Velocity Down |
@@ -16,7 +18,7 @@ This table contains EKF3 state data for a specific core.
 | PosN | m | Position North |
 | PosE | m | Position East |
 | PosD | m | Position Down |
-| GyrX | cdeg/s | Gyro bias X |
-| GyrY | cdeg/s | Gyro bias Y |
-| GyrZ | cdeg/s | Gyro bias Z |
-| OriginHgt | cm | WGS-84 altitude of EKF origin |
+| GyrX | deg/s | Gyro bias X |
+| GyrY | deg/s | Gyro bias Y |
+| GyrZ | deg/s | Gyro bias Z |
+| OriginHgt | m | WGS-84 altitude of EKF origin |

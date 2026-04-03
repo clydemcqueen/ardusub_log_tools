@@ -1,4 +1,5 @@
 # GPS DataFlash Message
+Commit: abe1721cf5
 
 **Purpose**: Logs information received from GNSS (Global Navigation Satellite System) systems attached to the autopilot.
 **Location**: `libraries/AP_GPS/LogStructure.h`
@@ -11,7 +12,7 @@
 | **GMS** | Milliseconds since start of GPS Week | ms |
 | **GWk** | Weeks since 5 Jan 1980 | |
 | **NSats** | Number of satellites visible | |
-| **HDop** | Horizontal dilution of precision | |
+| **HDop** | Horizontal dilution of precision | cm (needs / 100) |
 | **Lat** | Latitude | Degrees * 1e7 |
 | **Lng** | Longitude | Degrees * 1e7 |
 | **Alt** | Altitude | Meters |

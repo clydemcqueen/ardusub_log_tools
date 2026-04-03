@@ -1,18 +1,18 @@
 # GUIP
+Commit: abe1721cf5
 
-The GUIP table contains GUIDED mode target position and velocity information for Sub, Rover, and Copter:
-* Sub: units are cm and cm/s.
-* Rover: units are cm and cm/s. The frame field is not used.
-* Copter: units are m and m/s.
+The GUIP table contains GUIDED mode target position and velocity information for Sub, Rover, and Copter.
+**Location**: `ArduSub/Log.cpp`
 
 | Field | Units | Description |
 |---|---|---|
-| TimeUS | s | Timestamp |
+| TimeUS | us | Timestamp |
 | Type | - | Target type |
-| Frame | - | Altitude frame |
-| pX | cm | Target Position X |
-| pY | cm | Target Position Y |
-| pZ | cm | Target Position Z |
-| vX | cm/s | Target Velocity X |
-| vY | cm/s | Target Velocity Y |
-| vZ | cm/s | Target Velocity Z |
+| pX | m | Target Position X (Local ENU) |
+| pY | m | Target Position Y (Local ENU) |
+| pZ | m | Target Position Z (Local ENU) |
+| vX | m/s | Target Velocity X |
+| vY | m/s | Target Velocity Y |
+| vZ | m/s | Target Velocity Z |
+
+Note: ArduSub units are meters and m/s (contrary to older notes about cm). In the code `QBffffff` with units `s-mmmnnn` and multipliers `F-000000`, 'm' is meters and 'n' is m/s. Multiplier '0' is 1.0.
