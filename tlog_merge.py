@@ -39,50 +39,50 @@ PERHAPS_USEFUL_MSG_TYPES = [
     "AHRS",
     "AHRS2",
     "ATTITUDE",
-    # 'AUTOPILOT_VERSION',
-    # 'BATTERY_STATUS',
-    # 'COMMAND_ACK',
-    # 'COMMAND_LONG',
+    # "AUTOPILOT_VERSION",
+    # "BATTERY_STATUS",
+    # "COMMAND_ACK",
+    # "COMMAND_LONG",
     "DISTANCE_SENSOR",
     "EKF_STATUS_REPORT",
     "GLOBAL_POSITION_INT",
     "GLOBAL_VISION_POSITION_ESTIMATE",
-    # 'GPS2_RAW',
+    # "GPS2_RAW",
     "GPS_GLOBAL_ORIGIN",
     "GPS_INPUT",
     "GPS_RAW_INT",
     "HEARTBEAT",
     "HOME_POSITION",
-    # 'HWSTATUS',
+    # "HWSTATUS",
     "LOCAL_POSITION_NED",
-    # 'MANUAL_CONTROL',
-    # 'MEMINFO',
-    # 'MISSION_ACK',
-    # 'MISSION_COUNT',
-    # 'MISSION_CURRENT',
-    # 'MISSION_REQUEST_LIST',
-    # 'MOUNT_STATUS',
-    # 'NAMED_VALUE_FLOAT',
-    # 'NAV_CONTROLLER_OUTPUT',
-    # 'PARAM_REQUEST_LIST',
-    # 'PARAM_VALUE',
-    # 'POWER_STATUS',
+    # "MANUAL_CONTROL",
+    # "MEMINFO",
+    # "MISSION_ACK",
+    # "MISSION_COUNT",
+    # "MISSION_CURRENT",
+    # "MISSION_REQUEST_LIST",
+    # "MOUNT_STATUS",
+    # "NAMED_VALUE_FLOAT",
+    # "NAV_CONTROLLER_OUTPUT",
+    # "PARAM_REQUEST_LIST",
+    # "PARAM_VALUE",
+    # "POWER_STATUS",
     "RANGEFINDER",
-    # 'RAW_IMU',
-    # 'RC_CHANNELS',
-    # 'REQUEST_DATA_STREAM',
-    # 'SCALED_IMU2',
-    # 'SCALED_PRESSURE',
+    # "RAW_IMU",
+    # "RC_CHANNELS",
+    # "REQUEST_DATA_STREAM",
+    # "SCALED_IMU2",
+    # "SCALED_PRESSURE",
     "SCALED_PRESSURE2",
-    # 'SENSOR_OFFSETS',
+    # "SENSOR_OFFSETS",
     "SERVO_OUTPUT_RAW",
     "SET_GPS_GLOBAL_ORIGIN",
-    # 'STATUSTEXT',
+    # "STATUSTEXT",
     "SYS_STATUS",
     "SYSTEM_TIME",
     "TIMESYNC",
     "VFR_HUD",
-    # 'VIBRATION',
+    # "VIBRATION",
     "VISION_POSITION_DELTA",
     "VISION_POSITION_ESTIMATE",
 ]
@@ -186,34 +186,15 @@ def main():
     add_segment_args(parser)
     parser.add_argument("-v", "--verbose", action="store_true", help="print a lot more information")
     parser.add_argument("--explode", action="store_true", help="write a csv file for each message type")
-    parser.add_argument(
-        "--no-merge", action="store_true", help="do not merge tables, useful if you also select --explode"
-    )
-    parser.add_argument(
-        "--types", default=None, help="comma separated list of message types, the default is a set of useful types"
-    )
-    parser.add_argument(
-        "--max-msgs", type=int, default=500000, help="stop after processing this number of messages (default 500K)"
-    )
-    parser.add_argument(
-        "--max-rows",
-        type=int,
-        default=500000,
-        help="stop if the merged table exceeds this number of rows (default 500K)",
-    )
+    parser.add_argument("--no-merge", action="store_true", help="do not merge, useful if you also select --explode")
+    parser.add_argument("--types", default=None, help="comma separated list of message types")
+    parser.add_argument("--max-msgs", type=int, default=500000, help="stop after N messages (default 500K)")
+    parser.add_argument("--max-rows", type=int, default=500000, help="stop if the merge exceeds N rows (default 500K)")
     parser.add_argument("--rate", action="store_true", help="calculate rate for each message type")
-    parser.add_argument(
-        "--sysid", type=int, default=None, help="select source system id (default is all source systems)"
-    )
-    parser.add_argument(
-        "--compid", type=int, default=None, help="select source component id (default is all source components)"
-    )
+    parser.add_argument("--sysid", type=int, default=None, help="select source system id (default is all)")
+    parser.add_argument("--compid", type=int, default=None, help="select source component id (default is all)")
     parser.add_argument("--split-source", action="store_true", help="split messages by source (sysid, compid)")
-    parser.add_argument(
-        "--system-time",
-        action="store_true",
-        help="experimental: use ArduSub SYSTEM_TIME.time_boot_ms rather than QGC timestamp",
-    )
+    parser.add_argument("--system-time", action="store_true", help="use ArduSub SYSTEM_TIME.time_boot_ms vs QGC time")
     parser.add_argument("--raw", action="store_true", help="show all GPS messages; default is to drop bad GPS messages")
     args = parser.parse_args()
 

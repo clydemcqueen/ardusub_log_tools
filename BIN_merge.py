@@ -198,6 +198,17 @@ class PSCxTable(DataflashTable):
     Works with PosControl tables PSCN (north), PSCE (east), PSCD (down) and the made-up table PSCU (up)
     Suffix should be 'N', 'E', 'D'; this is used to change field names from short codes to log_PSCx struct field names
     Flip means flip the sign, e.g., from down to up
+
+    Key and source of data:
+    Short  Long             Method                              Variable
+    TP     pos_target       get_pos_target_cm().z               _pos_target.z
+    P      pos              _inav.get_position_z_up_cm()        _relpos_cm.z
+    DV     vel_desired      get_vel_desired_cms().z             _vel_desired.z
+    TV     vel_target       get_vel_target_cms().z              _vel_target.z
+    V      vel              _inav.get_velocity_z_up_cms()       _velocity_cm.z
+    DA     accel_desired    _accel_desired.z                    _accel_desired.z
+    TA     accel_target     get_accel_target_cmss().z           _accel_target.z
+    A      accel            get_z_accel_cmss()                  -(_ahrs.get_accel_ef().z + GRAVITY_MSS) * 100.0
     """
 
     def __init__(self, table_name: str, suffix: str, flip: bool):
@@ -206,15 +217,14 @@ class PSCxTable(DataflashTable):
         self._flip = flip
 
     MAP = [
-        # log_PSCx struct field       PosControl/InertialNav method     Underlying PosControl/InertialNav variable
-        ("TP", "pos_target"),  # get_pos_target_cm().z             _pos_target.z
-        ("P", "pos"),  # _inav.get_position_z_up_cm()      _relpos_cm.z
-        ("DV", "vel_desired"),  # get_vel_desired_cms().z           _vel_desired.z
-        ("TV", "vel_target"),  # get_vel_target_cms().z            _vel_target.z
-        ("V", "vel"),  # _inav.get_velocity_z_up_cms()     _velocity_cm.z
-        ("DA", "accel_desired"),  # _accel_desired.z                  _accel_desired.z
-        ("TA", "accel_target"),  # get_accel_target_cmss().z         _accel_target.z
-        ("A", "accel"),  # get_z_accel_cmss()                -(_ahrs.get_accel_ef().z + GRAVITY_MSS) * 100.0
+        ("TP", "pos_target"),
+        ("P", "pos"),
+        ("DV", "vel_desired"),
+        ("TV", "vel_target"),
+        ("V", "vel"),
+        ("DA", "accel_desired"),
+        ("TA", "accel_target"),
+        ("A", "accel"),
     ]
 
     def append(self, row: dict):
@@ -229,7 +239,7 @@ class PSOTTable(DataflashTable):
     Add U (up) fields to the PSOT "Position Control Offsets Terrain (Down)" table
 
     Key and source of data as of AP 4.7:
-    log_PSOx struct field     Underlying PosControl variable
+    Short   log_PSOx struct field   Underlying PosControl variable
     TPOT    pos_target_offset       -_pos_terrain_target_u_m
     POT     pos_offset              -_pos_terrain_u_m
     TVOT    vel_target_offset       0 (always)
@@ -496,23 +506,12 @@ def main():
     parser.add_argument("-r", "--recurse", action="store_true", help="enter directories looking for BIN files")
     parser.add_argument("-v", "--verbose", action="store_true", help="print a lot more information")
     parser.add_argument("--explode", action="store_true", help="write a csv file for each message type")
-    parser.add_argument(
-        "--no-merge", action="store_true", help="do not merge tables, useful if you also select --explode"
-    )
+    parser.add_argument("--no-merge", action="store_true", help="do not merge, useful if you also select --explode")
     parser.add_argument("--types", default=None, help="comma separated list of message types")
-    parser.add_argument("--ekf", action="store_true", help="add all ekf message types to the list of types")
-    parser.add_argument(
-        "--max-msgs", type=int, default=500000, help="stop after processing this number of messages (default 500K)"
-    )
-    parser.add_argument(
-        "--max-rows",
-        type=int,
-        default=500000,
-        help="stop if the merged table exceeds this number of rows (default 500K)",
-    )
-    parser.add_argument(
-        "--raw", action="store_true", help="show all records; default is to drop BARO records where id==0"
-    )
+    parser.add_argument("--ekf", action="store_true", help="add all EKF message types to the list of types")
+    parser.add_argument("--max-msgs", type=int, default=500000, help="stop after N messages (default 500K)")
+    parser.add_argument("--max-rows", type=int, default=500000, help="stop if the merge exceeds N rows (default 500K)")
+    parser.add_argument("--raw", action="store_true", help="do not drop BARO records where id==0")
     parser.add_argument("--start", type=float, default=-1.0, help="experiment: segment start")
     parser.add_argument("--stop", type=float, default=-1.0, help="experiment: segment stop")
     parser.add_argument("--sync", default=None, help="experiment: provide a tlog file to establish an rtc_shift")
