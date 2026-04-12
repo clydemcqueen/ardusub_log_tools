@@ -7,11 +7,11 @@ MAX_RATE = 100.0
 
 
 def time_str(timestamp: float) -> str:
-    return datetime.datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
+    return datetime.datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
 
 
 def time_us_str(time_us: int):
-    return datetime.datetime.fromtimestamp(time_us * 1e-6).strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+    return datetime.datetime.fromtimestamp(time_us * 1e-6).strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
 
 
 def add_rate_field(messages: list[dict], half_n: int, max_gap: float, field_name: str):
@@ -31,7 +31,7 @@ def add_rate_field(messages: list[dict], half_n: int, max_gap: float, field_name
         return
 
     def is_gap_right(j: int):
-        return j + 1 < len(messages) and messages[j + 1]['timestamp'] - messages[j]['timestamp'] > max_gap
+        return j + 1 < len(messages) and messages[j + 1]["timestamp"] - messages[j]["timestamp"] > max_gap
 
     total_gaps = 0
 
@@ -45,12 +45,12 @@ def add_rate_field(messages: list[dict], half_n: int, max_gap: float, field_name
         if wr < len(messages) and not is_gap_right(wr - 1):
             wr += 1
 
-        ts_i = messages[i]['timestamp']
+        ts_i = messages[i]["timestamp"]
 
         if is_gap_right(i):
-            gap_len = messages[i + 1]['timestamp'] - ts_i
+            gap_len = messages[i + 1]["timestamp"] - ts_i
             total_gaps += gap_len
-            print(f'NOTE: {gap_len :.2f}s gap detected at ts {ts_i :.2f} while generating {field_name}')
+            print(f"NOTE: {gap_len :.2f}s gap detected at ts {ts_i :.2f} while generating {field_name}")
 
             # Set the rate to 0.0 on either side of the segment
             messages[i][field_name] = 0.0
@@ -64,15 +64,15 @@ def add_rate_field(messages: list[dict], half_n: int, max_gap: float, field_name
                 wr += 1
         else:
             numerator = wr - wl - 1
-            denominator = messages[wr - 1]['timestamp'] - messages[wl]['timestamp']
+            denominator = messages[wr - 1]["timestamp"] - messages[wl]["timestamp"]
 
             # Avoid edge cases: divide by 0; very high rates; time going backwards
             # This might happen if timestamps repeat or are very close to each other
             if denominator < 0.01:
-                print(f'{denominator} < 0.01 computing {field_name}[{i}].rate, clip to {MAX_RATE}')
+                print(f"{denominator} < 0.01 computing {field_name}[{i}].rate, clip to {MAX_RATE}")
                 messages[i][field_name] = MAX_RATE
             elif numerator / denominator > MAX_RATE:
-                print(f'{field_name}[{i}].rate > {MAX_RATE}, clip to {MAX_RATE}')
+                print(f"{field_name}[{i}].rate > {MAX_RATE}, clip to {MAX_RATE}")
                 messages[i][field_name] = MAX_RATE
             else:
                 messages[i][field_name] = numerator / denominator
@@ -86,10 +86,12 @@ def add_rate_field(messages: list[dict], half_n: int, max_gap: float, field_name
     # Last message should have rate=0.0. This will be easy to spot in plotjuggler.
     messages[-1][field_name] = 0.0
 
-    total_time = messages[-1]['timestamp'] - messages[0]['timestamp']
+    total_time = messages[-1]["timestamp"] - messages[0]["timestamp"]
     without_gaps = total_time - total_gaps
-    print(f'{field_name} summary: {len(messages)} messages in {total_time :.2f} seconds for '
-          f'{len(messages) / total_time :.2f} mps, without gaps {len(messages) / without_gaps :.2f} mps')
+    print(
+        f"{field_name} summary: {len(messages)} messages in {total_time :.2f} seconds for "
+        f"{len(messages) / total_time :.2f} mps, without gaps {len(messages) / without_gaps :.2f} mps"
+    )
 
 
 def expand_path(paths: list[str], recurse: bool, ext: str | list[str]) -> list[str]:
@@ -107,10 +109,10 @@ def expand_path(paths: list[str], recurse: bool, ext: str | list[str]) -> list[s
         else:
             if recurse:
                 for e in ext:
-                    files.update(glob.glob(os.path.join(path, '**', f'*{e}'), recursive=True))
+                    files.update(glob.glob(os.path.join(path, "**", f"*{e}"), recursive=True))
             else:
                 for e in ext:
-                    files.update(glob.glob(os.path.join(path, f'*{e}')))
+                    files.update(glob.glob(os.path.join(path, f"*{e}")))
 
     return sorted(list(files))
 
@@ -121,17 +123,19 @@ def filter_blueos_tlog_paths(paths: list[str]) -> list[str]:
 
     The file names must match the pattern: `nnnnn-YYYY-MM-DD_HH-mm-ss.tlog`
     The `nnnnn` prefix is not included in the sort key.
-    
+
     This assumes that the folder structure is sortable by time, e.g., each folder contains
     log files from 1 day, and the folders are named something like `YYYY_MM_DD_suffix`.
     """
-    blueos_tlog_paths = [f for f in paths if re.match(r'^\d{5}-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.tlog$', os.path.basename(f))]
-    blueos_tlog_paths.sort(key=lambda f: os.path.basename(f).split('-', 1)[1])
+    blueos_tlog_paths = [
+        f for f in paths if re.match(r"^\d{5}-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.tlog$", os.path.basename(f))
+    ]
+    blueos_tlog_paths.sort(key=lambda f: os.path.basename(f).split("-", 1)[1])
     return blueos_tlog_paths
 
 
 def get_blueos_tlog_paths(paths: list[str], recurse: bool) -> list[str]:
-    expanded_paths = expand_path(paths, recurse, '.tlog')
+    expanded_paths = expand_path(paths, recurse, ".tlog")
     return filter_blueos_tlog_paths(expanded_paths)
 
 
@@ -140,21 +144,21 @@ def filter_qgc_tlog_paths(paths: list[str]) -> list[str]:
     Given a list of paths, return a list of QGC-generated tlog files, sorted by time.
 
     The file names must match the pattern: `YYYY-MM-DD HH-mm-ss.tlog`
-    
+
     This assumes that the folder structure is sortable by time, e.g., each folder contains
     log files from 1 day, and the folders are named something like `YYYY_MM_DD_suffix`.
     """
-    qgc_tlog_paths = [f for f in paths if re.match(r'^\d{4}-\d{2}-\d{2} \d{2}-\d{2}-\d{2}\.tlog$', os.path.basename(f))]
+    qgc_tlog_paths = [f for f in paths if re.match(r"^\d{4}-\d{2}-\d{2} \d{2}-\d{2}-\d{2}\.tlog$", os.path.basename(f))]
     qgc_tlog_paths.sort(key=lambda f: os.path.basename(f))
     return qgc_tlog_paths
 
 
 def get_qgc_tlog_paths(paths: list[str], recurse: bool) -> list[str]:
-    expanded_paths = expand_path(paths, recurse, '.tlog')
+    expanded_paths = expand_path(paths, recurse, ".tlog")
     return filter_qgc_tlog_paths(expanded_paths)
 
 
-def get_outfile_name(infile: str, suffix: str = '', ext: str = '.csv'):
+def get_outfile_name(infile: str, suffix: str = "", ext: str = ".csv"):
     """Given input file path, return <path to infile>/<infile root>suffix.ext"""
     dirname, basename = os.path.split(infile)
     root, _ = os.path.splitext(basename)
@@ -175,8 +179,8 @@ def get_rtc_shift(tlog_conn, rewind=False) -> float | None:
         if msg is None:
             break
 
-        if hasattr(msg, 'time_boot_ms'):
-            offset = getattr(msg, '_timestamp', 0) - msg.time_boot_ms / 1e3
+        if hasattr(msg, "time_boot_ms"):
+            offset = getattr(msg, "_timestamp", 0) - msg.time_boot_ms / 1e3
             if min_offset is None or offset < min_offset:
                 min_offset = offset
 

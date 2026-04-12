@@ -1,6 +1,6 @@
 import os
 
-os.environ['MAVLINK20'] = '1'
+os.environ["MAVLINK20"] = "1"
 from pymavlink import mavutil
 
 print("ArduSub modes:")

@@ -13,13 +13,13 @@ import pymavlink.dialects.v20.ardupilotmega as apm
 import table_types
 from segment_reader import add_segment_args, choose_reader_list
 
-MSG_TYPES = ['HEARTBEAT', 'STATUSTEXT', 'SYSTEM_TIME', 'SYS_STATUS']
+MSG_TYPES = ["HEARTBEAT", "STATUSTEXT", "SYSTEM_TIME", "SYS_STATUS"]
 
 
 class SensorInfo:
     def __init__(self, description: str):
-        if description == '0x100 laser based position':
-            description = '0x100 laser based position (down-facing sonar rangefinder)'
+        if description == "0x100 laser based position":
+            description = "0x100 laser based position (down-facing sonar rangefinder)"
 
         self.description = description
         self.present = 0
@@ -35,14 +35,14 @@ class SensorInfo:
 
     def count_str(self, count: int) -> str:
         if count == 0:
-            return 'NEVER!'
+            return "NEVER!"
         elif count == self.present:
-            return 'always'
+            return "always"
         else:
-            return f'{100.0 * count / self.present :.2f}%'
+            return f"{100.0 * count / self.present :.2f}%"
 
     def report(self) -> str:
-        return f'{self.description}: enabled {self.count_str(self.enabled)}, healthy {self.count_str(self.healthy)}'
+        return f"{self.description}: enabled {self.count_str(self.enabled)}, healthy {self.count_str(self.healthy)}"
 
 
 class CompInfo:
@@ -70,34 +70,34 @@ class CompInfo:
         msg_type = msg.get_type()
         data = msg.to_dict()
 
-        if msg_type == 'HEARTBEAT':
+        if msg_type == "HEARTBEAT":
 
             self._heartbeat_count += 1
             self._mode_counter.count(data)
 
-        elif msg_type == 'STATUSTEXT':
+        elif msg_type == "STATUSTEXT":
 
-            severity = data['severity']
+            severity = data["severity"]
             if severity not in self._status_severities:
                 self._status_severities[severity] = 0
             self._status_severities[severity] += 1
 
-            string = data['text']
+            string = data["text"]
             if string not in self._status_strings:
                 self._status_strings[string] = 0
             self._status_strings[string] += 1
 
-        elif msg_type == 'SYSTEM_TIME':
+        elif msg_type == "SYSTEM_TIME":
 
-            if data['time_unix_usec'] != 0:
+            if data["time_unix_usec"] != 0:
                 self._unix_time += 1
 
-        elif msg_type == 'SYS_STATUS':
+        elif msg_type == "SYS_STATUS":
 
             if self._sensors_present is None:
                 self._sensors_present = {}
 
-            for bit, entry in apm.enums['MAV_SYS_STATUS_SENSOR'].items():
+            for bit, entry in apm.enums["MAV_SYS_STATUS_SENSOR"].items():
                 if bit == apm.MAV_SYS_STATUS_SENSOR_ENUM_END:
                     break
                 if msg.onboard_control_sensors_present & bit:
@@ -109,46 +109,46 @@ class CompInfo:
                     self._sensors_present[bit].count(enabled, healthy)
 
     def report_heartbeat(self):
-        print('            HEARTBEAT')
+        print("            HEARTBEAT")
 
         if self._sys_id == 1 and self._comp_id == 1:
             for i, count in sorted(self._mode_counter.modes.items()):
-                print(f'                    {count:8d} {i:20}')
+                print(f"                    {count:8d} {i:20}")
 
         minutes = self._heartbeat_count // 60
-        print(f'                    {self._heartbeat_count:8d} Total heartbeat messages, approx {minutes} minutes')
+        print(f"                    {self._heartbeat_count:8d} Total heartbeat messages, approx {minutes} minutes")
 
     def report_statustext(self):
         if len(self._status_severities) > 0 or len(self._status_strings) > 0:
-            print('            STATUSTEXT')
+            print("            STATUSTEXT")
 
-            print('                severities')
+            print("                severities")
             for si in sorted(self._status_severities.items()):
-                print(f'                    {si[1]:8d} {table_types.status_severity_name(si[0])}')
+                print(f"                    {si[1]:8d} {table_types.status_severity_name(si[0])}")
 
-            print('                strings')
+            print("                strings")
             num_ardusub_versions = 0
             for si in self._status_strings.items():
-                problem = ''
-                if si[0].startswith('ArduSub'):
+                problem = ""
+                if si[0].startswith("ArduSub"):
                     num_ardusub_versions += 1
                     if num_ardusub_versions > 1:
-                        problem += 'FIRMWARE UPDATE!'
+                        problem += "FIRMWARE UPDATE!"
                     elif si[1] > 1:
-                        problem += 'REBOOT!'
-                print(f'                    {si[1]:8d} {si[0]} {problem}')
+                        problem += "REBOOT!"
+                print(f"                    {si[1]:8d} {si[0]} {problem}")
 
     def report_system_time(self):
         if self._unix_time > 0:
-            print('            SYSTEM_TIME')
-            print(f'                         valid time was sent {self._unix_time} time(s)')
+            print("            SYSTEM_TIME")
+            print(f"                         valid time was sent {self._unix_time} time(s)")
 
     def report_sys_status(self):
         if self._sensors_present is not None:
-            print('            SYS_STATUS')
-            print('                sensors')
+            print("            SYS_STATUS")
+            print("                sensors")
             for _, info in self._sensors_present.items():
-                print('                         ' + info.report())
+                print("                         " + info.report())
 
     def report(self):
         self.report_heartbeat()
@@ -162,7 +162,7 @@ class TelemetryLogInfo:
         self.reader = reader
 
     def read_and_report(self):
-        print(f'Results for {self.reader.name}')
+        print(f"Results for {self.reader.name}")
 
         # Build a dictionary sys_id => system
         # Each system is a dictionary of comp_id => instance of CompInfo
@@ -183,9 +183,9 @@ class TelemetryLogInfo:
 
         # Print results
         for si in sorted(systems.items()):
-            print(f'    System = {table_types.sys_name(si[0])}')
+            print(f"    System = {table_types.sys_name(si[0])}")
             for ci in sorted(si[1].items()):
-                print(f'        Component = {table_types.comp_name(ci[0])}')
+                print(f"        Component = {table_types.comp_name(ci[0])}")
                 ci[1].report()
 
 
@@ -200,5 +200,5 @@ def main():
         tlog_doctor.read_and_report()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

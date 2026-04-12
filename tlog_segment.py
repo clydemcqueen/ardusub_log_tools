@@ -27,25 +27,25 @@ from segment_reader import add_segment_args, parse_segment_args
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=__doc__)
     add_segment_args(parser)
-    parser.add_argument('-v', '--verbose', action='store_true',
-                        help='print a lot more information')
-    parser.add_argument('--types', default=None,
-                        help='comma separated list of message types to keep, the default is all types')
-    parser.add_argument('--sysid', type=int, default=0,
-                        help='source system id to keep, default is all source systems')
-    parser.add_argument('--compid', type=int, default=0,
-                        help='source component id to keep, default is all source components')
+    parser.add_argument("-v", "--verbose", action="store_true", help="print a lot more information")
+    parser.add_argument(
+        "--types", default=None, help="comma separated list of message types to keep, the default is all types"
+    )
+    parser.add_argument("--sysid", type=int, default=0, help="source system id to keep, default is all source systems")
+    parser.add_argument(
+        "--compid", type=int, default=0, help="source component id to keep, default is all source components"
+    )
     args = parser.parse_args()
 
     segments = parse_segment_args(args.keep)
-    print(f'Segments: {segments}')
+    print(f"Segments: {segments}")
 
     if args.types:
-        msg_types = args.types.split(',')
-        print(f'Looking for these types: {msg_types}')
+        msg_types = args.types.split(",")
+        print(f"Looking for these types: {msg_types}")
 
     # TODO implement tlog file writing
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

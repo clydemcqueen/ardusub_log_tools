@@ -20,10 +20,11 @@ class DiveIterator:
         while msg := next(dive_iter):
             print(msg)
     """
+
     def __init__(self, tlog_path: str, bin_path: str):
         self.tlog_path = tlog_path
         self.bin_path = bin_path
-        
+
         # The next message to return from each file
         self._next_tlog = None
         self._next_bin = None
@@ -43,11 +44,11 @@ class DiveIterator:
         bin_msg = self._bin_conn.recv_match(blocking=False)
 
         if not bin_msg:
-             raise ValueError("The BIN file is empty or has no messages with a TimeUS field")
+            raise ValueError("The BIN file is empty or has no messages with a TimeUS field")
 
         # Get the timestamps
-        tlog_timestamp = getattr(tlog_msg, '_timestamp', 0)
-        bin_timestamp = getattr(bin_msg, '_timestamp', 0) + self.rtc_shift
+        tlog_timestamp = getattr(tlog_msg, "_timestamp", 0)
+        bin_timestamp = getattr(bin_msg, "_timestamp", 0) + self.rtc_shift
 
         # Pick the start of the overlap
         overlap_start = max(tlog_timestamp, bin_timestamp)
@@ -71,17 +72,17 @@ class DiveIterator:
             if msg is None:
                 self._next_tlog = None
                 return
-            if  getattr(msg, '_timestamp', 0) >= target:
+            if getattr(msg, "_timestamp", 0) >= target:
                 self._next_tlog = msg
                 return
-    
+
     def _seek_bin(self, target):
         while True:
             msg = self._bin_conn.recv_match(blocking=False)
             if msg is None:
                 self._next_bin = None
                 return
-            if  getattr(msg, '_timestamp', 0) + self.rtc_shift >= target:
+            if getattr(msg, "_timestamp", 0) + self.rtc_shift >= target:
                 self._next_bin = msg
                 return
 
@@ -92,9 +93,9 @@ class DiveIterator:
         # Stop iteration if EITHER file ends (intersection only)
         if self._next_tlog is None or self._next_bin is None:
             raise StopIteration
-            
-        tlog_timestamp = getattr(self._next_tlog, '_timestamp', 0)
-        bin_timestamp = getattr(self._next_bin, '_timestamp', 0) + self.rtc_shift
+
+        tlog_timestamp = getattr(self._next_tlog, "_timestamp", 0)
+        bin_timestamp = getattr(self._next_bin, "_timestamp", 0) + self.rtc_shift
 
         # Compare timestamps
         if tlog_timestamp <= bin_timestamp:
@@ -106,15 +107,15 @@ class DiveIterator:
             self._next_bin = self._bin_conn.recv_match(blocking=False)
 
             # Adjust the BIN message timestamp
-            setattr(msg, '_timestamp', bin_timestamp)
+            setattr(msg, "_timestamp", bin_timestamp)
             return msg
 
 
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=__doc__)
-    parser.add_argument('--count', type=int, default=20, help='number of messages to print')
-    parser.add_argument('tlog_path')
-    parser.add_argument('bin_path')
+    parser.add_argument("--count", type=int, default=20, help="number of messages to print")
+    parser.add_argument("tlog_path")
+    parser.add_argument("bin_path")
     args = parser.parse_args()
 
     try:
@@ -134,5 +135,5 @@ def main():
         pass
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

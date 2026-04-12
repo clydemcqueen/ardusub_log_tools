@@ -43,7 +43,7 @@ class BadDataInfo:
         self.reason = msg.reason
 
         # Is this a CRC error?
-        self.crc_error = True if msg.reason.find('invalid MAVLink CRC') >= 0 else False
+        self.crc_error = True if msg.reason.find("invalid MAVLink CRC") >= 0 else False
 
         # Parse the MAVLink header
         b = bytes(msg.data)
@@ -59,7 +59,7 @@ class BadDataInfo:
             self.msg_id = int(b[5])
 
     def __str__(self):
-        return f'BadDataMsg mavlink2={self.mavlink2} sysid={self.sysid} compid={self.compid} msg_id={self.msg_id} reason: {self.reason}'
+        return f"BadDataMsg mavlink2={self.mavlink2} sysid={self.sysid} compid={self.compid} msg_id={self.msg_id} reason: {self.reason}"
 
 
 class BadDataFinder:
@@ -68,9 +68,9 @@ class BadDataFinder:
         self.verbose = verbose
 
     def read(self):
-        print(f'Results for {self.infile}')
+        print(f"Results for {self.infile}")
 
-        mlog = mavutil.mavlink_connection(self.infile, dialect='ardupilotmega')
+        mlog = mavutil.mavlink_connection(self.infile, dialect="ardupilotmega")
 
         total_count = 0
         crc_errors = 0
@@ -86,7 +86,7 @@ class BadDataFinder:
             if msg is None:
                 break
 
-            if msg.get_type() == 'BAD_DATA':
+            if msg.get_type() == "BAD_DATA":
                 msg_info = BadDataInfo(msg)
                 # Count number of bad messages
                 total_count += 1
@@ -105,25 +105,25 @@ class BadDataFinder:
                     print(BadDataInfo(msg))
 
         for msg_id_item in sorted(counts.items()):
-            print(f'msg_id {msg_id_item[0]} count {msg_id_item[1]}')
+            print(f"msg_id {msg_id_item[0]} count {msg_id_item[1]}")
 
-        print(f'{total_count} BAD_DATA messages, {crc_errors} of them were CRC errors')
+        print(f"{total_count} BAD_DATA messages, {crc_errors} of them were CRC errors")
 
 
 def main():
     parser = ArgumentParser(description=__doc__)
-    parser.add_argument('-r', '--recurse', action='store_true', help='enter directories looking for tlog files')
-    parser.add_argument('-v', '--verbose', action='store_true', help='print a lot more information')
-    parser.add_argument('path', nargs='+')
+    parser.add_argument("-r", "--recurse", action="store_true", help="enter directories looking for tlog files")
+    parser.add_argument("-v", "--verbose", action="store_true", help="print a lot more information")
+    parser.add_argument("path", nargs="+")
     args = parser.parse_args()
-    files = util.expand_path(args.path, args.recurse, '.tlog')
-    print(f'Processing {len(files)} files')
+    files = util.expand_path(args.path, args.recurse, ".tlog")
+    print(f"Processing {len(files)} files")
 
     for file in files:
-        print('-------------------')
+        print("-------------------")
         scanner = BadDataFinder(file, args.verbose)
         scanner.read()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

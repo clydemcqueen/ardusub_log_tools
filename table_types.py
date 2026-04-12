@@ -34,19 +34,19 @@ class Mode(enum.IntEnum):
 
 
 MODE_NAMES = {
-    -10: 'DISARMED',
-    -9: 'UNKNOWN',
-    0: 'STABILIZE',
-    1: 'ACRO',
-    2: 'ALT_HOLD',
-    3: 'AUTO',
-    4: 'GUIDED',
-    7: 'CIRCLE',
-    9: 'SURFACE',
-    16: 'POS_HOLD',
-    19: 'MANUAL',
-    20: 'MOTOR_DETECT',
-    21: 'SURFTRAK',
+    -10: "DISARMED",
+    -9: "UNKNOWN",
+    0: "STABILIZE",
+    1: "ACRO",
+    2: "ALT_HOLD",
+    3: "AUTO",
+    4: "GUIDED",
+    7: "CIRCLE",
+    9: "SURFACE",
+    16: "POS_HOLD",
+    19: "MANUAL",
+    20: "MOTOR_DETECT",
+    21: "SURFTRAK",
 }
 
 
@@ -66,57 +66,58 @@ def mode_name(mode: int) -> str:
     if mode in MODE_NAMES:
         return MODE_NAMES[mode]
     else:
-        return f'mode {mode}'
+        return f"mode {mode}"
 
 
 def sys_name(sys_id: int) -> str:
     if sys_id == 1:
-        return 'Vehicle'
+        return "Vehicle"
     elif sys_id == 255:
-        return 'QGroundControl or similar'
+        return "QGroundControl or similar"
     else:
-        return 'unknown'
+        return "unknown"
 
 
 def comp_name(comp_id: int) -> str:
-    return apm.enums['MAV_COMPONENT'][comp_id].name.lower()
+    return apm.enums["MAV_COMPONENT"][comp_id].name.lower()
 
 
 def state_name(state_id: int) -> str:
-    return apm.enums['MAV_STATE'][state_id].name.lower()
+    return apm.enums["MAV_STATE"][state_id].name.lower()
 
 
 def system_status_name(state_id: int) -> str:
     if state_id == apm.MAV_STATE_CRITICAL:
-        return 'CRITICAL, FAILSAFE was triggered'
+        return "CRITICAL, FAILSAFE was triggered"
     elif state_id == apm.MAV_STATE_ACTIVE:
-        return 'active, sub was armed'
+        return "active, sub was armed"
     elif state_id == apm.MAV_STATE_STANDBY:
-        return 'standby, sub was disarmed'
+        return "standby, sub was disarmed"
     else:
-        return 'unknown'
+        return "unknown"
 
 
 def status_severity_name(severity: int) -> str:
     if severity == apm.MAV_SEVERITY_CRITICAL:
-        return 'CRITICAL'
+        return "CRITICAL"
     elif severity == apm.MAV_SEVERITY_ERROR:
-        return 'ERROR'
+        return "ERROR"
     elif severity == apm.MAV_SEVERITY_WARNING:
-        return 'WARNING'
+        return "WARNING"
     elif severity == apm.MAV_SEVERITY_INFO:
-        return 'INFO'
+        return "INFO"
     else:
-        return f'severity {severity}'
+        return f"severity {severity}"
 
 
 class ModeCounter:
     """Count seconds spent in the various [combined] modes"""
+
     def __init__(self):
         self.modes = {}
 
     def count(self, heartbeat_data: dict):
-        mode = mode_name(combined_mode(heartbeat_data['base_mode'], heartbeat_data['custom_mode']))
+        mode = mode_name(combined_mode(heartbeat_data["base_mode"], heartbeat_data["custom_mode"]))
         if mode not in self.modes:
             self.modes[mode] = 0
         self.modes[mode] += 1
@@ -124,36 +125,32 @@ class ModeCounter:
 
 class Table:
     @staticmethod
-    def create_table(
-            msg_type: str,
-            hdop_max: float = 100.0,
-            table_name: str | None = None,
-            filter_bad: bool = False):
+    def create_table(msg_type: str, hdop_max: float = 100.0, table_name: str | None = None, filter_bad: bool = False):
         # table_name can be different from msg_type, e.g., HEARTBEAT_255_0 if split_source is True
         if table_name is None:
             table_name = msg_type
 
-        if msg_type == 'AHRS2':
+        if msg_type == "AHRS2":
             return AHRS2Table(table_name)
-        elif msg_type == 'BATTERY_STATUS':
+        elif msg_type == "BATTERY_STATUS":
             return BatteryStatusTable(table_name)
-        elif msg_type == 'DISTANCE_SENSOR':
+        elif msg_type == "DISTANCE_SENSOR":
             return DistanceSensorTable(table_name)
-        elif msg_type == 'HEARTBEAT':
+        elif msg_type == "HEARTBEAT":
             return HeartbeatTable(table_name)
-        elif msg_type == 'GLOBAL_POSITION_INT':
+        elif msg_type == "GLOBAL_POSITION_INT":
             return GPSTable(msg_type, table_name, hdop_max, filter_bad)
-        elif msg_type == 'GPS_INPUT':
+        elif msg_type == "GPS_INPUT":
             return GPSTable(msg_type, table_name, hdop_max, filter_bad)
-        elif msg_type == 'GPS_RAW_INT':
+        elif msg_type == "GPS_RAW_INT":
             return GPSTable(msg_type, table_name, hdop_max, filter_bad)
-        elif msg_type == 'GPS2_RAW':
+        elif msg_type == "GPS2_RAW":
             return GPSTable(msg_type, table_name, hdop_max, filter_bad)
-        elif msg_type == 'NAMED_VALUE_FLOAT':
+        elif msg_type == "NAMED_VALUE_FLOAT":
             return NamedValueFloatTable(table_name)
-        elif msg_type == 'RC_CHANNELS':
+        elif msg_type == "RC_CHANNELS":
             return RCChannelsTable(table_name)
-        elif msg_type == 'VISION_POSITION_DELTA':
+        elif msg_type == "VISION_POSITION_DELTA":
             return VisionPositionDeltaTable(table_name)
         else:
             return Table(table_name)
@@ -178,18 +175,18 @@ class Table:
 
         self._rows.append(row)
 
-    def add_rate_field(self, half_n=10, field_name='rate'):
-        util.add_rate_field(self._rows, half_n, 4.0, f'{self._table_name}.{field_name}')
+    def add_rate_field(self, half_n=10, field_name="rate"):
+        util.add_rate_field(self._rows, half_n, 4.0, f"{self._table_name}.{field_name}")
 
     def get_dataframe(self, verbose):
         if self._df is None:
             self._df = pd.DataFrame(self._rows)
             if verbose:
-                print('-----------------')
+                print("-----------------")
                 if self._df.empty:
-                    print(f'{self._table_name} is empty')
+                    print(f"{self._table_name} is empty")
                 else:
-                    print(f'{self._table_name} has {len(self._df)} rows:')
+                    print(f"{self._table_name} has {len(self._df)} rows:")
                     print(self._df.head())
 
         return self._df
@@ -204,9 +201,9 @@ class AHRS2Table(Table):
 
     def append(self, row: dict):
         # Add degree fields
-        row[f'{self._table_name}.roll_deg'] = math.degrees(row[f'{self._table_name}.roll'])
-        row[f'{self._table_name}.pitch_deg'] = math.degrees(row[f'{self._table_name}.pitch'])
-        row[f'{self._table_name}.yaw_deg'] = math.degrees(row[f'{self._table_name}.yaw'])
+        row[f"{self._table_name}.roll_deg"] = math.degrees(row[f"{self._table_name}.roll"])
+        row[f"{self._table_name}.pitch_deg"] = math.degrees(row[f"{self._table_name}.pitch"])
+        row[f"{self._table_name}.yaw_deg"] = math.degrees(row[f"{self._table_name}.yaw"])
         super().append(row)
 
 
@@ -217,7 +214,7 @@ class BatteryStatusTable(Table):
     def append(self, row: dict):
         # Grab the voltage of the first battery
         # TODO AP will split the voltage across multiple rows if required, check for this
-        row[f'{self._table_name}.voltage'] = row[f'{self._table_name}.voltages'][0]
+        row[f"{self._table_name}.voltage"] = row[f"{self._table_name}.voltages"][0]
         super().append(row)
 
 
@@ -226,7 +223,7 @@ class DistanceSensorTable(Table):
         super().__init__(table_name)
 
     def append(self, row: dict):
-        row[f'{self._table_name}.current_distance_m'] = row[f'{self._table_name}.current_distance'] / 100.0
+        row[f"{self._table_name}.current_distance_m"] = row[f"{self._table_name}.current_distance"] / 100.0
         super().append(row)
 
 
@@ -235,13 +232,13 @@ class HeartbeatTable(Table):
         super().__init__(table_name)
 
     def is_armed(self, row):
-        return is_armed(row[f'{self._table_name}.base_mode'])
+        return is_armed(row[f"{self._table_name}.base_mode"])
 
     def get_mode(self, row):
-        return combined_mode(row[f'{self._table_name}.base_mode'], row[f'{self._table_name}.custom_mode'])
+        return combined_mode(row[f"{self._table_name}.base_mode"], row[f"{self._table_name}.custom_mode"])
 
     def append(self, row: dict):
-        row[f'{self._table_name}.mode'] = self.get_mode(row)
+        row[f"{self._table_name}.mode"] = self.get_mode(row)
         super().append(row)
 
 
@@ -259,6 +256,7 @@ class GPSTable(Table):
     alt             GLOBAL_POSITION_INT (mm), GPS_INPUT (m)
     relative_alt    GLOBAL_POSITION_INT
     """
+
     def __init__(self, msg_type: str, table_name: str, hdop_max: float, filter_bad: bool):
         super().__init__(table_name)
         self._msg_type = msg_type
@@ -267,29 +265,29 @@ class GPSTable(Table):
 
     def append(self, row: dict):
         def field(f: str):
-            return f'{self._table_name}.{f}'
+            return f"{self._table_name}.{f}"
 
         # Warm up messages have lat=0, lon=0, fix_type<3, hdop>max, etc.
         # This makes graphing a pain, so drop these rows
         if self._filter_bad:
-            if row[field('lat')] == 0 and row[field('lon')] == 0:
+            if row[field("lat")] == 0 and row[field("lon")] == 0:
                 return
-            if field('fix_type') in row and row[field('fix_type')] < 3:
+            if field("fix_type") in row and row[field("fix_type")] < 3:
                 return
-            if field('hdop') in row and row[field('hdop')] > self._hdop_max:
+            if field("hdop") in row and row[field("hdop")] > self._hdop_max:
                 return
-            if field('eph') in row and row[field('eph')] / 100.0 > self._hdop_max:
+            if field("eph") in row and row[field("eph")] / 100.0 > self._hdop_max:
                 return
 
         # Convert to degrees and meters for convenience
-        row[field('lat_deg')] = row[field('lat')] / 1.0e7
-        row[field('lon_deg')] = row[field('lon')] / 1.0e7
-        if self._msg_type == 'GLOBAL_POSITION_INT':
-            row[field('hdg_deg')] = row[field('hdg')] / 100.0
-            row[field('alt_m')] = row[field('alt')] / 1000.0
-            row[field('relative_alt_m')] = row[field('relative_alt')] / 1000.0
-        if field('yaw') in row:
-            row[field('yaw_deg')] = row[field('yaw')] / 100.0
+        row[field("lat_deg")] = row[field("lat")] / 1.0e7
+        row[field("lon_deg")] = row[field("lon")] / 1.0e7
+        if self._msg_type == "GLOBAL_POSITION_INT":
+            row[field("hdg_deg")] = row[field("hdg")] / 100.0
+            row[field("alt_m")] = row[field("alt")] / 1000.0
+            row[field("relative_alt_m")] = row[field("relative_alt")] / 1000.0
+        if field("yaw") in row:
+            row[field("yaw_deg")] = row[field("yaw")] / 100.0
 
         super().append(row)
 
@@ -300,13 +298,13 @@ class NamedValueFloatTable(Table):
 
     def get_one_named_value_float_type(self, input_df, name: str):
         # Get a subset of rows
-        df = input_df[input_df[f'{self._table_name}.name'] == name]
+        df = input_df[input_df[f"{self._table_name}.name"] == name]
 
         # Get a subset of columns
-        df = df[['timestamp', f'{self._table_name}.value']]
+        df = df[["timestamp", f"{self._table_name}.value"]]
 
         # Rename one column
-        return df.rename(columns={f'{self._table_name}.value': f'SUB_INFO.{name}'})
+        return df.rename(columns={f"{self._table_name}.value": f"SUB_INFO.{name}"})
 
     def get_dataframe(self, verbose):
         if self._df is None:
@@ -314,26 +312,26 @@ class NamedValueFloatTable(Table):
             named_value_float_df = pd.DataFrame(self._rows)
 
             if verbose:
-                print('-----------------')
+                print("-----------------")
                 if named_value_float_df.empty:
-                    print(f'{self._table_name} is empty')
+                    print(f"{self._table_name} is empty")
                 else:
-                    print(f'{self._table_name} has {len(named_value_float_df)} rows:')
+                    print(f"{self._table_name} has {len(named_value_float_df)} rows:")
                     print(named_value_float_df.head())
 
             # Re-arrange the data so it appears like it does in the QGC-generated csv file. Since the timestamps are
             # fine-grained this may result in an explosion of data, so let's just do this for a few key columns.
-            interesting_fields = ['RFTarget', 'PilotGain']
-            print(f'Save these NAMED_VALUE_FLOAT fields: {interesting_fields}')
+            interesting_fields = ["RFTarget", "PilotGain"]
+            print(f"Save these NAMED_VALUE_FLOAT fields: {interesting_fields}")
             for interesting_field in interesting_fields:
                 df = self.get_one_named_value_float_type(named_value_float_df, interesting_field)
                 self._df = df if self._df is None else pd.merge_ordered(self._df, df)
 
             if verbose:
                 if self._df.empty:
-                    print(f'{self._table_name} is empty')
+                    print(f"{self._table_name} is empty")
                 else:
-                    print(f'{self._table_name} has {len(self._df)} rows:')
+                    print(f"{self._table_name} has {len(self._df)} rows:")
                     print(self._df.head())
 
         return self._df
@@ -343,12 +341,12 @@ class RCChannelsTable(Table):
     def __init__(self, table_name: str):
         super().__init__(table_name)
 
-    RC_MAP = [(1, 'pitch'), (2, 'roll'), (3, 'throttle'), (4, 'yaw'), (5, 'forward'), (6, 'lateral')]
+    RC_MAP = [(1, "pitch"), (2, "roll"), (3, "throttle"), (4, "yaw"), (5, "forward"), (6, "lateral")]
 
     def append(self, row: dict):
         # Rename a few fields for ease-of-use
         for item in RCChannelsTable.RC_MAP:
-            row[f'{self._table_name}.chan{item[0]}_raw_{item[1]}'] = row.pop(f'{self._table_name}.chan{item[0]}_raw')
+            row[f"{self._table_name}.chan{item[0]}_raw_{item[1]}"] = row.pop(f"{self._table_name}.chan{item[0]}_raw")
         super().append(row)
 
 
@@ -360,36 +358,38 @@ class VisionPositionDeltaTable(Table):
         self.pose = geometry.Pose((0.0, 0.0, 0.0), (0.0, 0.0, 0.0))
 
     def append(self, row: dict):
-        angle_delta = np.array(row[f'{self._table_name}.angle_delta'])
-        position_delta = np.array(row[f'{self._table_name}.position_delta'])
+        angle_delta = np.array(row[f"{self._table_name}.angle_delta"])
+        position_delta = np.array(row[f"{self._table_name}.position_delta"])
 
         # Flatten angle array, and normalize while we're at it
         is_degrees = False
         if is_degrees:
-            row[f'{self._table_name}.roll_delta'], \
-            row[f'{self._table_name}.pitch_delta'], \
-            row[f'{self._table_name}.yaw_delta'] = (angle_delta + 180) % 360 - 180
+            (
+                row[f"{self._table_name}.roll_delta"],
+                row[f"{self._table_name}.pitch_delta"],
+                row[f"{self._table_name}.yaw_delta"],
+            ) = (angle_delta + 180) % 360 - 180
         else:
-            row[f'{self._table_name}.roll_delta'], \
-            row[f'{self._table_name}.pitch_delta'], \
-            row[f'{self._table_name}.yaw_delta'] = (angle_delta + np.pi) % (2 * np.pi) - np.pi
+            (
+                row[f"{self._table_name}.roll_delta"],
+                row[f"{self._table_name}.pitch_delta"],
+                row[f"{self._table_name}.yaw_delta"],
+            ) = (angle_delta + np.pi) % (2 * np.pi) - np.pi
 
         # Flatten position array
-        row[f'{self._table_name}.x_delta'], \
-        row[f'{self._table_name}.y_delta'], \
-        row[f'{self._table_name}.z_delta'] = position_delta
+        row[f"{self._table_name}.x_delta"], row[f"{self._table_name}.y_delta"], row[f"{self._table_name}.z_delta"] = (
+            position_delta
+        )
 
         # Accumulate deltas to build a pose
         self.pose.add_angle_delta(angle_delta)
         self.pose.add_position_delta(position_delta)
 
         # Add pose fields
-        row[f'{self._table_name}.roll'], \
-        row[f'{self._table_name}.pitch'], \
-        row[f'{self._table_name}.yaw'] = self.pose.orientation
+        row[f"{self._table_name}.roll"], row[f"{self._table_name}.pitch"], row[f"{self._table_name}.yaw"] = (
+            self.pose.orientation
+        )
 
-        row[f'{self._table_name}.x'], \
-        row[f'{self._table_name}.y'], \
-        row[f'{self._table_name}.z'] = self.pose.position
+        row[f"{self._table_name}.x"], row[f"{self._table_name}.y"], row[f"{self._table_name}.z"] = self.pose.position
 
         super().append(row)

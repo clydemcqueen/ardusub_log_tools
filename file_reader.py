@@ -23,7 +23,7 @@ class FileReader(NamedReader):
         self.last_ts = None
         self.types = types
 
-        self._conn = mavutil.mavlink_connection(path, dialect='ardupilotmega')
+        self._conn = mavutil.mavlink_connection(path, dialect="ardupilotmega")
 
         # Works for tlog, but not for BIN:
         # print(f'Reading {path}, WIRE_PROTOCOL_VERSION {self._conn.WIRE_PROTOCOL_VERSION}')
@@ -38,7 +38,7 @@ class FileReader(NamedReader):
             raise StopIteration
         else:
             self.count += 1
-            self.last_ts = getattr(msg, '_timestamp', 0.0)
+            self.last_ts = getattr(msg, "_timestamp", 0.0)
             if self.first_ts is None:
                 self.first_ts = self.last_ts
             return msg
@@ -49,16 +49,16 @@ class FileReaderList:
     Iterate over a list of file readers.
     """
 
-    def __init__(self, args, types: list[str] | None, ext: str = '.tlog'):
+    def __init__(self, args, types: list[str] | None, ext: str = ".tlog"):
         paths = expand_path(args.path, args.recurse, ext)
 
-        if ext == '.tlog':
-            if getattr(args, 'blueos', False):
+        if ext == ".tlog":
+            if getattr(args, "blueos", False):
                 paths = filter_blueos_tlog_paths(paths)
-            elif getattr(args, 'qgc', False):
+            elif getattr(args, "qgc", False):
                 paths = filter_qgc_tlog_paths(paths)
 
-        print(f'Reading {len(paths)} file(s)')
+        print(f"Reading {len(paths)} file(s)")
         self._ext = ext
         self._types = types
         self._paths_iter = iter(paths)
@@ -78,12 +78,16 @@ class FileReaderList:
         return self._current
 
 
-def add_file_args(parser: argparse.ArgumentParser, ext: str = '.tlog'):
+def add_file_args(parser: argparse.ArgumentParser, ext: str = ".tlog"):
     """
     Add args for working with multiple files.
     """
-    parser.add_argument('-r', '--recurse', action='store_true', help='enter directories looking for files')
-    if ext == '.tlog':
-        parser.add_argument('--blueos',action='store_true',help='only process BlueOS-generated tlog files (based on name pattern)')
-        parser.add_argument('--qgc',action='store_true',help='only process QGC-generated tlog files (based on name pattern)')
-    parser.add_argument('path', nargs='+')
+    parser.add_argument("-r", "--recurse", action="store_true", help="enter directories looking for files")
+    if ext == ".tlog":
+        parser.add_argument(
+            "--blueos", action="store_true", help="only process BlueOS-generated tlog files (based on name pattern)"
+        )
+        parser.add_argument(
+            "--qgc", action="store_true", help="only process QGC-generated tlog files (based on name pattern)"
+        )
+    parser.add_argument("path", nargs="+")
