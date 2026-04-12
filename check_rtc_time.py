@@ -38,11 +38,12 @@ def check_bin_gps_time(filename, verbose):
 
     # DFReader (which mavlink_connection returns for BIN files) determines the timebase during initialization. If it
     # found GPS messages, it sets a non-zero timebase (or at least uses a clock that isn't just 0-based).
-    if hasattr(mlog, 'clock') and hasattr(mlog.clock, 'timebase'):
+    if hasattr(mlog, "clock") and hasattr(mlog.clock, "timebase"):
         if mlog.clock.timebase > 1:
             return True
-            
+
     return False
+
 
 def check_tlog_gps_or_unix_time(filename, verbose) -> tuple[bool, bool, bool]:
     """
@@ -58,7 +59,7 @@ def check_tlog_gps_or_unix_time(filename, verbose) -> tuple[bool, bool, bool]:
     unix_time_x_x = 0
 
     while True:
-        m = mlog.recv_match(type=['GPS_INPUT', 'SYSTEM_TIME'], blocking=False)
+        m = mlog.recv_match(type=["GPS_INPUT", "SYSTEM_TIME"], blocking=False)
         if m is None:
             break
 
@@ -66,11 +67,11 @@ def check_tlog_gps_or_unix_time(filename, verbose) -> tuple[bool, bool, bool]:
         compid = m.get_srcComponent()
         msg_type = m.get_type()
 
-        if msg_type == 'GPS_INPUT':
+        if msg_type == "GPS_INPUT":
             if m.time_week > 0:
                 # For sure this is GPS time
                 gps_time += 1
-        elif m.get_type() == 'SYSTEM_TIME':
+        elif m.get_type() == "SYSTEM_TIME":
             if m.time_unix_usec > 0:
                 if sysid == 1 and compid == 1:
                     # This is Unix time from ArduSub, might be GPS time
@@ -88,6 +89,7 @@ def check_tlog_gps_or_unix_time(filename, verbose) -> tuple[bool, bool, bool]:
 
     return gps_time > 0, unix_time_1_1 > 0, unix_time_x_x > 0
 
+
 def process_file(filename, verbose):
     _, ext = os.path.splitext(filename)
 
@@ -95,34 +97,36 @@ def process_file(filename, verbose):
     unix_time_1_1 = False
     unix_time_x_x = False
 
-    if ext == '.BIN':
+    if ext == ".BIN":
         gps_time = check_bin_gps_time(filename, verbose)
-    elif ext == '.tlog':
+    elif ext == ".tlog":
         gps_time, unix_time_1_1, unix_time_x_x = check_tlog_gps_or_unix_time(filename, verbose)
 
     if gps_time:
-        prefix = 'GPS'
+        prefix = "GPS"
     elif unix_time_1_1:
-        prefix = 'UNIX (ArduSub)'
+        prefix = "UNIX (ArduSub)"
     elif unix_time_x_x:
-        prefix = 'UNIX (other)'
+        prefix = "UNIX (other)"
     else:
-        prefix = ''
+        prefix = ""
 
     print(f"{prefix:14s} {filename}")
 
+
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=__doc__)
-    parser.add_argument('paths', nargs='+', help='Files or directories to scan')
-    parser.add_argument('-r', '--recurse', action='store_true', help='Recurse into directories')
-    parser.add_argument('-v', '--verbose', action='store_true', help='Verbose output')
+    parser.add_argument("paths", nargs="+", help="Files or directories to scan")
+    parser.add_argument("-r", "--recurse", action="store_true", help="Recurse into directories")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Verbose output")
     args = parser.parse_args()
 
     # Require exact capitalization: '.BIN' for dataflash logs and '.tlog' for MAVLink logs
-    files = util.expand_path(args.paths, args.recurse, ['.BIN', '.tlog'])
-    
+    files = util.expand_path(args.paths, args.recurse, [".BIN", ".tlog"])
+
     for f in files:
         process_file(f, args.verbose)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

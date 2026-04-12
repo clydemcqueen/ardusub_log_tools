@@ -21,30 +21,30 @@ class BeamSplitter:
     def process_messages(self):
         mlog = mavutil.mavlink_connection(self.path)
         while True:
-            msg = mlog.recv_match(type='DISTANCE_SENSOR')
+            msg = mlog.recv_match(type="DISTANCE_SENSOR")
             if msg is None:
                 break
 
             key = (msg.get_srcSystem(), msg.get_srcComponent(), msg.orientation)
             if key not in self.sensor_data:
                 self.sensor_data[key] = {
-                    'timestamp': [],
-                    'min_distance': [],
-                    'max_distance': [],
-                    'current_distance': [],
-                    'type': [],
-                    'id': [],
-                    'covariance': []
+                    "timestamp": [],
+                    "min_distance": [],
+                    "max_distance": [],
+                    "current_distance": [],
+                    "type": [],
+                    "id": [],
+                    "covariance": [],
                 }
 
             data = self.sensor_data[key]
-            data['timestamp'].append(getattr(msg, '_timestamp', 0.0))
-            data['min_distance'].append(msg.min_distance)
-            data['max_distance'].append(msg.max_distance)
-            data['current_distance'].append(msg.current_distance)
-            data['type'].append(msg.type)
-            data['id'].append(msg.id)
-            data['covariance'].append(msg.covariance)
+            data["timestamp"].append(getattr(msg, "_timestamp", 0.0))
+            data["min_distance"].append(msg.min_distance)
+            data["max_distance"].append(msg.max_distance)
+            data["current_distance"].append(msg.current_distance)
+            data["type"].append(msg.type)
+            data["id"].append(msg.id)
+            data["covariance"].append(msg.covariance)
 
     def write_csv_files(self):
         base_name = os.path.splitext(self.path)[0]
@@ -58,15 +58,15 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('-r', '--recurse', action='store_true', help='enter directories looking for tlog files')
-    parser.add_argument('path', nargs='+')
+    parser.add_argument("-r", "--recurse", action="store_true", help="enter directories looking for tlog files")
+    parser.add_argument("path", nargs="+")
     args = parser.parse_args()
-    paths = util.expand_path(args.path, args.recurse, ['.tlog'])
-    print(f'Processing {len(paths)} tlog files')
+    paths = util.expand_path(args.path, args.recurse, [".tlog"])
+    print(f"Processing {len(paths)} tlog files")
 
     for path in paths:
-        print('-------------------')
-        print(f'Reading {path}')
+        print("-------------------")
+        print(f"Reading {path}")
         splitter = BeamSplitter(path)
         splitter.process_messages()
         splitter.write_csv_files()

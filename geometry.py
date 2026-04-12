@@ -29,7 +29,7 @@ class Pose:
 
         # Body (FRD) to world (NED) rotation
         # R = Rz(y) * Ry(p) * Rx(r)
-        R = transforms3d.euler.euler2mat(r, p, y, axes='sxyz')
+        R = transforms3d.euler.euler2mat(r, p, y, axes="sxyz")
 
         # Rotate the delta
         self.position += R @ position_delta

@@ -28,13 +28,13 @@ class MapMaker:
     @staticmethod
     def build_map_from_df(df, lat_col, lon_col, outfile, verbose, center, zoom):
         mm = MapMaker(verbose, center, zoom)
-        mm.add_df(df, lat_col, lon_col, 'blue')
+        mm.add_df(df, lat_col, lon_col, "blue")
         mm.write(outfile)
 
     @staticmethod
     def build_map_from_txt(locations, outfile, verbose, center, zoom):
         mm = MapMaker(verbose, center, zoom)
-        mm.add_locations(locations, 'blue')
+        mm.add_locations(locations, "blue")
         mm.write(outfile)
 
     def __init__(self, verbose, center, zoom):
@@ -84,10 +84,10 @@ class MapMaker:
 
     def write(self, outfile):
         if self.m:
-            print(f'Writing {outfile}')
+            print(f"Writing {outfile}")
             self.m.save(outfile)
         else:
-            print(f'Nothing to write')
+            print(f"Nothing to write")
 
 
 def build_map_from_csv(infile, outfile, verbose, center, zoom):
@@ -95,34 +95,34 @@ def build_map_from_csv(infile, outfile, verbose, center, zoom):
     try:
         df = pd.read_csv(infile)
     except Exception as e:
-        print(f'exception parsing csv file: {e}')
+        print(f"exception parsing csv file: {e}")
         return
 
-    if 'gps.lat' in df.columns and 'gps.lat' in df.columns:
+    if "gps.lat" in df.columns and "gps.lat" in df.columns:
         if verbose:
-            print('QGC csv file')
-        df = pd.read_csv(infile, usecols=['gps.lat', 'gps.lon'])
-        MapMaker.build_map_from_df(df, 'gps.lat', 'gps.lon', outfile, verbose, center, zoom)
-    elif 'lat' in df.columns and 'lon' in df.columns:
+            print("QGC csv file")
+        df = pd.read_csv(infile, usecols=["gps.lat", "gps.lon"])
+        MapMaker.build_map_from_df(df, "gps.lat", "gps.lon", outfile, verbose, center, zoom)
+    elif "lat" in df.columns and "lon" in df.columns:
         if verbose:
-            print('cleaned csv file')
-        df = pd.read_csv(infile, usecols=['lat', 'lon'])
-        MapMaker.build_map_from_df(df, 'lat', 'lon', outfile, verbose, center, zoom)
+            print("cleaned csv file")
+        df = pd.read_csv(infile, usecols=["lat", "lon"])
+        MapMaker.build_map_from_df(df, "lat", "lon", outfile, verbose, center, zoom)
     else:
-        print('GPS information not found')
+        print("GPS information not found")
 
 
 def get_timestamp(line: str):
-    match = re.search(r'^[^|]+', line)
-    return datetime.strptime(match[0], '%Y-%m-%d %H:%M:%S.%f ')
+    match = re.search(r"^[^|]+", line)
+    return datetime.strptime(match[0], "%Y-%m-%d %H:%M:%S.%f ")
 
 
 def build_map_from_txt(infile, outfile, verbose, center, zoom):
-    file = open(infile, 'r')
+    file = open(infile, "r")
     line = file.readline()
 
-    if line == '':
-        print('Empty file')
+    if line == "":
+        print("Empty file")
         return
 
     # Count messages
@@ -136,19 +136,19 @@ def build_map_from_txt(infile, outfile, verbose, center, zoom):
 
     # group(0) is everything from $<sentence_type> to end of line
     # group(1) is $<sentence_type>
-    pattern = re.compile(r'(\$[A-Z]+),.*$')
+    pattern = re.compile(r"(\$[A-Z]+),.*$")
 
     while line := file.readline():
         m = re.search(pattern, line)
         if m is not None:
             total_nmea += 1
-            if m.group(1).endswith('GGA'):
+            if m.group(1).endswith("GGA"):
                 sentence = pynmea2.parse(m.group(0))
                 locations.append((sentence.latitude, sentence.longitude))
         prev_line = line
 
     duration = get_timestamp(prev_line) - start
-    print(f'{total_nmea} sentences received in {duration.seconds} seconds, {len(locations)} were GGA')
+    print(f"{total_nmea} sentences received in {duration.seconds} seconds, {len(locations)} were GGA")
 
     if len(locations) > 0:
         MapMaker.build_map_from_txt(locations, outfile, verbose, center, zoom)
@@ -157,14 +157,17 @@ def build_map_from_txt(infile, outfile, verbose, center, zoom):
 
 
 def add_map_maker_args(parser: argparse.ArgumentParser):
-    parser.add_argument('-v', '--verbose', action='store_true',
-                        help='print a lot more information')
-    parser.add_argument('--lat', default=None, type=float_or_none,
-                        help='center the map at this latitude, default is mean of all points')
-    parser.add_argument('--lon', default=None, type=float_or_none,
-                        help='center the map at this longitude, default is mean of all points')
-    parser.add_argument('--zoom', default=18, type=int,
-                        help='initial zoom, default is 18')
+    parser.add_argument("-v", "--verbose", action="store_true", help="print a lot more information")
+    parser.add_argument(
+        "--lat", default=None, type=float_or_none, help="center the map at this latitude, default is mean of all points"
+    )
+    parser.add_argument(
+        "--lon",
+        default=None,
+        type=float_or_none,
+        help="center the map at this longitude, default is mean of all points",
+    )
+    parser.add_argument("--zoom", default=18, type=int, help="initial zoom, default is 18")
 
 
 def float_or_none(x):
@@ -174,32 +177,31 @@ def float_or_none(x):
     try:
         return float(x)
     except ValueError:
-        raise argparse.ArgumentTypeError(f'{x} is not a floating-point literal')
+        raise argparse.ArgumentTypeError(f"{x} is not a floating-point literal")
 
 
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=__doc__)
-    parser.add_argument('-r', '--recurse', action='store_true',
-                        help='enter directories looking for csv and txt files')
-    parser.add_argument('path', nargs='+')
+    parser.add_argument("-r", "--recurse", action="store_true", help="enter directories looking for csv and txt files")
+    parser.add_argument("path", nargs="+")
     add_map_maker_args(parser)
     args = parser.parse_args()
 
-    files = util.expand_path(args.path, args.recurse, ['.csv', '.txt'])
-    print(f'Processing {len(files)} files')
+    files = util.expand_path(args.path, args.recurse, [".csv", ".txt"])
+    print(f"Processing {len(files)} files")
 
     for infile in files:
-        print('-------------------')
+        print("-------------------")
         print(infile)
         dirname, basename = os.path.split(infile)
         root, ext = os.path.splitext(basename)
-        outfile = os.path.join(dirname, root + '.html')
+        outfile = os.path.join(dirname, root + ".html")
 
-        if ext == '.csv':
+        if ext == ".csv":
             build_map_from_csv(infile, outfile, args.verbose, [args.lat, args.lon], args.zoom)
         else:
             build_map_from_txt(infile, outfile, args.verbose, [args.lat, args.lon], args.zoom)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

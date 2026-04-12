@@ -20,19 +20,19 @@ class DataflashParam:
         self.value = msg.Value
 
     def comment(self) -> str | None:
-        if self.id.startswith('EK3_SRC'):
-            if self.id.endswith('POSXY'):
+        if self.id.startswith("EK3_SRC"):
+            if self.id.endswith("POSXY"):
                 return EK3_SRCn_POSXY[int(self.value)]
-            elif self.id.endswith('VELXY'):
+            elif self.id.endswith("VELXY"):
                 return EK3_SRCn_VELXY[int(self.value)]
-            elif self.id.endswith('POSZ'):
+            elif self.id.endswith("POSZ"):
                 return EK3_SRCn_POSZ[int(self.value)]
-            elif self.id.endswith('VELZ'):
+            elif self.id.endswith("VELZ"):
                 return EK3_SRCn_VELZ[int(self.value)]
-            elif self.id.endswith('YAW'):
+            elif self.id.endswith("YAW"):
                 return EK3_SRCn_YAW[int(self.value)]
-            elif self.id == 'EK3_SRC_OPTIONS':
-                return 'FuseAllVelocities' if int(self.value) == 1 else 'None'
+            elif self.id == "EK3_SRC_OPTIONS":
+                return "FuseAllVelocities" if int(self.value) == 1 else "None"
         return None
 
 
@@ -52,22 +52,22 @@ class DataFlashParams:
 
     def write_params_file(self, outfile: str):
         if not len(self.params):
-            print('Nothing to write')
+            print("Nothing to write")
             return
 
-        print(f'Writing {outfile}')
-        f = open(outfile, 'w')
+        print(f"Writing {outfile}")
+        f = open(outfile, "w")
 
         previous_id = None
-        for param in sorted(self.params, key=attrgetter('id', 'time_us')):  # Sort by id, then by time
-            s = f'{param.id :20s}{param.time_us :12}'
-            s = s + (f' >>>' if param.id == previous_id else '    ')
-            s = s + f'{param.value :30}'
+        for param in sorted(self.params, key=attrgetter("id", "time_us")):  # Sort by id, then by time
+            s = f"{param.id :20s}{param.time_us :12}"
+            s = s + (f" >>>" if param.id == previous_id else "    ")
+            s = s + f"{param.value :30}"
             comment = param.comment()
             if comment is not None:
-                s = s + f'  # {comment}'
+                s = s + f"  # {comment}"
 
-            f.write(s + '\n')
+            f.write(s + "\n")
             previous_id = param.id
 
         f.close()
@@ -75,23 +75,23 @@ class DataFlashParams:
 
 def main():
     parser = ArgumentParser(description=__doc__)
-    parser.add_argument('-r', '--recurse', help='enter directories looking for BIN files', action='store_true')
-    parser.add_argument('path', nargs='+')
+    parser.add_argument("-r", "--recurse", help="enter directories looking for BIN files", action="store_true")
+    parser.add_argument("path", nargs="+")
     args = parser.parse_args()
-    files = util.expand_path(args.path, args.recurse, '.BIN')
-    print(f'Processing {len(files)} files')
+    files = util.expand_path(args.path, args.recurse, ".BIN")
+    print(f"Processing {len(files)} files")
 
     for file in files:
-        mlog = mavutil.mavlink_connection(file, robust_parsing=False, dialect='ardupilotmega')
+        mlog = mavutil.mavlink_connection(file, robust_parsing=False, dialect="ardupilotmega")
 
         params = DataFlashParams()
 
-        print(f'Reading {file}')
-        while (msg := mlog.recv_match(blocking=False, type=['PARM'])) is not None:
+        print(f"Reading {file}")
+        while (msg := mlog.recv_match(blocking=False, type=["PARM"])) is not None:
             params.add(msg)
 
-        params.write_params_file(util.get_outfile_name(file, ext='.params'))
+        params.write_params_file(util.get_outfile_name(file, ext=".params"))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

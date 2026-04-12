@@ -3,6 +3,7 @@ pymavlink
 folium
 requests>=2.33.0
 pytest
+black
 pynmea2
 matplotlib
 numpy

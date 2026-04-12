@@ -48,43 +48,42 @@ class LogErrorSubsystem(Enum):
 
 log_error_code = {
     # general error codes
-    'ERROR_RESOLVED': 0,
-    'FAILED_TO_INITIALISE': 1,
-    'UNHEALTHY': 4,
+    "ERROR_RESOLVED": 0,
+    "FAILED_TO_INITIALISE": 1,
+    "UNHEALTHY": 4,
     # subsystem specific error codes -- radio
-    'RADIO_LATE_FRAME': 2,
+    "RADIO_LATE_FRAME": 2,
     # subsystem specific error codes -- failsafe_thr, batt, gps
-    'FAILSAFE_RESOLVED': 0,
-    'FAILSAFE_OCCURRED': 1,
+    "FAILSAFE_RESOLVED": 0,
+    "FAILSAFE_OCCURRED": 1,
     # subsystem specific error codes -- main
-    'MAIN_INS_DELAY': 1,
+    "MAIN_INS_DELAY": 1,
     # subsystem specific error codes -- crash checker
-    'CRASH_CHECK_CRASH': 1,
-    'CRASH_CHECK_LOSS_OF_CONTROL': 2,
+    "CRASH_CHECK_CRASH": 1,
+    "CRASH_CHECK_LOSS_OF_CONTROL": 2,
     # subsystem specific error codes -- flip
-    'FLIP_ABANDONED': 2,
+    "FLIP_ABANDONED": 2,
     # subsystem specific error codes -- terrain
-    'MISSING_TERRAIN_DATA': 2,
+    "MISSING_TERRAIN_DATA": 2,
     # subsystem specific error codes -- navigation
-    'FAILED_TO_SET_DESTINATION': 2,
-    'RESTARTED_RTL': 3,
-    'FAILED_CIRCLE_INIT': 4,
-    'DEST_OUTSIDE_FENCE': 5,
-    'RTL_MISSING_RNGFND': 6,
+    "FAILED_TO_SET_DESTINATION": 2,
+    "RESTARTED_RTL": 3,
+    "FAILED_CIRCLE_INIT": 4,
+    "DEST_OUTSIDE_FENCE": 5,
+    "RTL_MISSING_RNGFND": 6,
     # subsystem specific error codes -- internal_error
-    'INTERNAL_ERRORS_DETECTED': 1,
-
+    "INTERNAL_ERRORS_DETECTED": 1,
     # parachute failed to deploy because of low altitude or landed
-    'PARACHUTE_TOO_LOW': 2,
-    'PARACHUTE_LANDED': 3,
+    "PARACHUTE_TOO_LOW": 2,
+    "PARACHUTE_LANDED": 3,
     # EKF check definitions
-    'EKFCHECK_BAD_VARIANCE': 2,
-    'EKFCHECK_VARIANCE_CLEARED': 0,
+    "EKFCHECK_BAD_VARIANCE": 2,
+    "EKFCHECK_VARIANCE_CLEARED": 0,
     # Baro specific error codes
-    'BARO_GLITCH': 2,
-    'BAD_DEPTH': 3,  # sub-only
+    "BARO_GLITCH": 2,
+    "BAD_DEPTH": 3,  # sub-only
     # GPS specific error codes
-    'GPS_GLITCH': 2,
+    "GPS_GLITCH": 2,
 }
 
 
@@ -175,62 +174,66 @@ class DataflashLogReader:
         self._messages = []
 
     def read(self):
-        print(f'Reading {self._infile}')
-        mlog = mavutil.mavlink_connection(self._infile, robust_parsing=False, dialect='ardupilotmega')
+        print(f"Reading {self._infile}")
+        mlog = mavutil.mavlink_connection(self._infile, robust_parsing=False, dialect="ardupilotmega")
 
-        print('Parsing messages')
+        print("Parsing messages")
         msg_count = 0
-        while (msg := mlog.recv_match(blocking=False, type=['EV', 'MSG', 'ERR'])) is not None:
+        while (msg := mlog.recv_match(blocking=False, type=["EV", "MSG", "ERR"])) is not None:
             msg_type = msg.get_type()
             raw_data = msg.to_dict()
-            timestamp = getattr(msg, '_timestamp', 0.0)
+            timestamp = getattr(msg, "_timestamp", 0.0)
 
-            if msg_type == 'MSG':
-                self._messages.append({'timestamp': timestamp, 'message': f'{raw_data["Message"]}'})
-            elif msg_type == 'EV':
+            if msg_type == "MSG":
+                self._messages.append({"timestamp": timestamp, "message": f'{raw_data["Message"]}'})
+            elif msg_type == "EV":
                 try:
-                    event = LogEvent(raw_data['Id'])
-                    self._messages.append({'timestamp': timestamp, 'message': f'Event: {event.name}'})
+                    event = LogEvent(raw_data["Id"])
+                    self._messages.append({"timestamp": timestamp, "message": f"Event: {event.name}"})
                 except ValueError:
                     print(f'Warning: unknown event ID {raw_data["Id"]}')
-            elif msg_type == 'ERR':
+            elif msg_type == "ERR":
                 try:
-                    subsys = LogErrorSubsystem(raw_data['Subsys'])
+                    subsys = LogErrorSubsystem(raw_data["Subsys"])
                     # There are duplicate error codes, so find all matching names
-                    ecode_names = [name for name, code in log_error_code.items() if code == raw_data['ECode']]
-                    self._messages.append({'timestamp': timestamp,
-                                           'message': f'Error: Subsys {subsys.name}, ECode {",".join(ecode_names)}'})
+                    ecode_names = [name for name, code in log_error_code.items() if code == raw_data["ECode"]]
+                    self._messages.append(
+                        {
+                            "timestamp": timestamp,
+                            "message": f'Error: Subsys {subsys.name}, ECode {",".join(ecode_names)}',
+                        }
+                    )
                 except ValueError:
                     print(f'Warning: unknown subsystem ID {raw_data["Subsys"]}')
             else:
                 # Should not happen
-                print(f'Error: unexpected message type {msg_type}')
+                print(f"Error: unexpected message type {msg_type}")
 
             msg_count += 1
 
-        print(f'{msg_count} messages')
-        self._messages.sort(key=lambda item: item['timestamp'])
+        print(f"{msg_count} messages")
+        self._messages.sort(key=lambda item: item["timestamp"])
 
     def write_messages(self, filename: str):
-        print(f'Messages and events for {filename}:')
+        print(f"Messages and events for {filename}:")
         for item in self._messages:
             print(f'  {item["timestamp"]:10.6f} {item["message"]}')
 
 
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=__doc__)
-    parser.add_argument('-r', '--recurse', action='store_true',
-                        help='enter directories looking for BIN files')
-    parser.add_argument('path', nargs='+')
+    parser.add_argument("-r", "--recurse", action="store_true", help="enter directories looking for BIN files")
+    parser.add_argument("path", nargs="+")
     args = parser.parse_args()
-    files = util.expand_path(args.path, args.recurse, '.BIN')
-    print(f'Processing {len(files)} files')
+    files = util.expand_path(args.path, args.recurse, ".BIN")
+    print(f"Processing {len(files)} files")
 
     for file in files:
-        print('===================')
+        print("===================")
         reader = DataflashLogReader(file)
         reader.read()
         reader.write_messages(file)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

@@ -21,12 +21,12 @@ class Segment:
 
         if name is None:
             # This will be used in a filename, so avoid adding dots
-            name = f'{start :.0f}_{end :.0f}'
+            name = f"{start :.0f}_{end :.0f}"
 
         self.name = name
 
     def __repr__(self):
-        return '{' + f'start={self.start}, end={self.end}, name={self.name}' + '}'
+        return "{" + f"start={self.start}, end={self.end}, name={self.name}" + "}"
 
 
 class SegmentReader(NamedReader):
@@ -61,7 +61,7 @@ class SegmentReader(NamedReader):
                 # Try again
                 continue
 
-            timestamp = getattr(msg, '_timestamp', 0.0)
+            timestamp = getattr(msg, "_timestamp", 0.0)
 
             # Ignore messages before the segment start
             if timestamp < self._segment.start:
@@ -79,8 +79,8 @@ class SegmentReaderList:
     Iterate over a list of segments.
     """
 
-    def __init__(self, args, segments, types: list[str] | None, ext: str = '.tlog'):
-        print(f'Reading {len(segments)} segment(s)')
+    def __init__(self, args, segments, types: list[str] | None, ext: str = ".tlog"):
+        print(f"Reading {len(segments)} segment(s)")
         self._segments_iter = iter(segments)
 
         # Get a list of file readers, and prime the pump by getting the first file reader
@@ -99,23 +99,27 @@ class SegmentReaderList:
         return SegmentReader(next(self._segments_iter), file_reader, self._file_readers)
 
 
-def add_segment_args(parser: argparse.ArgumentParser, ext: str = '.tlog'):
+def add_segment_args(parser: argparse.ArgumentParser, ext: str = ".tlog"):
     """
     Add args for working with multiple files and multiple segments.
     """
     add_file_args(parser, ext)
     group = parser.add_mutually_exclusive_group()
-    group.add_argument('-k', '--keep', default=None, action='append',
-                       help='process just these segments; a segment is 2 timestamps and a name, e.g., start,end,s1')
-    group.add_argument('-a', '--all', default=None, action='store_true',
-                       help='keep all (combining all tlog files)')
+    group.add_argument(
+        "-k",
+        "--keep",
+        default=None,
+        action="append",
+        help="process just these segments; a segment is 2 timestamps and a name, e.g., start,end,s1",
+    )
+    group.add_argument("-a", "--all", default=None, action="store_true", help="keep all (combining all tlog files)")
 
 
 def parse_segment(segment_str: str) -> Segment:
     """
     Parse a --keep string and return a segment.
     """
-    strs = segment_str.split(',')
+    strs = segment_str.split(",")
     if len(strs) == 3:
         start_str, end_str, name = strs
     elif len(strs) == 2:
@@ -128,13 +132,13 @@ def parse_segment(segment_str: str) -> Segment:
     try:
         start = float(start_str)
     except ValueError:
-        print(f'ERROR {start_str} must be a number')
+        print(f"ERROR {start_str} must be a number")
         raise SegmentFormatException
 
     try:
         end = float(end_str)
     except ValueError:
-        print(f'ERROR {end_str} must be a number')
+        print(f"ERROR {end_str} must be a number")
         raise SegmentFormatException
 
     return Segment(start, end, name)
@@ -149,7 +153,7 @@ def parse_segment_args(args) -> list[Segment]:
     Parse segment arguments (--all, --keep) and return a list of segments.
     """
     if args.all:
-        return [Segment(ALL_START, ALL_END, 'all')]
+        return [Segment(ALL_START, ALL_END, "all")]
 
     try:
         results = []
@@ -161,7 +165,7 @@ def parse_segment_args(args) -> list[Segment]:
         exit(1)
 
 
-def choose_reader_list(args, types: list[str] | None, ext: str = '.tlog'):
+def choose_reader_list(args, types: list[str] | None, ext: str = ".tlog"):
     """
     If there are segments return a SegmentReaderList, otherwise return a FileReaderList.
     """

@@ -40,7 +40,7 @@ def optimize_rtc_shift(tlog_path, bin_path, graph):
     tlog_times = []
     tlog_alts = []
     while True:
-        msg = tlog_conn.recv_match(type='GLOBAL_POSITION_INT', blocking=False)
+        msg = tlog_conn.recv_match(type="GLOBAL_POSITION_INT", blocking=False)
         if msg is None:
             break
 
@@ -51,7 +51,7 @@ def optimize_rtc_shift(tlog_path, bin_path, graph):
     bin_times = []
     bin_pds = []
     while True:
-        msg = bin_conn.recv_match(type='XKF1', blocking=False)
+        msg = bin_conn.recv_match(type="XKF1", blocking=False)
         if msg is None:
             break
 
@@ -111,11 +111,11 @@ def optimize_rtc_shift(tlog_path, bin_path, graph):
     if graph:
         plt.figure(figsize=(10, 5))
         plt.plot(shifts, mses)
-        plt.axvline(x=0, color='r', linestyle='--', label='Current Shift')
-        plt.axvline(x=optimal_shift_offset, color='g', linestyle='--', label='Optimal Shift')
-        plt.xlabel('Additional Shift (s)')
-        plt.ylabel('MSE')
-        plt.title('MSE vs Time Shift (Zoomed)')
+        plt.axvline(x=0, color="r", linestyle="--", label="Current Shift")
+        plt.axvline(x=optimal_shift_offset, color="g", linestyle="--", label="Optimal Shift")
+        plt.xlabel("Additional Shift (s)")
+        plt.ylabel("MSE")
+        plt.title("MSE vs Time Shift (Zoomed)")
         plt.legend()
         plt.grid(True)
         plt.savefig("mse_optimization.png")
@@ -124,7 +124,7 @@ def optimize_rtc_shift(tlog_path, bin_path, graph):
 
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=__doc__)
-    parser.add_argument("--graph", action='store_true', help="Graph optimization results")
+    parser.add_argument("--graph", action="store_true", help="Graph optimization results")
     parser.add_argument("tlog_path", help="Path to the tlog file")
     parser.add_argument("bin_path", help="Path to the BIN file")
     args = parser.parse_args()

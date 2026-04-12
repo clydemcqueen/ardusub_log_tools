@@ -17,12 +17,12 @@ def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=__doc__)
     file_reader.add_file_args(parser)
     args = parser.parse_args()
-    readers = file_reader.FileReaderList(args, ['HEARTBEAT'])
+    readers = file_reader.FileReaderList(args, ["HEARTBEAT"])
 
     for reader in readers:
-        print(f'Processing {reader.name}...')
+        print(f"Processing {reader.name}...")
         process_reader(reader)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

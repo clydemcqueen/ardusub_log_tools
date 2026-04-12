@@ -29,13 +29,13 @@ def process_reader(reader, terse: bool):
 
     for msg in reader:
         msg_type = msg.get_type()
-        if msg_type == 'BATTERY_STATUS':
+        if msg_type == "BATTERY_STATUS":
             data = msg.to_dict()
-            
+
             # Filter invalid voltage readings (e.g., 65535 mV)
             # 20V (20000 mV) seems like a reasonable upper bound for a 4S battery (max ~16.8V)
             # The test files show correct values around 16000 mV and invalid ones at 65535 mV
-            voltage = data['voltages'][0]
+            voltage = data["voltages"][0]
             if voltage > 20000:
                 continue
 
@@ -43,21 +43,21 @@ def process_reader(reader, terse: bool):
             if start_time is None:
                 start_time = timestamp
             end_time = timestamp
-            
+
             timestamps.append(timestamp)
             voltages.append(voltage)
-            currents.append(data['current_battery'])
-            
-            if data['current_consumed'] != -1:
-                current_consumed = data['current_consumed']
-            if data['energy_consumed'] != -1:
-                energy_consumed = data['energy_consumed']
+            currents.append(data["current_battery"])
+
+            if data["current_consumed"] != -1:
+                current_consumed = data["current_consumed"]
+            if data["energy_consumed"] != -1:
+                energy_consumed = data["energy_consumed"]
 
     if not voltages:
         if terse:
-            print(f'{reader.name} None')
+            print(f"{reader.name} None")
         else:
-            print('    No valid battery data found')
+            print("    No valid battery data found")
         return
 
     # Detect system type based on voltage variance
@@ -72,18 +72,18 @@ def process_reader(reader, terse: bool):
 
     # 200mV threshold for distinguishing constant voltage source from battery
     if voltage_range < 200:
-        battery_type = 'Outland'
+        battery_type = "Outland"
     else:
-        battery_type = 'Battery'
+        battery_type = "Battery"
 
     if terse:
-        print(f'{reader.name} {battery_type}')
+        print(f"{reader.name} {battery_type}")
         return
 
-    if battery_type == 'Outland':
-        print('    System type: Outland (constant voltage)')
+    if battery_type == "Outland":
+        print("    System type: Outland (constant voltage)")
     else:
-        print('    System type: BlueROV2 (battery)')
+        print("    System type: BlueROV2 (battery)")
 
     duration = end_time - start_time
     avg_voltage = sum(voltages) / len(voltages)
@@ -96,29 +96,29 @@ def process_reader(reader, terse: bool):
         max_current = 0
         avg_current = 0
 
-    print(f'    Duration: {duration:.1f} seconds')
-    print(f'    Voltage: {min_voltage} min, {max_voltage} max, {avg_voltage:.1f} avg (mV)')
-    print(f'    Current: {max_current} max, {avg_current:.1f} avg (cA)')
+    print(f"    Duration: {duration:.1f} seconds")
+    print(f"    Voltage: {min_voltage} min, {max_voltage} max, {avg_voltage:.1f} avg (mV)")
+    print(f"    Current: {max_current} max, {avg_current:.1f} avg (cA)")
 
     if current_consumed is not None and current_consumed >= 0:
-        print(f'    Current consumed: {current_consumed} mAh')
+        print(f"    Current consumed: {current_consumed} mAh")
 
     if energy_consumed is not None and energy_consumed >= 0:
-        print(f'    Energy consumed: {energy_consumed} hJ')
+        print(f"    Energy consumed: {energy_consumed} hJ")
 
 
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=__doc__)
     file_reader.add_file_args(parser)
-    parser.add_argument('--terse', action='store_true', help='A terse report: show Outland vs battery')
+    parser.add_argument("--terse", action="store_true", help="A terse report: show Outland vs battery")
     args = parser.parse_args()
-    readers = file_reader.FileReaderList(args, ['BATTERY_STATUS'])
+    readers = file_reader.FileReaderList(args, ["BATTERY_STATUS"])
 
     for reader in readers:
         if not args.terse:
-            print(f'Processing {reader.name}...')
+            print(f"Processing {reader.name}...")
         process_reader(reader, args.terse)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

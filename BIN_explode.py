@@ -9,8 +9,8 @@ This is a wrapper around BIN_merge.py that calls BIN_merge.py with the --no-merg
 import sys
 from BIN_merge import main
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Add --no-merge and --explode to the arguments
-    sys.argv.insert(1, '--no-merge')
-    sys.argv.insert(2, '--explode')
+    sys.argv.insert(1, "--no-merge")
+    sys.argv.insert(2, "--explode")
     main()
