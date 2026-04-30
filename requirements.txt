@@ -34,8 +34,10 @@ jinja2==3.1.6
     #   folium
 kiwisolver==1.5.0
     # via matplotlib
-lxml==6.0.3
-    # via pymavlink
+lxml==6.1.0
+    # via
+    #   -r requirements.in
+    #   pymavlink
 markupsafe==3.0.3
     # via jinja2
 matplotlib==3.10.8
