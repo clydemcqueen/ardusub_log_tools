@@ -10,5 +10,5 @@ numpy
 transforms3d
 pillow>=12.1.1 # mitigation for CVE-2026-25990
 pygments>=2.20.0 # mitigation for CVE-2026-4539
-urllib3>=2.6.3 # mitigation for CVE-2026-21441
+urllib3>=2.7.0 # mitigation for CVE-2026-21441
 lxml>=6.1.0 # mitigation for https://bugs.launchpad.net/lxml/+bug/2146291

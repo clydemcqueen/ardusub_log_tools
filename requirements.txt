@@ -95,7 +95,7 @@ six==1.17.0
     # via python-dateutil
 transforms3d==0.4.2
     # via -r requirements.in
-urllib3==2.6.3
+urllib3==2.7.0
     # via
     #   -r requirements.in
     #   requests
