@@ -9,6 +9,7 @@
 
 import pytest
 
+import BIN_graph_alt
 import BIN_info
 import BIN_merge
 import map_maker
@@ -85,6 +86,9 @@ class TestTools:
     def test_dataflash_info(self):
         tool = BIN_info.DataflashLogInfo("testing/small.BIN")
         tool.read_and_report()
+
+    def test_bin_graph_alt(self):
+        BIN_graph_alt.process_reader(FileReader("testing/small.BIN", ["AHR2", "XKF1", "BARO", "ORGN", "POS"]))
 
     def test_tlog_merge(self):
         tool = tlog_merge.TelemetryLogReader(
