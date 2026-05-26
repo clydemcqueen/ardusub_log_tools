@@ -17,15 +17,15 @@ This clock is used throughout the code for all functions, including scheduling, 
 ### ArduPilot Unix Time
 
 ArduPilot also has an offset value (`rtc_shift`) that can be added to time-since-boot to get Unix time.
-This can be set from several sources in priority order (`AP_RTC::source_type`):
-* A hardware GPS driver, or MAVLink `GPS_INPUT` messages from an external GPS system (see below)
-* MAVLink `SYSTEM_TIME` messages (see below)
-* A hardware RTC (real-time clock) driver (not used by ArduSub)
+This can be set from several sources in priority order by setting the `BRD_RTC_TYPES` parameter (`AP_RTC::source_type`):
+* Bit 0 (1): GPS driver or MAVLink `GPS_INPUT` messages from an external GPS system (see below)
+* Bit 1 (2): MAVLink `SYSTEM_TIME` messages from another system, like QGroundControl or BlueOS (see below)
+* Bit 2 (4): Hardware RTC; on Linux (e.g., the Raspberry Pi) this is set from the system clock
 
 ArduPilot periodically sends `SYSTEM_TIME` MAVLink messages that contain both `time_boot_ms` and `time_unix_usec` fields.
 If `rtc_shift` is 0 then `time_unix_usec` is 0.
 
-> TODO(clyde): is there a Linux RTC driver? Could we add one?
+> TODO(clyde): what is the default BRD_RTC_TYPES value for the BlueROV2? I am seeing values of 1 or 3 in all logs
 
 ### GPS Time
 
@@ -58,7 +58,7 @@ The `LOG_DISARMED` parameter controls when ArduPilot starts logging:
 
 > TODO(clyde): describe the log file naming method
 
-> TODO(clyde): there is an RTC message in the code that could be logged when `rtc_shift` is set, but it is commented out
+> TODO(clyde): update this section for the RTC table [added in 4.7](https://github.com/ArduPilot/ardupilot/pull/29948)
 
 ### QGroundControl
 
@@ -112,12 +112,16 @@ For BIN files where GPS time is available, _timestamp is the GPS time. The libra
 looking for a GPS record with non-zero time, computes a time offset, then rewinds the file and applies the offset using
 the `TimeUS` fields.
 
+> TODO(clyde): will pymavlink also look for the RTC table?
+
 For BIN files where GPS time is not available, _timestamp is the ArduPilot time (TimeUS converted to seconds).
 Messages that lack a TimeUS field (such as FMT messages) inherit the timestamp of the previous message, or 0.0 if at the start of the log.
 
 ## Aligning MAVLink and Dataflash Logs
 
 The easiest way to align logs is to make sure that GPS time ends up in both the tlog and BIN files.
+
+> TODO(clyde): update this section to look at the RTC table in 4.7
 
 Evidence that GPS time is not available:
 * `GPS_INPUT` messages are not present in the tlog file
