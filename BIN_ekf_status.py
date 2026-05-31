@@ -4,7 +4,6 @@
 Report on EKF3 status (XKF4.SS field).
 """
 
-import datetime
 from argparse import ArgumentParser
 
 from pymavlink import mavutil
@@ -57,7 +56,7 @@ class FilterStatusReport:
                     prev_val = bool(prev_status & 1 << bit)
                     curr_val = bool(curr_status & 1 << bit)
                     if curr_val != prev_val:
-                        print(f'{util.time_us_str(msg.TimeUS)} {"+" if curr_val else "-"} {STATUS_BITS[bit]}')
+                        print(f"{util.time_us_str(msg.TimeUS)} {'+' if curr_val else '-'} {STATUS_BITS[bit]}")
                 print()
 
             prev_status = curr_status

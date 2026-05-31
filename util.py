@@ -50,7 +50,7 @@ def add_rate_field(messages: list[dict], half_n: int, max_gap: float, field_name
         if is_gap_right(i):
             gap_len = messages[i + 1]["timestamp"] - ts_i
             total_gaps += gap_len
-            print(f"NOTE: {gap_len :.2f}s gap detected at ts {ts_i :.2f} while generating {field_name}")
+            print(f"NOTE: {gap_len:.2f}s gap detected at ts {ts_i:.2f} while generating {field_name}")
 
             # Set the rate to 0.0 on either side of the segment
             messages[i][field_name] = 0.0
@@ -89,8 +89,8 @@ def add_rate_field(messages: list[dict], half_n: int, max_gap: float, field_name
     total_time = messages[-1]["timestamp"] - messages[0]["timestamp"]
     without_gaps = total_time - total_gaps
     print(
-        f"{field_name} summary: {len(messages)} messages in {total_time :.2f} seconds for "
-        f"{len(messages) / total_time :.2f} mps, without gaps {len(messages) / without_gaps :.2f} mps"
+        f"{field_name} summary: {len(messages)} messages in {total_time:.2f} seconds for "
+        f"{len(messages) / total_time:.2f} mps, without gaps {len(messages) / without_gaps:.2f} mps"
     )
 
 
@@ -98,7 +98,7 @@ def expand_path(paths: list[str], recurse: bool, ext: str | list[str]) -> list[s
     """Given a list of paths, return a sorted list of files. Use file globbing to handle -r."""
     files = set()
 
-    if type(ext) is str:
+    if isinstance(ext, str):
         ext = [ext]
 
     for path in paths:

@@ -169,7 +169,7 @@ class TelemetryLogReader(LogMerger):
 
             msg_count += 1
             if msg_count > self.max_msgs:
-                print(f"Too many messages, stopping")
+                print("Too many messages, stopping")
                 break
             if self.verbose and msg_count % 20000 == 0:
                 print(f"{msg_count} messages")
@@ -206,7 +206,7 @@ def main():
     if args.system_time:
         print("Merge on SYSTEM_TIME.time_boot_ms instead of QGC timestamp")
         if "SYSTEM_TIME" not in msg_types:
-            print(f"Adding SYSTEM_TIME to message types")
+            print("Adding SYSTEM_TIME to message types")
             msg_types.append("SYSTEM_TIME")
 
     print(f"Looking for these types: {msg_types}")

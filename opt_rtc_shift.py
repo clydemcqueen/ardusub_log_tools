@@ -5,6 +5,7 @@ Optimize the RTC shift value by comparing data that appears in both tlog and BIN
 """
 
 import argparse
+
 import matplotlib.pyplot as plt
 import numpy as np
 from pymavlink import mavutil

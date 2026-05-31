@@ -10,10 +10,10 @@ Plots:
 """
 
 import argparse
-import sys
+
 import matplotlib.pyplot as plt
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 import util
 from segment_reader import add_segment_args, choose_reader_list
@@ -166,7 +166,7 @@ def plot_surftrak(dfs, pdf_outfile, csv_outfile, show_plot):
         mode_name = get_mode_name(mode_num)
         color = MODE_COLORS.get(mode_name, None)  # None lets matplotlib cycle
 
-        label = mode_name if mode_name not in [l.get_label() for l in ax_xy.get_lines()] else None
+        label = mode_name if mode_name not in [line.get_label() for line in ax_xy.get_lines()] else None
 
         ax_xy.plot(group["PE"], group["PN"], color=color, label=label)
 

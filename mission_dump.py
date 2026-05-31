@@ -72,9 +72,9 @@ class Mission:
     def print_all(self):
         print(f"Mission type {mission_type_name(self.mission_type)} has {len(self.mission_items)} items")
         for seq, msg in sorted(self.mission_items.items()):
-            param_str = f"{msg.param1 :7.2f} {msg.param2 :7.2f} {msg.param3 :7.2f} {msg.param4 :7.2f}"
-            xyz_str = f"{msg.x / 1.0e7 :11.6f} {msg.y / 1.0e7 :11.6f} {msg.z :11.6f}"
-            print(f"{seq :3}: frame {msg.frame} {mav_cmd_name(msg.command) :36} params {param_str :20}   xyz {xyz_str}")
+            param_str = f"{msg.param1:7.2f} {msg.param2:7.2f} {msg.param3:7.2f} {msg.param4:7.2f}"
+            xyz_str = f"{msg.x / 1.0e7:11.6f} {msg.y / 1.0e7:11.6f} {msg.z:11.6f}"
+            print(f"{seq:3}: frame {msg.frame} {mav_cmd_name(msg.command):36} params {param_str:20}   xyz {xyz_str}")
 
 
 class MissionReader:
@@ -96,7 +96,7 @@ class MissionReader:
             ts = getattr(msg, "_timestamp", 0.0)
             self.prefix = (
                 datetime.datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M:%S")
-                + f" ({ts :.2f}): "
+                + f" ({ts:.2f}): "
                 + f"{source_str} => {target_str}: "
             )
 
@@ -140,7 +140,7 @@ class MissionReader:
                         print()
                         missions[mission_type] = None
                 else:
-                    print(f"(Ignoring ACK error)")
+                    print("(Ignoring ACK error)")
             else:
                 self.report(msg_type)
 

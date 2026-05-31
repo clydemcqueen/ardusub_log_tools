@@ -23,11 +23,10 @@ import tlog_param
 import tlog_scan
 import util
 from file_reader import FileReader
-from segment_reader import SegmentFormatException, Segment, SegmentReader, parse_segment
+from segment_reader import Segment, SegmentFormatException, SegmentReader, parse_segment
 
 
 class TestTools:
-
     def test_dataflash_merge(self):
         tool = BIN_merge.DataflashLogReader("testing/small.BIN", ["VIBE"], 10000, 10000, False, False, -1.0, -1.0)
         tool.read()

@@ -1,9 +1,7 @@
 import util
-import pytest
 
 
 class TestUtil:
-
     def test_filter_blueos_tlog_paths(self):
         paths = [
             "2025_09_26_sj/Lutris_ardupilot_logs_pt1/00093-2025-09-26_17-29-52.tlog",

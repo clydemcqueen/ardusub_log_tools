@@ -7,8 +7,9 @@ Always preserves FMT messages to ensure the file remains valid.
 
 import argparse
 import os
-import sys
+
 from pymavlink import mavutil
+
 import util
 
 

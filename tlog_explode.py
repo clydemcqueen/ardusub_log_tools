@@ -9,6 +9,7 @@ Supports segments.
 """
 
 import sys
+
 from tlog_merge import main
 
 if __name__ == "__main__":

@@ -39,7 +39,7 @@ class SensorInfo:
         elif count == self.present:
             return "always"
         else:
-            return f"{100.0 * count / self.present :.2f}%"
+            return f"{100.0 * count / self.present:.2f}%"
 
     def report(self) -> str:
         return f"{self.description}: enabled {self.count_str(self.enabled)}, healthy {self.count_str(self.healthy)}"
@@ -71,12 +71,10 @@ class CompInfo:
         data = msg.to_dict()
 
         if msg_type == "HEARTBEAT":
-
             self._heartbeat_count += 1
             self._mode_counter.count(data)
 
         elif msg_type == "STATUSTEXT":
-
             severity = data["severity"]
             if severity not in self._status_severities:
                 self._status_severities[severity] = 0
@@ -88,12 +86,10 @@ class CompInfo:
             self._status_strings[string] += 1
 
         elif msg_type == "SYSTEM_TIME":
-
             if data["time_unix_usec"] != 0:
                 self._unix_time += 1
 
         elif msg_type == "SYS_STATUS":
-
             if self._sensors_present is None:
                 self._sensors_present = {}
 

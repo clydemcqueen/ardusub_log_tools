@@ -7,6 +7,7 @@ This is a wrapper around BIN_merge.py that calls BIN_merge.py with the --no-merg
 """
 
 import sys
+
 from BIN_merge import main
 
 if __name__ == "__main__":

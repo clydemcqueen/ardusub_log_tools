@@ -29,7 +29,7 @@ def main():
             gz.append(msg.GZ)
 
         print(
-            f"{file :40} range gx ({min(gx) :6.2f}, {max(gx) :6.2f}), gy ({min(gy) :6.2f}, {max(gy) :6.2f}), gz ({min(gz) :6.2f}, {max(gz) :6.2f})"
+            f"{file:40} range gx ({min(gx):6.2f}, {max(gx):6.2f}), gy ({min(gy):6.2f}, {max(gy):6.2f}), gz ({min(gz):6.2f}, {max(gz):6.2f})"
         )
 
 

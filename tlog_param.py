@@ -80,7 +80,7 @@ class Param:
         self.value = msg.param_value
         self.type = msg.param_type
         timestamp = getattr(msg, "_timestamp", 0.0)
-        self.when = f"[{timestamp :.3f}] {time.asctime(time.localtime(timestamp))}"
+        self.when = f"[{timestamp:.3f}] {time.asctime(time.localtime(timestamp))}"
 
     def is_int(self) -> bool:
         return is_int(self.type)
@@ -135,10 +135,10 @@ def print_change(old_param: Param | None, new_param: Param | None):
         old_param_str = f"{old_param.value_int()}" if old_param else "ADDED"
         new_param_str = f"{new_param.value_int()}" if new_param else ""
     else:
-        old_param_str = f"{old_param.value :.6f}" if old_param else "ADDED"
-        new_param_str = f"{new_param.value :.6f}" if new_param else ""
+        old_param_str = f"{old_param.value:.6f}" if old_param else "ADDED"
+        new_param_str = f"{new_param.value:.6f}" if new_param else ""
 
-    print(f"{param_when} {param_id :18s} {old_param_str} -> {new_param_str}")
+    print(f"{param_when} {param_id:18s} {old_param_str} -> {new_param_str}")
 
 
 class TelemetryLogParam:

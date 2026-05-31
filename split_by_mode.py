@@ -7,6 +7,7 @@ Split ArduSub log files (tlog and BIN) into separate files based on flight modes
 import argparse
 import os
 import struct
+
 from pymavlink import mavutil
 
 # Force MAVLink 2.0

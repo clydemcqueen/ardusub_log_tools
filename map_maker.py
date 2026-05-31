@@ -87,7 +87,7 @@ class MapMaker:
             print(f"Writing {outfile}")
             self.m.save(outfile)
         else:
-            print(f"Nothing to write")
+            print("Nothing to write")
 
 
 def build_map_from_csv(infile, outfile, verbose, center, zoom):

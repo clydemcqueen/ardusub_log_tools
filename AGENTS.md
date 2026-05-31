@@ -4,8 +4,6 @@ There is a Python .venv in the root directory, please use it.
 
 Use pytest for testing.
 
-Run "black" on all Python code before finishing.
-
 Unless instructed otherwise, always support multiple log files, recursion and file globbing.
 
 There are 2 templates, please use one of them if possible:

@@ -84,11 +84,11 @@ def main():
                 min_val = min(data)
                 max_val = max(data)
                 print(
-                    f"MAG[{instance}].Mag{dim} ({dev_ids[instance]}): mean {xbar :8.2f}, stdev {stdev(data, xbar) :8.2f}, min {min_val :8.2f}, max {max_val :8.2f}"
+                    f"MAG[{instance}].Mag{dim} ({dev_ids[instance]}): mean {xbar:8.2f}, stdev {stdev(data, xbar):8.2f}, min {min_val:8.2f}, max {max_val:8.2f}"
                 )
                 if min_val < -2000 or max_val > 2000:
                     print(
-                        f"MAG[{instance}].Mag{dim} ({dev_ids[instance]}) OUTLIER[S], min {min_val :8.2f}, max {max_val :8.2f}"
+                        f"MAG[{instance}].Mag{dim} ({dev_ids[instance]}) OUTLIER[S], min {min_val:8.2f}, max {max_val:8.2f}"
                     )
 
 
