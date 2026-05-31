@@ -1,2 +1,10 @@
-[tool.black]
+[tool.ruff]
 line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+# A bunch of tools play games with `os.environ["MAVLINK20"] = "1"`; ignore E402 problems for now
+ignore = ["E501", "E402"]
+
+[tool.ruff.format]
+quote-style = "double"

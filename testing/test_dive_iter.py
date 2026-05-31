@@ -1,5 +1,6 @@
 import unittest
 from unittest.mock import MagicMock, patch
+
 from dive_iter import DiveIterator
 
 
@@ -18,7 +19,6 @@ class MockMsg:
 
 
 class TestDiveIterator(unittest.TestCase):
-
     @patch("dive_iter.mavutil.mavlink_connection")
     def test_sync_and_read(self, mock_conn):
         # Setup Tlog mock

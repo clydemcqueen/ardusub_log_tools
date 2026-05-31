@@ -1,8 +1,8 @@
-import unittest
-import os
 import glob
+import os
 import subprocess
 import sys
+import unittest
 
 # Add project root to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

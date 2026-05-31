@@ -9,8 +9,8 @@ from operator import attrgetter
 
 from pymavlink import mavutil
 
-from tlog_param import EK3_SRCn_POSXY, EK3_SRCn_VELXY, EK3_SRCn_POSZ, EK3_SRCn_VELZ, EK3_SRCn_YAW
 import util
+from tlog_param import EK3_SRCn_POSXY, EK3_SRCn_POSZ, EK3_SRCn_VELXY, EK3_SRCn_VELZ, EK3_SRCn_YAW
 
 
 class DataflashParam:
@@ -60,9 +60,9 @@ class DataFlashParams:
 
         previous_id = None
         for param in sorted(self.params, key=attrgetter("id", "time_us")):  # Sort by id, then by time
-            s = f"{param.id :20s}{param.time_us :12}"
-            s = s + (f" >>>" if param.id == previous_id else "    ")
-            s = s + f"{param.value :30}"
+            s = f"{param.id:20s}{param.time_us:12}"
+            s = s + (" >>>" if param.id == previous_id else "    ")
+            s = s + f"{param.value:30}"
             comment = param.comment()
             if comment is not None:
                 s = s + f"  # {comment}"

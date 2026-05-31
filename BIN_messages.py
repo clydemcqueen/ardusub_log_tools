@@ -185,13 +185,13 @@ class DataflashLogReader:
             timestamp = getattr(msg, "_timestamp", 0.0)
 
             if msg_type == "MSG":
-                self._messages.append({"timestamp": timestamp, "message": f'{raw_data["Message"]}'})
+                self._messages.append({"timestamp": timestamp, "message": f"{raw_data['Message']}"})
             elif msg_type == "EV":
                 try:
                     event = LogEvent(raw_data["Id"])
                     self._messages.append({"timestamp": timestamp, "message": f"Event: {event.name}"})
                 except ValueError:
-                    print(f'Warning: unknown event ID {raw_data["Id"]}')
+                    print(f"Warning: unknown event ID {raw_data['Id']}")
             elif msg_type == "ERR":
                 try:
                     subsys = LogErrorSubsystem(raw_data["Subsys"])
@@ -200,11 +200,11 @@ class DataflashLogReader:
                     self._messages.append(
                         {
                             "timestamp": timestamp,
-                            "message": f'Error: Subsys {subsys.name}, ECode {",".join(ecode_names)}',
+                            "message": f"Error: Subsys {subsys.name}, ECode {','.join(ecode_names)}",
                         }
                     )
                 except ValueError:
-                    print(f'Warning: unknown subsystem ID {raw_data["Subsys"]}')
+                    print(f"Warning: unknown subsystem ID {raw_data['Subsys']}")
             else:
                 # Should not happen
                 print(f"Error: unexpected message type {msg_type}")
@@ -217,7 +217,7 @@ class DataflashLogReader:
     def write_messages(self, filename: str):
         print(f"Messages and events for {filename}:")
         for item in self._messages:
-            print(f'  {item["timestamp"]:10.6f} {item["message"]}')
+            print(f"  {item['timestamp']:10.6f} {item['message']}")
 
 
 def main():

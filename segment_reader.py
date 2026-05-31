@@ -3,7 +3,7 @@ import os
 
 import pymavlink.dialects.v20.ardupilotmega as apm
 
-from file_reader import NamedReader, FileReader, FileReaderList, add_file_args
+from file_reader import FileReader, FileReaderList, NamedReader, add_file_args
 
 
 class SegmentFormatException(Exception):
@@ -21,7 +21,7 @@ class Segment:
 
         if name is None:
             # This will be used in a filename, so avoid adding dots
-            name = f"{start :.0f}_{end :.0f}"
+            name = f"{start:.0f}_{end:.0f}"
 
         self.name = name
 

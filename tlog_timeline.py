@@ -87,14 +87,14 @@ class ColorMap:
 
 def mav_cmd_name(cmd: int) -> str:
     if cmd in apm.enums["MAV_CMD"]:
-        return f'{apm.enums["MAV_CMD"][cmd].name} ({cmd})'
+        return f"{apm.enums['MAV_CMD'][cmd].name} ({cmd})"
     else:
         return f"unknown command {cmd}"
 
 
 def mav_result_name(result: int) -> str:
     if result in apm.enums["MAV_RESULT"]:
-        return f'{apm.enums["MAV_RESULT"][result].name} ({result})'
+        return f"{apm.enums['MAV_RESULT'][result].name} ({result})"
     else:
         return f"unknown result {result}"
 
@@ -122,7 +122,7 @@ class Timeline:
 
             self.prefix = (
                 datetime.datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M:%S")
-                + f" | {ts :.2f} | {ts - self.first_ts :7.2f} : "
+                + f" | {ts:.2f} | {ts - self.first_ts:7.2f} : "
             )
 
             msg_type = msg.get_type()
@@ -146,7 +146,7 @@ class Timeline:
 
     def report(self, msg_str, ansi_code=None):
         if self.ansi and ansi_code is not None:
-            print(f'{self.prefix}{ANSI_CODES[ansi_code]}{msg_str}{ANSI_CODES["END"]}')
+            print(f"{self.prefix}{ANSI_CODES[ansi_code]}{msg_str}{ANSI_CODES['END']}")
         else:
             print(f"{self.prefix}{msg_str}")
 
@@ -203,20 +203,20 @@ class Timeline:
             elif msg.flags == 0:
                 self.report("EKF initialized", self.colors.ekf_status_report)
             else:
-                s = f"EKF status: {msg.flags :4}"
-                s += f' {"const" if msg.flags & apm.EKF_CONST_POS_MODE else "" :5}'
-                s += f' {"att" if msg.flags & apm.EKF_ATTITUDE else "" :3}'
+                s = f"EKF status: {msg.flags:4}"
+                s += f" {'const' if msg.flags & apm.EKF_CONST_POS_MODE else '':5}"
+                s += f" {'att' if msg.flags & apm.EKF_ATTITUDE else '':3}"
                 s += " pos_xy: ["
-                s += f'{"rel" if msg.flags & apm.EKF_POS_HORIZ_REL else "" :3}'
-                s += f' {"abs" if msg.flags & apm.EKF_POS_HORIZ_ABS else "" :3}'
-                s += f' {"pred_rel" if msg.flags & apm.EKF_PRED_POS_HORIZ_REL else "" :8}'
-                s += f' {"pred_abs" if msg.flags & apm.EKF_PRED_POS_HORIZ_ABS else "" :8}'
+                s += f"{'rel' if msg.flags & apm.EKF_POS_HORIZ_REL else '':3}"
+                s += f" {'abs' if msg.flags & apm.EKF_POS_HORIZ_ABS else '':3}"
+                s += f" {'pred_rel' if msg.flags & apm.EKF_PRED_POS_HORIZ_REL else '':8}"
+                s += f" {'pred_abs' if msg.flags & apm.EKF_PRED_POS_HORIZ_ABS else '':8}"
                 s += "] pos_z: ["
-                s += f'{"abs" if msg.flags & apm.EKF_POS_VERT_ABS else "" :3}'
-                s += f' {"agl" if msg.flags & apm.EKF_POS_VERT_AGL else "" :3}'
+                s += f"{'abs' if msg.flags & apm.EKF_POS_VERT_ABS else '':3}"
+                s += f" {'agl' if msg.flags & apm.EKF_POS_VERT_AGL else '':3}"
                 s += "] vel: ["
-                s += f'{"xy" if msg.flags & apm.EKF_VELOCITY_HORIZ else "" :2}'
-                s += f' {"z" if msg.flags & apm.EKF_VELOCITY_VERT else "" :1}'
+                s += f"{'xy' if msg.flags & apm.EKF_VELOCITY_HORIZ else '':2}"
+                s += f" {'z' if msg.flags & apm.EKF_VELOCITY_VERT else '':1}"
                 s += "]"
                 self.report(s, self.colors.ekf_status_report)
             self.ekf_status_flags = msg.flags

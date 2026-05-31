@@ -2,14 +2,15 @@
 # python -m pytest
 
 import os
-from file_reader import FileReader
+
 from pymavlink import mavutil
-from segment_reader import Segment, SegmentReader
+
 import tlog_filter
+from file_reader import FileReader
+from segment_reader import Segment, SegmentReader
 
 
 class TestTools:
-
     def test_tlog_filter(self):
         # Create a reader for a small tlog file
         reader = FileReader("testing/small.tlog", None)

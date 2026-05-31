@@ -29,7 +29,6 @@ class DataflashLogInfo:
         count_orgn_records = 0
 
         while (msg := mlog.recv_match(blocking=False, type=["MSG", "GPS", "ORGN"])) is not None:
-
             if msg.get_type() == "MSG":
                 message = msg.Message
                 if message not in self.message_counts:
@@ -45,7 +44,7 @@ class DataflashLogInfo:
             elif msg.get_type() == "ORGN":
                 count_orgn_records += 1
                 origin_type = "EKF origin" if msg.Type == 0 else "AHRS home"
-                print(f"{origin_type} set after {msg.TimeUS / 1e6 :.1f} seconds: ({msg.Lat}, {msg.Lng}, {msg.Alt})")
+                print(f"{origin_type} set after {msg.TimeUS / 1e6:.1f} seconds: ({msg.Lat}, {msg.Lng}, {msg.Alt})")
 
         if count_orgn_records == 0:
             print("No ORGN records, origin was not set")

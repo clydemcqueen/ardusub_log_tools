@@ -493,7 +493,7 @@ class DataflashLogReader(LogMerger):
 
             msg_count += 1
             if msg_count > self.max_msgs:
-                print(f"Too many messages, stopping")
+                print("Too many messages, stopping")
                 break
             if self.verbose and msg_count % 20000 == 0:
                 print(f"{msg_count} messages")

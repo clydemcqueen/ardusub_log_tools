@@ -46,7 +46,7 @@ def check_gps_input_messages(reader, max_gap: float):
             num_bad += 1
 
     print(
-        f"{reader.name :<60} {num_long_gap} long gap, {num_bad_fix} bad fix, {num_no_sat} no satellites, {num_bad} bad, {num_good} good"
+        f"{reader.name:<60} {num_long_gap} long gap, {num_bad_fix} bad fix, {num_no_sat} no satellites, {num_bad} bad, {num_good} good"
     )
 
 

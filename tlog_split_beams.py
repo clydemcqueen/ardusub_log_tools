@@ -5,7 +5,7 @@ Read DISTANCE_SENSOR messages from a tlog file and write one csv file per (src, 
 """
 
 import os
-from typing import Dict, Tuple, List, Any
+from typing import Any, Dict, List, Tuple
 
 import pandas as pd
 from pymavlink import mavutil

@@ -27,8 +27,8 @@ class TelemetryLog:
                     dive.count_mode(msg)
 
     def report(self):
-        print(f">>> First: {util.time_str(self._reader.first_ts)} ({self._reader.first_ts :.2f})")
-        print(f">>> Last:  {util.time_str(self._reader.last_ts)} ({self._reader.last_ts :.2f})")
+        print(f">>> First: {util.time_str(self._reader.first_ts)} ({self._reader.first_ts:.2f})")
+        print(f">>> Last:  {util.time_str(self._reader.last_ts)} ({self._reader.last_ts:.2f})")
 
 
 class ExpectedDataflashLog:
@@ -47,12 +47,12 @@ class ExpectedDataflashLog:
         self.mode_counter.count(heartbeat_msg.to_dict())
 
     def report(self):
-        print(f">>> Reference {self.name}, first {self.first_time_boot_s :.2f}s, last {self.last_time_boot_s :.2f}s")
-        print(f"--- First: {util.time_str(self.first_ts)} ({self.first_ts :.2f})")
-        print(f"--- Last:  {util.time_str(self.last_ts)} ({self.last_ts :.2f})")
+        print(f">>> Reference {self.name}, first {self.first_time_boot_s:.2f}s, last {self.last_time_boot_s:.2f}s")
+        print(f"--- First: {util.time_str(self.first_ts)} ({self.first_ts:.2f})")
+        print(f"--- Last:  {util.time_str(self.last_ts)} ({self.last_ts:.2f})")
         print("--- Expected:")
         for i, count in sorted(self.mode_counter.modes.items()):
-            print(f"    {count :8d} {i :20}")
+            print(f"    {count:8d} {i:20}")
 
 
 class DataflashLog:
@@ -64,7 +64,7 @@ class DataflashLog:
             pass
 
     def report(self):
-        print(f">>> First {self._reader.first_ts :.2f}s, last {self._reader.last_ts :.2f}s")
+        print(f">>> First {self._reader.first_ts:.2f}s, last {self._reader.last_ts:.2f}s")
 
 
 class DiveReaderList:
@@ -122,16 +122,16 @@ class Dive:
         time_boot_s = time_boot_ms / 1e3
 
         if len(self._ex_df_logs) == 0:
-            print(f">>> Bootstrap: expect dataflash log starting around {time_boot_s :.2f}s")
+            print(f">>> Bootstrap: expect dataflash log starting around {time_boot_s:.2f}s")
             self._ex_df_logs.append(ExpectedDataflashLog(tlog_name, timestamp, time_boot_s))
         elif timestamp > self._ex_df_logs[-1].last_ts + 5:
             print(
-                f">>> Gap at {self._ex_df_logs[-1].last_time_boot_s :.2f}s, expect dataflash log starting around {time_boot_s :.2f}s"
+                f">>> Gap at {self._ex_df_logs[-1].last_time_boot_s:.2f}s, expect dataflash log starting around {time_boot_s:.2f}s"
             )
             self._ex_df_logs.append(ExpectedDataflashLog(tlog_name, timestamp, time_boot_s))
         elif time_boot_s < self._ex_df_logs[-1].last_time_boot_s:
             print(
-                f"!!! Backwards at {self._ex_df_logs[-1].last_time_boot_s :.2f}s, expect dataflash log starting around {time_boot_s :.2f}s"
+                f"!!! Backwards at {self._ex_df_logs[-1].last_time_boot_s:.2f}s, expect dataflash log starting around {time_boot_s:.2f}s"
             )
             self._ex_df_logs.append(ExpectedDataflashLog(tlog_name, timestamp, time_boot_s))
         else:

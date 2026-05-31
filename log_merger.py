@@ -22,7 +22,7 @@ class LogMerger:
 
     def write_merged_csv_file(self):
         merged_df = None
-        print(f"Merging dataframes")
+        print("Merging dataframes")
         for table_name in self.tables:
             df = self.tables[table_name].get_dataframe(self.verbose)
             if df.empty:
@@ -44,7 +44,7 @@ class LogMerger:
                         break
 
         if merged_df is None:
-            print(f"Nothing to write")
+            print("Nothing to write")
         else:
             filename = util.get_outfile_name(self.infile)
             print(f"Writing {len(merged_df)} rows to {filename}")

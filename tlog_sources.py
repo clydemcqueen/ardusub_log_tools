@@ -25,7 +25,7 @@ def count_by_source(reader):
 
     print(f"{reader.name}")
     for source in counts.keys():
-        print(f"   {source[0] :3}, {source[1] :3}: {counts[source] :6}")
+        print(f"   {source[0]:3}, {source[1]:3}: {counts[source]:6}")
 
 
 def main():
