@@ -2,6 +2,8 @@
 
 """
 Convert MCAP files containing MAVLink messages to tlog files readable by pymavlink.
+
+We only look at the "mavlink/out" channel, this seems to contain everything we need.
 """
 
 import argparse
@@ -14,7 +16,25 @@ from pymavlink.dialects.v20 import ardupilotmega as mavlink
 import util
 
 
-def get_resolved_kwargs(msg_class, msg_data):
+def convert_json_to_pymavlink(msg_class, msg_data):
+    """
+    Convert JSON values to pymavlink-compatible values.
+
+    -- Map 'mavtype' key to 'type' (special case for pymavlink).
+    -- If a field is a dictionary containing a 'type' key (common in enum objects), extract the raw 'type' value.
+    -- If the target field type is 'char', encodes string values to UTF-8 bytes.
+    -- If a string contains a bitwise-OR combination (e.g., 'A|B'), split and resolve each constant against the
+       pymavlink dialect to compute the combined integer mask.
+    -- If a string is a named enum constant, resolve it to its integer value.
+    -- If a string is empty (''), default value to 0.
+
+    Args:
+        msg_class: The pymavlink message class (e.g., MAVLink_heartbeat_message).
+        msg_data (dict): The dictionary of field values extracted from the MCAP JSON payload.
+
+    Returns:
+        dict: A dictionary of resolved keyword arguments ready to be passed to msg_class().
+    """
     kwargs = {}
     for k, v in msg_data.items():
         if k == "mavtype":
@@ -34,12 +54,12 @@ def get_resolved_kwargs(msg_class, msg_data):
             else:
                 if "|" in v:
                     parts = [p.strip() for p in v.split("|")]
-                    res = 0
+                    result = 0
                     for p in parts:
                         enum_v = getattr(mavlink, p, None)
                         if enum_v is not None:
-                            res |= enum_v
-                    v = res
+                            result |= enum_v
+                    v = result
                 else:
                     enum_v = getattr(mavlink, v, None)
                     if enum_v is not None:
@@ -52,113 +72,74 @@ def get_resolved_kwargs(msg_class, msg_data):
     return kwargs
 
 
-def mcap_to_tlog(mcap_file: str):
+def mcap_to_tlog(mcap_file: str, msg_types: list | None = None):
     output_filename = util.get_outfile_name(mcap_file, ext=".tlog")
     print(f"Reading {mcap_file}")
     print(f"Writing {output_filename}")
 
     msg_count = 0
-    seen_messages = set()
 
-    try:
-        with open(mcap_file, "rb") as f_in, open(output_filename, "wb") as f_out:
-            reader = make_reader(f_in)
-            mav = mavlink.MAVLink(None)
+    with open(mcap_file, "rb") as f_in, open(output_filename, "wb") as f_out:
+        reader = make_reader(f_in)
+        mav = mavlink.MAVLink(None)
 
-            for schema, channel, message in reader.iter_messages():
-                # tlog header is 8 bytes, Big Endian unsigned long long, microseconds
-                timestamp_us = int(message.log_time / 1000)
+        for schema, channel, message in reader.iter_messages(topics=["mavlink/out"]):
+            # tlog header is 8 bytes, Big Endian unsigned long long, microseconds
+            timestamp_us = int(message.log_time / 1000)
 
-                try:
-                    data = json.loads(message.data)
-                except Exception:
-                    continue
+            data = json.loads(message.data)
+            header = data["header"]
+            msg_data = data["message"]
+            msg_type = msg_data.pop("type")
 
-                if not isinstance(data, dict) or "message" not in data or "header" not in data:
-                    # print(f"reject {channel.topic}")
-                    # We reject channels that don't containe full MAVLink messages. These fall into 2 buckets:
-                    # 1. Other logs, services/wifi-manager
-                    # 2. Duplicated unrolled fields, like mavlink/1/194/HEARTBEAT/autopilot
-                    continue
+            if msg_types is not None and msg_type not in msg_types:
+                continue
 
-                header = data["header"]
-                msg_data = data["message"]
-                if "type" not in msg_data:
-                    continue
+            sys_id = header.get("system_id", 1)
+            comp_id = header.get("component_id", 1)
+            seq = header.get("sequence", 0)
 
-                msg_type = msg_data.pop("type")
+            msg_class = getattr(mavlink, f"MAVLink_{msg_type.lower()}_message", None)
+            if msg_class:
+                kwargs = convert_json_to_pymavlink(msg_class, msg_data)
 
-                # Deduplication
-                sys_id = header.get("system_id", 1)
-                comp_id = header.get("component_id", 1)
-                seq = header.get("sequence", 0)
-                msg_id = header.get("message_id", 0)
+                msg = msg_class(**kwargs)
 
-                msg_tuple = (timestamp_us, sys_id, comp_id, seq, msg_id)
-                if msg_tuple in seen_messages:
-                    continue
-                seen_messages.add(msg_tuple)
+                mav.srcSystem = sys_id
+                mav.srcComponent = comp_id
 
-                # To prevent unbounded memory growth, limit seen_messages size
-                if len(seen_messages) > 10000:
-                    seen_messages.clear()
-                    seen_messages.add(msg_tuple)
+                # pack handles the header generation
+                packed_bytes = msg.pack(mav)
 
-                msg_class = getattr(mavlink, f"MAVLink_{msg_type.lower()}_message", None)
-                if msg_class:
-                    kwargs = get_resolved_kwargs(msg_class, msg_data)
+                # Fix sequence number to match original log
+                msg_buf = bytearray(packed_bytes)
+                # In MAVLink v2, seq is byte 4. In v1, it's byte 2.
+                # pymavlink pack() creates MAVLink v2 by default since we import from v20
+                if msg_buf[0] == 253:  # MAVLink v2
+                    msg_buf[4] = seq
+                elif msg_buf[0] == 254:  # MAVLink v1
+                    msg_buf[2] = seq
 
-                    try:
-                        msg = msg_class(**kwargs)
+                tlog_header = struct.pack(">Q", timestamp_us)
+                f_out.write(tlog_header)
+                f_out.write(msg_buf)
 
-                        mav.srcSystem = sys_id
-                        mav.srcComponent = comp_id
+                msg_count += 1
 
-                        # pack handles the header generation
-                        packed_bytes = msg.pack(mav)
-
-                        # Fix sequence number to match original log
-                        msg_buf = bytearray(packed_bytes)
-                        # In MAVLink v2, seq is byte 4. In v1, it's byte 2.
-                        # pymavlink pack() creates MAVLink v2 by default since we import from v20
-                        if msg_buf[0] == 253:  # MAVLink v2
-                            msg_buf[4] = seq
-                        elif msg_buf[0] == 254:  # MAVLink v1
-                            msg_buf[2] = seq
-
-                        tlog_header = struct.pack(">Q", timestamp_us)
-                        f_out.write(tlog_header)
-                        f_out.write(packed_bytes)
-
-                        msg_count += 1
-                    except Exception as e:
-                        print(f"Caught exception {e}")
-                        pass
-
-        print(f"Converted {msg_count} messages.")
-    except Exception as e:
-        print(f"Error processing {mcap_file}: {e}")
+    print(f"Converted {msg_count} messages")
 
 
 def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=__doc__)
-    parser.add_argument("paths", nargs="+", help="files or directories to read")
-    parser.add_argument(
-        "-r",
-        "--recurse",
-        action="store_true",
-        help="enter directories looking for mcap files",
-    )
+    parser.add_argument("paths", nargs="+", help="files or directories")
+    parser.add_argument("-r", "--recurse", action="store_true", help="enter directories")
+    parser.add_argument("--types", default=None, help="comma separated list of MAVLink message types")
     args = parser.parse_args()
-
+    msg_types = args.types.split(",") if args.types else None
     files = util.expand_path(args.paths, args.recurse, ".mcap")
 
-    if not files:
-        print("No .mcap files found.")
-        return
-
     for file in files:
-        mcap_to_tlog(file)
+        mcap_to_tlog(file, msg_types)
 
 
 if __name__ == "__main__":
