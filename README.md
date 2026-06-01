@@ -17,15 +17,10 @@ tool.py --recurse .
 ardusub_log_tools requires Python 3.12.
 Other requirements are listed in [requirements.txt](requirements.txt).
 
-## A note on BAD_DATA messages
+## Docs
 
-Some BlueOS-generated messages in QGC-generated tlog files may have bad CRC values. These messages will show
-up as type=BAD_DATA. See [this discussion for the cause(es) and fix(es)](https://github.com/bluerobotics/BlueOS/issues/1740).
-A simple workaround is to set the `MAV_IGNORE_CRC` environment variable:
-~~~
-export MAV_IGNORE_CRC=1
-show_types.py *.tlog
-~~~
+* [Dealing with BAD_DATA message](docs/bad_data.md)
+* [Understanding timestamps and synchronizing logs](docs/timesync.md)
 
 ## Segments
 
@@ -269,247 +264,50 @@ options:
   --raw                show all records; default is to drop BARO records where id==0
 ~~~
 
-## General tools
+## All tools
 
-### show_types.py
-
-show_types opens MAVLink (.tlog) and Dataflash (.BIN) files and counts records by type.
-
-Sample output:
-~~~
-$ show_types.py 100.BIN
-Processing 1 files
--------------------
-Reading 100.BIN
-   824  AHR2  Backup AHRS data                                                                  
-     3  ARM   Arming status changes                                                             
-   824  ATT   Canonical vehicle attitude                                                        
-  1652  BARO  Gathered Barometer data                                                           
-   826  BAT   Gathered battery data                                                             
-   824  CTRL  Attitude Control oscillation monitor diagnostics                                  
-   826  CTUN  Control Tuning information                                                        
-    82  DSF   Onboard logging statistics                                                        
-    83  DU32  Generic 32-bit-unsigned-integer storage                                           
-     3  ERR   Specifically coded error messages                                                 
-     6  EV    Specifically coded event messages                                                 
-   153  FMT   Message defining the format of messages in this file                              
-   153  FMTU  Message defining units and multipliers used for fields of other messages          
-   826  FTN   Filter Tuning Message - per motor                                                 
-   193  GPA   GPS accuracy information                                                          
-   193  GPS   Information received from GNSS systems attached to the autopilot                  
-  4124  IMU   Inertial Measurement Unit data                                                    
-    79  IOMC  TODO -- update tool                                                               
-   826  MAG   Information received from compasses                                               
-   246  MAV   GCS MAVLink link statistics                                                       
-     4  MODE  vehicle control mode information                                                  
-   824  MOTB  Motor mixer information                                                           
-    68  MSG   Textual messages                                                                  
-    14  MULT  Message mapping from single character to numeric multiplier                       
-     2  ORGN  Vehicle navigation origin or other notable position                               
-   902  PARM  parameter value                                                                   
-     7  PM    autopilot system performance and general data dumping ground                      
-   479  POS   Canonical vehicle position [lat/lon/alt]                                          
-   826  POWR  TODO -- update tool                                                               
-    29  PSCD  Position Control Down                                                             
-   824  RATE  Desired and achieved vehicle attitude rates. Not logged in Fixed Wing Plane modes.
-   824  RCI2  (More) RC input channels to vehicle                                               
-   824  RCIN  RC input channels to vehicle                                                      
-   824  RCOU  Servo channel output values 1 to 14                                               
-    34  UNIT  Message mapping from single character to SI unit                                  
-  1648  VIBE  Processed (acceleration) vibration information                                    
-  1648  XKF1  EKF3 estimator outputs                                                            
-  1648  XKF2  EKF3 estimator secondary outputs                                                  
-  1648  XKF3  EKF3 innovations                                                                  
-  1648  XKF4  EKF3 variances                                                                    
-   824  XKF5  EKF3 Sensor innovations (primary core) and general dumping ground                 
-  1648  XKFS  EKF3 sensor selection                                                             
-  1648  XKQ   EKF3 quaternion defining the rotation from NED to XYZ (autopilot) axes            
-    16  XKT   EKF3 timing information                                                           
-   164  XKV1  EKF3 State variances (primary core)                                               
-   164  XKV2  more EKF3 State Variances (primary core)                                          
-   542  XKY0  EKF Yaw Estimator States                                                          
-   542  XKY1  EKF Yaw Estimator Innovations                                                     
-~~~
-
-Parameters:
-~~~
-$ show_types.py --help
-usage: show_types.py [-h] [-r] path [path ...]
-
-Read messages from tlog (telemetry) and BIN (dataflash) logs and report on the message types found.
-
-positional arguments:
-  path
-
-options:
-  -h, --help     show this help message and exit
-  -r, --recurse  enter directories looking for tlog and BIN files
-~~~
-
-### tlog_info.py
-
-Read tlog files and report on a few interesting things.
-
-~~~
-$ tlog_info.py --help
-usage: tlog_info.py [-h] [-r] [-k KEEP] path [path ...]
-
-Read MAVLink messages from a tlog file (telemetry log) and report on a few interesting things.
-
-Supports segments.
-
-positional arguments:
-  path
-
-options:
-  -h, --help            show this help message and exit
-  -r, --recurse         enter directories looking for files
-  -k KEEP, --keep KEEP  process just these segments; a segment is 2 timestamps and a name, e.g., start,end,s1
-~~~
-
-
-### BIN_info.py
-
-BIN_info opens Dataflash (.BIN) files and reports on a few interesting things.
-
-Sample output:
-~~~
-$ BIN_info.py *.BIN
-Processing 2 files
--------------------
-Results for 100.BIN
-193 GPS records, gps_week is always 0, no datetime information
-List of messages, with counts:
-       3  ArduSub V4.1.0 (f2af3c7e)
-       3  ChibiOS: 93e6e03d
-       1  EKF3 IMU0 stopped aiding
-       1  EKF3 IMU1 stopped aiding
-       2  Frame: VECTORED_6DOF
-       1  GPS 1: specified as MAV
-       2  IMU0: fast sampling enabled 8.0kHz/1.0kHz
-       3  Lost manual control
-      44  MYGCS: 255, heartbeat lost
-       1  New mission
-       1  Param space used: 951/3840
-       3  Pixhawk1 0049001F 34395111 30323935
-       1  RC Protocol: None
-       2  RCOut: PWM:1-12
--------------------
-Results for 102.BIN
-6111 GPS records, gps_week is always 0, no datetime information
-List of messages, with counts:
-       2  #Gain is 30%
-       4  #Gain is 40%
-       3  #Gain is 50%
-       2  #Gain is 60%
-       1  #Gain is 70%
-       1  ArduSub V4.1.0 (f2af3c7e)
-       1  ChibiOS: 93e6e03d
-       1  EKF3 IMU0 stopped aiding
-       1  EKF3 IMU1 stopped aiding
-       1  EKF3 lane switch 1
-       1  GPS 1: specified as MAV
-       1  Lost manual control
-       1  MYGCS: 255, heartbeat lost
-       1  New mission
-       1  Param space used: 951/3840
-       1  Pixhawk1 0049001F 34395111 30323935
-       1  RC Protocol: None
-~~~
-
-Parameters:
-~~~
-$ BIN_info.py -h
-usage: BIN_info.py [-h] [-r] path [path ...]
-
-Read dataflash messages from a BIN file and report on a few interesting things.
-
-positional arguments:
-  path
-
-options:
-  -h, --help     show this help message and exit
-  -r, --recurse  enter directories looking for BIN files
-~~~
-
-### tlog_param.py
-
-Generate QGC-compatible parameter files from tlog files.
-
-~~~
-$ tlog_param.py --help
-usage: tlog_param.py [-h] [-r] [-c] path [path ...]
-
-Read MAVLink PARAM_VALUE messages from a tlog file (telemetry log), reconstruct the parameter state of a
-vehicle, and write the parameters to a QGC-compatible params file.
-
-positional arguments:
-  path
-
-options:
-  -h, --help     show this help message and exit
-  -r, --recurse  enter directories looking for tlog files
-  -c, --changes  only show changes across files, do not write *.params files
-~~~
-
-## Tools for working with Waterlinked UGPS systems
-
-### wl_ugps_logger.py
-
-~~~
-$ wl_ugps_logger.py -h
-usage: wl_ugps_logger.py [-h] [--url URL] [--filtered] [--raw] [--locator] [--g2] [--all] [--rate RATE]
-
-Get position data from the Water Linked UGPS API and write it to one or more csv files.
-
-To run in the field, capturing all outputs:
-wl_ugps_logger.py --all
-
-To test with the demo server, capturing all outputs:
-wl_ugps_logger.py --url https://demo.waterlinked.com --all
-
-options:
-  -h, --help   show this help message and exit
-  --url URL    URL of UGPS topside unit
-  --filtered   log position/acoustic/filtered
-  --raw        log position/acoustic/raw
-  --locator    log position/global (locator)
-  --g2         log position/master (G2 box)
-  --all        log everything
-  --rate RATE  polling rate
-~~~
-
-### wl_ugps_process.py
-
-~~~
-$ wl_ugps_process.py -h
-usage: wl_ugps_process.py [-h] [-r] [--lat LAT] [--lon LON] [--heading HEADING] [--zoom ZOOM] path [path ...]
-
-Generate a folium map from a log generated by wl_ugps_logger.py.
-
-positional arguments:
-  path
-
-options:
-  -h, --help         show this help message and exit
-  -r, --recurse      enter directories looking for csv files
-  --lat LAT          WL UGPS antenna latitude
-  --lon LON          WL UGPS antenna longitude
-  --heading HEADING  WL UGPS antenna heading
-  --zoom ZOOM        initial zoom, default is 18
-~~~
-
-## MAVLink debugging tools
-
-These might be useful when debugging tlog files or pymavlink.
-
-* tlog_scan.py: report on any pymavlink crashes
-* tlog_bad_data.py: report on BAD_DATA messages
-* tlog_backwards.py: read the timestamps and note when time appears to go backwards
-
-## Timestamp notes
-
-Timestamp notes have been enhanced and moved to [timesync.md](timesync.md).
+* [BIN_ekf_status.py](BIN_ekf_status.py) - Report on EKF3 status (XKF4.SS field).
+* [BIN_explode.py](BIN_explode.py) - Read ArduSub dataflash messages from a BIN file and write a csv file for each message type.
+* [BIN_filter.py](BIN_filter.py) - Read Dataflash (BIN) file(s), filter messages, and write new BIN file(s) with the kept messages.
+* [BIN_graph_alt.py](BIN_graph_alt.py) - Read an ArduSub BIN file and produce a graph of altitude readings.
+* [BIN_gyro_bias_stats.py](BIN_gyro_bias_stats.py) - Read dataflash logs and report on high / low XKF1.G? (gyro_bias) values.
+* [BIN_info.py](BIN_info.py) - Read dataflash messages from a BIN file and report on a few interesting things.
+* [BIN_mag_3d.py](BIN_mag_3d.py) - Note transitions to/from mag 3d fusion.
+* [BIN_mag_stats.py](BIN_mag_stats.py) - Read dataflash logs and report on some MAG stats.
+* [BIN_map_maker.py](BIN_map_maker.py) - Read BIN files and build Leaflet (interactive HTML) maps from GPS coordinates.
+* [BIN_merge.py](BIN_merge.py) - Read ArduSub dataflash messages from a BIN file and merge the messages into a single, wide csv file.
+* [BIN_messages.py](BIN_messages.py) - Read a dataflash (BIN) file and write the entries in the MSG and EV tables to stdout.
+* [BIN_param.py](BIN_param.py) - Read PARM messages from a dataflash file and write them to a params file.
+* [BIN_plot_surftrak.py](BIN_plot_surftrak.py) - Read BIN files and plot rangefinder vs target for SURFTRAK and GUIDED above-terrain modes.
+* [check_offset_stability.py](check_offset_stability.py) - Analyze the stability of the timestamp offset (unix_time - boot_time) in a tlog file.
+* [check_rtc_time.py](check_rtc_time.py) - Check log files (Dataflash .BIN and MAVLink .tlog) for the presence of GPS or Unix time.
+* [dive.py](dive.py) - Read all BIN and tlog files in a directory and figure out how they line up.
+* [dive_iter.py](dive_iter.py) - Iterate through chronological MAVLink messages from overlapping tlog and BIN files.
+* [map_maker.py](map_maker.py) - Read csv and txt files and build Leaflet (interactive HTML) maps from GPS coordinates.
+* [mav_type_echo.py](mav_type_echo.py) - Connect to a running MAVLink system and echo a message type.
+* [mission_dump.py](mission_dump.py) - Read MISSION_* messages from a tlog file (telemetry log) and print the mission(s).
+* [opt_rtc_shift.py](opt_rtc_shift.py) - Optimize the RTC shift value by comparing data that appears in both tlog and BIN files.
+* [plot_local_position.py](plot_local_position.py) - Look for LOCATION_POSITION_NED and VISION_POSITION_DELTA messages in tlog files, plot x and y, and write PDF files.
+* [show_types.py](show_types.py) - Read messages from tlog (telemetry) and BIN (dataflash) logs and report on the message types found.
+* [split_by_mode.py](split_by_mode.py) - Split ArduSub log files (tlog and BIN) into separate files based on flight modes.
+* [tlog_bad_data.py](tlog_bad_data.py) - Read MAVLink messages from a tlog file (telemetry log) and report on BAD_DATA messages.
+* [tlog_bad_time.py](tlog_bad_time.py) - Read a tlog file (telemetry log) and report on bad timestamps.
+* [tlog_battery.py](tlog_battery.py) - Provide information about the battery type and usage.
+* [tlog_explode.py](tlog_explode.py) - Read MAVLink messages from a tlog file (telemetry log) and write a csv file for each message type.
+* [tlog_filter.py](tlog_filter.py) - Read one or more tlog files, filter messages, and write a single, combined, valid tlog file with the resulting messages.
+* [tlog_gps_input_problems.py](tlog_gps_input_problems.py) - Read GPS_INPUT messages and look for problems.
+* [tlog_info.py](tlog_info.py) - Read MAVLink messages from a tlog file (telemetry log) and report on a few interesting things.
+* [tlog_map_maker.py](tlog_map_maker.py) - Read tlog files and build Leaflet (interactive HTML) maps from GPS coordinates.
+* [tlog_merge.py](tlog_merge.py) - Read MAVLink messages from a tlog file (telemetry log) and merge the messages into a single, wide csv file.
+* [tlog_messages.py](tlog_messages.py) - Read MAVLink messages from a tlog file (telemetry log) and write STATUSTEXT messages.
+* [tlog_param.py](tlog_param.py) - Read MAVLink PARAM_VALUE messages from a tlog file (telemetry log), reconstruct the parameter state of a vehicle, and write them to a params file.
+* [tlog_scan.py](tlog_scan.py) - Read MAVLink messages from a tlog file (telemetry log) and report on any pymavlink crashes.
+* [tlog_segment.py](tlog_segment.py) - Read MAVLink messages from one or more tlog files (telemetry logs), stitch them together in time order, then extract segments.
+* [tlog_sources.py](tlog_sources.py) - Read MAVLink messages and count messages by source.
+* [tlog_split_beams.py](tlog_split_beams.py) - Read DISTANCE_SENSOR messages from a tlog file and write one csv file per (src, comp, orientation) tuple.
+* [tlog_template.py](tlog_template.py) - Template for tlog tools that do not support segments.
+* [tlog_template_segments.py](tlog_template_segments.py) - Template for tlog tools that support segments.
+* [tlog_timeline.py](tlog_timeline.py) - Read MAVLink messages from a tlog file (telemetry log) and generate a timeline.
 
 ## Other tools
 

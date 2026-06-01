@@ -2,10 +2,15 @@
 __pycache__/
 .pytest_cache/
 
-# Don't save test output
+# Test output
 testing/*.csv
 testing/*.html
 testing/*.params
 testing/*.pdf
+
+# Python venv
 venv/
 .venv/
+
+# Temp data
+tmp
