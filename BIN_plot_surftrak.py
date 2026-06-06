@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
 """
-Read BIN files and plot rangefinder vs target forSURFTRAK and GUIDED above-terrain modes.
+Read BIN files and plot rangefinder vs target for all modes.
 
 Plots:
-1. Top-down XY plot of path (colored by mode) + Guided Targets.
-2. Elevation Z view: Sub vertical motion + Terrain height.
-3. Rangefinder value vs Target (SURFTRAK/GUIDED only).
+1. Top-down XY plot of path (colored by mode) + Guided Targets
+2. Elevation Z view: Sub vertical motion + Terrain height
+3. Rangefinder value vs Target
 """
 
 import argparse
@@ -25,7 +25,7 @@ MODE_COLORS = {
     "ALT_HOLD": "blue",
     "STABILIZE": "cyan",
     "MANUAL": "gray",
-    "SURFACE": "magenta",
+    "AUTO": "magenta",
 }
 
 
@@ -37,9 +37,7 @@ def load_data(reader):
     data = {
         "XKF1": [],
         "GUIP": [],
-        "GUIT": [],
         "CTUN": [],
-        "RFND": [],
         "MODE": [],
     }
 
@@ -89,31 +87,15 @@ def plot_surftrak(dfs, pdf_outfile, csv_outfile, show_plot):
         merged = main_df.copy()
         merged["ModeNum"] = -1  # Unknown
 
-    # Merge RFND for Terrain
-    # RFND usually higher rate or similar.
-    if not dfs["RFND"].empty:
-        rfnd_df = dfs["RFND"][["TimeUS", "Dist"]].copy()
-        rfnd_df.sort_values("TimeUS", inplace=True)
-        merged = pd.merge_asof(merged, rfnd_df, on="TimeUS", direction="nearest", tolerance=200000)  # 200ms tolerance
-    else:
-        merged["Dist"] = np.nan
-
-    # Merge Targets (CTUN.DSAlt, GUIT.RFTarg)
-    # CTUN
+    # Merge rangefinder distance and target (CTUN.SAlt, CTUN.DSAlt)
+    # As of 4.5 this is only available for SURFTRAK, but the idea is to get this to work across all modes
     if not dfs["CTUN"].empty:
-        ctun_df = dfs["CTUN"][["TimeUS", "DSAlt"]].copy()
+        ctun_df = dfs["CTUN"][["TimeUS", "DSAlt", "SAlt"]].copy()
         ctun_df.sort_values("TimeUS", inplace=True)
         merged = pd.merge_asof(merged, ctun_df, on="TimeUS", direction="nearest", tolerance=200000)
     else:
         merged["DSAlt"] = np.nan
-
-    # GUIT
-    if not dfs["GUIT"].empty:
-        guit_df = dfs["GUIT"][["TimeUS", "RFTarg"]].copy()
-        guit_df.sort_values("TimeUS", inplace=True)
-        merged = pd.merge_asof(merged, guit_df, on="TimeUS", direction="nearest", tolerance=200000)
-    else:
-        merged["RFTarg"] = np.nan
+        merged["SAlt"] = np.nan
 
     # GUIP
     if not dfs["GUIP"].empty:
@@ -135,7 +117,7 @@ def plot_surftrak(dfs, pdf_outfile, csv_outfile, show_plot):
     merged["TimeS"] = (merged["TimeUS"] - t0) / 1e6
     merged["SubAlt"] = -merged["PD"]
 
-    dist_clean = merged["Dist"].copy()
+    dist_clean = merged["SAlt"].copy()
     dist_clean[dist_clean == 0] = np.nan
     merged["TerrainAlt"] = merged["SubAlt"] - dist_clean
 
@@ -199,25 +181,15 @@ def plot_surftrak(dfs, pdf_outfile, csv_outfile, show_plot):
     ax_rf.grid(True)
 
     # Re-create dist_clean for plotting to avoid plotting 0s
-    dist_clean = merged["Dist"].copy()
+    dist_clean = merged["SAlt"].copy()
     dist_clean[dist_clean == 0] = np.nan
 
     ax_rf.plot(merged["TimeS"], dist_clean, label="RF Reading", color="black", alpha=0.5)
 
-    is_surftrak = merged["ModeNum"] == 21  # SURFTRAK
-    is_guided = merged["ModeNum"] == 4  # GUIDED
-
-    # Plot SURFTRAK target
-    surftrak_target = merged["DSAlt"].copy()
-    surftrak_target[~is_surftrak] = np.nan
-    if not surftrak_target.isna().all():
-        ax_rf.plot(merged["TimeS"], surftrak_target, label="SurfTrak Target", color="orange", linewidth=2)
-
-    # Plot GUIDED target
-    guided_target = merged["RFTarg"].copy()
-    guided_target[~is_guided] = np.nan
-    if not guided_target.isna().all():
-        ax_rf.plot(merged["TimeS"], guided_target, label="Guided Target", color="green", linewidth=2)
+    # Plot rangefinder target
+    rf_target = merged["DSAlt"].copy()
+    if not rf_target.isna().all():
+        ax_rf.plot(merged["TimeS"], rf_target, label="RF Target", color="orange", linewidth=2)
 
     ax_rf.legend()
 
