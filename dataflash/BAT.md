@@ -1,5 +1,5 @@
 # BAT DataFlash Message
-Commit: abe1721cf5
+Commit: 256483eb61
 
 **Purpose**: Logs battery status information.
 **Location**: `libraries/AP_BattMonitor/LogStructure.h`
@@ -11,7 +11,7 @@ Commit: abe1721cf5
 | **Volt** | Measured voltage | Volts |
 | **VoltR** | Estimated resting voltage | Volts |
 | **Curr** | Measured current | Amperes |
-| **CurrTot** | Consumed capacity | Ampere-hours |
+| **CurrTot** | Consumed capacity | mAh (NOTE: the log_BAT comment says Ah, but the code writes mAh) |
 | **EnrgTot** | Consumed energy | Watt-hours |
 | **Temp** | Battery temperature | Degrees Celsius |
 | **Res** | Estimated battery resistance | Ohms |
