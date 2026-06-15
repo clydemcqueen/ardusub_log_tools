@@ -39,6 +39,7 @@ def load_data(reader):
         "GUIP": [],
         "CTUN": [],
         "MODE": [],
+        "ORGN": [],
     }
 
     # We want these types
@@ -99,14 +100,53 @@ def plot_surftrak(dfs, pdf_outfile, csv_outfile, show_plot):
 
     # GUIP
     if not dfs["GUIP"].empty:
-        # GUIP is in cm, convert to m
-        guip_df = dfs["GUIP"][["TimeUS", "pX", "pY", "pZ"]].copy()
-        guip_df["GuipPN"] = guip_df["pX"] / 100.0
-        guip_df["GuipPE"] = guip_df["pY"] / 100.0
-        guip_df["GuipPD"] = guip_df["pZ"] / 100.0
-        guip_df = guip_df[["TimeUS", "GuipPN", "GuipPE", "GuipPD"]]
-        guip_df.sort_values("TimeUS", inplace=True)
-        merged = pd.merge_asof(merged, guip_df, on="TimeUS", direction="nearest", tolerance=200000)
+        # Get EKF origin for global coordinates conversion if needed
+        # TODO move the conversion to a util function
+        orgn_lat = None
+        orgn_lng = None
+        if not dfs["ORGN"].empty:
+            first_orgn = dfs["ORGN"].iloc[0]
+            orgn_lat = first_orgn["Lat"]
+            orgn_lng = first_orgn["Lng"]
+
+        guip_df = dfs["GUIP"].copy()
+
+        guip_pn = []
+        guip_pe = []
+        guip_pd = []
+
+        for idx, row in guip_df.iterrows():
+            gtype = row["Type"]
+            if gtype in [0, 1]:  # Global coordinates (degE7)
+                if orgn_lat is not None and orgn_lng is not None:
+                    lat = row["pX"] / 1e7
+                    lng = row["pY"] / 1e7
+                    r_earth = 6378137.0
+                    d_lat_rad = np.radians(lat - orgn_lat)
+                    d_lng_rad = np.radians(lng - orgn_lng)
+                    pn = r_earth * d_lat_rad
+                    pe = r_earth * d_lng_rad * np.cos(np.radians(orgn_lat))
+                    p_d = row["pZ"] / 100.0  # Usually altitude target in cm
+                else:
+                    pn = np.nan
+                    pe = np.nan
+                    p_d = np.nan
+            else:  # Local coordinates (cm)
+                pn = row["pX"] / 100.0
+                pe = row["pY"] / 100.0
+                p_d = row["pZ"] / 100.0
+
+            guip_pn.append(pn)
+            guip_pe.append(pe)
+            guip_pd.append(p_d)
+
+        dfs["GUIP"]["GuipPN"] = guip_pn
+        dfs["GUIP"]["GuipPE"] = guip_pe
+        dfs["GUIP"]["GuipPD"] = guip_pd
+
+        guip_merge_df = dfs["GUIP"][["TimeUS", "GuipPN", "GuipPE", "GuipPD"]].copy()
+        guip_merge_df.sort_values("TimeUS", inplace=True)
+        merged = pd.merge_asof(merged, guip_merge_df, on="TimeUS", direction="nearest", tolerance=200000)
     else:
         merged["GuipPN"] = np.nan
         merged["GuipPE"] = np.nan
@@ -153,10 +193,10 @@ def plot_surftrak(dfs, pdf_outfile, csv_outfile, show_plot):
         ax_xy.plot(group["PE"], group["PN"], color=color, label=label)
 
     # Plot GUIP targets if available
-    if not dfs["GUIP"].empty:
-        # The code suggests that the data is in meters, but ArduSub actually logs in cm (a small bug)
-        guip_df = dfs["GUIP"]
-        ax_xy.plot(guip_df["pY"] / 100, guip_df["pX"] / 100, ".", color="red", label="Guided Target", markersize=0.5)
+    if not dfs["GUIP"].empty and "GuipPE" in dfs["GUIP"]:
+        guip_df = dfs["GUIP"].dropna(subset=["GuipPE", "GuipPN"])
+        if not guip_df.empty:
+            ax_xy.plot(guip_df["GuipPE"], guip_df["GuipPN"], ".", color="red", label="Guided Target", markersize=8.0)
 
     ax_xy.legend()
 
