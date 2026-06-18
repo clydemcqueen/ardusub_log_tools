@@ -122,6 +122,11 @@ SPLIT_INSTANCE_MSG_TYPES = [
     "MAG",  # Compass data
 ]
 
+# Messages types that can be split by the 'chan' field
+SPLIT_CHANNEL_MSG_TYPES = [
+    "MAV",  # MAVLink link statistics
+]
+
 EKF_MSG_TYPES = [
     *SPLIT_CORE_MSG_TYPES,
     "XKF5",  # EKF3 Sensor innovations (primary core) and general dumping ground
@@ -465,6 +470,8 @@ class DataflashLogReader(LogMerger):
                 table_name = f"{msg_type}_core{msg.C}"
             elif msg_type in SPLIT_INSTANCE_MSG_TYPES:
                 table_name = f"{msg_type}_instance{msg.I}"
+            elif msg_type in SPLIT_CHANNEL_MSG_TYPES:
+                table_name = f"{msg_type}_chan{msg.chan}"
 
             # Hack: make up the PSCU table
             if msg_type == "PSCD" and self.pscu:
