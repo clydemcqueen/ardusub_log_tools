@@ -24,6 +24,7 @@ DATAFLASH_DESC = {
     "ARSP": "Airspeed sensor data",
     "ATSC": "Scale factors for attitude controller",
     "ATT": "Canonical vehicle attitude",
+    "AUXF": "TODO",
     "BARO": "Gathered Barometer data",
     "BAT": "Gathered battery data",
     "CTRL": "Attitude Control oscillation monitor diagnostics",
