@@ -174,6 +174,8 @@ class DataflashTable:
     def get_dataframe(self, verbose):
         if self._df is None:
             self._df = pd.DataFrame(self._rows)
+            if not self._df.empty and "timestamp" in self._df.columns:
+                self._df[f"{self._msg_type}._dt"] = self._df["timestamp"].diff().fillna(0.0)
             if verbose:
                 print("-----------------")
                 if self._df.empty:
