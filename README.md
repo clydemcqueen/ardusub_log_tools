@@ -286,7 +286,8 @@ options:
 * [dive_iter.py](dive_iter.py) - Iterate through chronological MAVLink messages from overlapping tlog and BIN files.
 * [map_maker.py](map_maker.py) - Read csv and txt files and build Leaflet (interactive HTML) maps from GPS coordinates.
 * [mav_type_echo.py](mav_type_echo.py) - Connect to a running MAVLink system and echo a message type.
-* [mcap_channels.py](mcap_channels.py) - Open an mcap file and report on the channels.
+* [mcap_channels.py](mcap_channels.py) - Open mcap files and report on the channels.
+* [mcap_strip_video.py](mcap_strip_video.py) - Open mcap files and copy all non-video channels to new mcap files (reduces file size by ~97%).
 * [mcap_tlog_diff.py](mcap_tlog_diff.py) - Compare a QGC-generated tlog to an mcap file.
 * [mcap_to_tlog.py](mcap_to_tlog.py) - Convert MCAP files containing MAVLink messages to tlog files readable by pymavlink.
 * [mcap_types.py](mcap_types.py) - Read messages from mcap files and report on the message types found(similar to show_types.py).
