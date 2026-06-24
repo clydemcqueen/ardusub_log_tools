@@ -11,6 +11,8 @@ from collections import Counter
 
 from mcap.reader import make_reader
 
+import util
+
 
 def count_mcap_messages(file_path, extract=False):
     message_counts = Counter()
@@ -69,10 +71,17 @@ def count_mcap_messages(file_path, extract=False):
             f_out.close()
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Open an mcap file and report on the contents.")
-    parser.add_argument("file_path", help="Path to the .mcap file")
+def main():
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=__doc__)
+    parser.add_argument("paths", nargs="+", help="files or directories")
+    parser.add_argument("-r", "--recurse", action="store_true", help="enter directories")
     parser.add_argument("--extract", action="store_true", help="Extract services/*/log channels into text files")
-
     args = parser.parse_args()
-    count_mcap_messages(args.file_path, extract=args.extract)
+    files = util.expand_path(args.paths, args.recurse, ".mcap")
+
+    for file in files:
+        count_mcap_messages(file, extract=args.extract)
+
+
+if __name__ == "__main__":
+    main()
