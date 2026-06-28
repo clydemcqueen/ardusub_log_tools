@@ -76,6 +76,9 @@ def main():
 
     args = parser.parse_args()
 
+    if args.types:
+        args.types = args.types.upper()
+
     files = util.expand_path(args.path, args.recurse, ".BIN")
     print(f"Processing {len(files)} files")
 

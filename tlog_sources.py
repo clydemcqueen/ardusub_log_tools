@@ -33,6 +33,10 @@ def main():
     add_segment_args(parser)
     parser.add_argument("--types", default=None, help="comma separated list of message types, default is all types")
     args = parser.parse_args()
+
+    if args.types:
+        args.types = args.types.upper()
+
     msg_types = None if args.types is None else args.types.split(",")
     readers = choose_reader_list(args, msg_types)
     for reader in readers:

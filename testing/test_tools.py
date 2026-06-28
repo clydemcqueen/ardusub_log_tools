@@ -183,6 +183,15 @@ class TestTools:
         tool = tlog_scan.Scanner("testing/small.tlog", ["GLOBAL_POSITION_INT"])
         tool.read()
 
+    def test_lowercase_types_arg(self, monkeypatch, capsys):
+        import sys
+
+        monkeypatch.setattr(sys, "argv", ["tlog_scan.py", "--types", "global_position_int", "testing/small.tlog"])
+        tlog_scan.main()
+        captured = capsys.readouterr()
+        # The tlog contains GLOBAL_POSITION_INT messages which should be read when the argument is uppercased.
+        assert "Read 792 messages from testing/small.tlog" in captured.out
+
     def test_add_rate_field(self):
         messages = [
             {"timestamp": 0.0},

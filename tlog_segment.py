@@ -37,6 +37,9 @@ def main():
     )
     args = parser.parse_args()
 
+    if args.types:
+        args.types = args.types.upper()
+
     segments = parse_segment_args(args.keep)
     print(f"Segments: {segments}")
 
