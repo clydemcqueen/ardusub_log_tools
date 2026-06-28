@@ -199,6 +199,9 @@ def main():
     args = parser.parse_args()
 
     if args.types:
+        args.types = args.types.upper()
+
+    if args.types:
         msg_types = args.types.split(",")
     else:
         msg_types = PERHAPS_USEFUL_MSG_TYPES

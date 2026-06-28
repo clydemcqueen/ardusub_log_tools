@@ -526,6 +526,10 @@ def main():
     parser.add_argument("--sync", default=None, help="experiment: provide a tlog file to establish an rtc_shift")
     parser.add_argument("path", nargs="+")
     args = parser.parse_args()
+
+    if args.types:
+        args.types = args.types.upper()
+
     files = util.expand_path(args.path, args.recurse, ".BIN")
     print(f"Processing {len(files)} files")
 

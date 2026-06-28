@@ -64,6 +64,9 @@ def main():
     )
     args = parser.parse_args()
 
+    if args.types:
+        args.types = args.types.upper()
+
     if args.types is None:
         # GPS_INPUT may result in a pymavlink crash, see https://github.com/ArduPilot/pymavlink/issues/807
         # Workaround: `export MAV_IGNORE_CRC=1`

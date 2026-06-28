@@ -73,6 +73,9 @@ def main():
     )
     args = parser.parse_args()
 
+    if args.types:
+        args.types = args.types.upper()
+
     if args.types is None:
         msg_types = GPS_MSG_TYPES
     else:

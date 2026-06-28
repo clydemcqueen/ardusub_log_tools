@@ -86,6 +86,9 @@ def main():
     )
     args = parser.parse_args()
 
+    if args.types:
+        args.types = args.types.upper()
+
     # If --keep is not specified, default to --all
     if not args.keep:
         args.all = True
