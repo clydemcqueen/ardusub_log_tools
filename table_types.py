@@ -79,11 +79,15 @@ def sys_name(sys_id: int) -> str:
 
 
 def comp_name(comp_id: int) -> str:
-    return apm.enums["MAV_COMPONENT"][comp_id].name.lower()
+    if comp_id in apm.enums["MAV_COMPONENT"]:
+        return apm.enums["MAV_COMPONENT"][comp_id].name.lower()
+    return f"mav_comp_id_{comp_id}"
 
 
 def state_name(state_id: int) -> str:
-    return apm.enums["MAV_STATE"][state_id].name.lower()
+    if state_id in apm.enums["MAV_STATE"]:
+        return apm.enums["MAV_STATE"][state_id].name.lower()
+    return f"mav_state_{state_id}"
 
 
 def system_status_name(state_id: int) -> str:
