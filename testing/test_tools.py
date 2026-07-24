@@ -15,6 +15,7 @@ import BIN_merge
 import map_maker
 import plot_local_position
 import show_types
+import table_types
 import tlog_bad_data
 import tlog_info
 import tlog_map_maker
@@ -188,3 +189,7 @@ class TestTools:
         s1, s2 = segments
         assert s1.start == 1683220546.0 and s1.end == 1683220547.0 and s1.name == "foo"
         assert s2.start == 1683220546.0 and s2.end == 1683220547.0 and s2.name == "1683220546_1683220547"
+
+    def test_unknown_comp_and_state_name(self):
+        assert table_types.comp_name(230) == "mav_comp_id_230"
+        assert table_types.state_name(999) == "mav_state_999"
