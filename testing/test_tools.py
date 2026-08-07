@@ -30,7 +30,7 @@ from segment_reader import Segment, SegmentFormatException, SegmentReader, parse
 
 class TestTools:
     def test_dataflash_merge(self):
-        tool = BIN_merge.DataflashLogReader("testing/small.BIN", ["VIBE"], 10000, 10000, False, False, -1.0, -1.0)
+        tool = BIN_merge.DataflashLogReader("testing/small2.BIN", ["VIBE"], 10000, 10000, False, False, -1.0, -1.0)
         tool.read()
         tool.write_merged_csv_file()
 
@@ -73,7 +73,7 @@ class TestTools:
         tool.read()
 
     def test_dataflash_types(self):
-        tool = show_types.TypeFinder("testing/small.BIN")
+        tool = show_types.TypeFinder("testing/small2.BIN")
         tool.read()
 
     def test_bad_data(self):
@@ -85,7 +85,7 @@ class TestTools:
         tool.read_and_report()
 
     def test_dataflash_info(self):
-        tool = BIN_info.DataflashLogInfo("testing/small.BIN")
+        tool = BIN_info.DataflashLogInfo("testing/small2.BIN")
         tool.read_and_report()
 
     def test_dataflash_info_file_messages(self, monkeypatch, capsys):
@@ -157,7 +157,7 @@ class TestTools:
         assert (out_dir / "sys_config.txt").stat().st_size == 100
 
     def test_bin_graph_alt(self):
-        BIN_graph_alt.process_reader(FileReader("testing/small.BIN", ["AHR2", "XKF1", "BARO", "ORGN", "POS"]))
+        BIN_graph_alt.process_reader(FileReader("testing/small2.BIN", ["AHR2", "XKF1", "BARO", "ORGN", "POS"]))
 
     def test_tlog_merge(self):
         tool = tlog_merge.TelemetryLogReader(

@@ -16,7 +16,7 @@ class TestSplitByMode(unittest.TestCase):
 
         # Files to test
         self.small_tlog = os.path.join(self.testing_dir, "small.tlog")
-        self.small_bin = os.path.join(self.testing_dir, "small.BIN")
+        self.small_bin = os.path.join(self.testing_dir, "small2.BIN")
         # TODO(clyde): These files are too big to save in git, find 2 smaller but still interesting files
         # self.large_tlog = os.path.join(self.testing_dir, '00118-2025-10-08_18-03-06.tlog')
         # self.large_bin = os.path.join(self.testing_dir, '00000062.BIN')
@@ -66,7 +66,7 @@ class TestSplitByMode(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
 
         # Expect small_MANUAL1.BIN
-        expected = os.path.join(self.testing_dir, "small_MANUAL1.BIN")
+        expected = os.path.join(self.testing_dir, "small2_MANUAL1.BIN")
         self.assertTrue(os.path.exists(expected), f"Expected {expected} to exist")
 
     def disabled_test_large_tlog(self):
