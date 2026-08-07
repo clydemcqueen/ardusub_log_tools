@@ -9,6 +9,7 @@
 
 import pytest
 
+import BIN_extract_files
 import BIN_graph_alt
 import BIN_info
 import BIN_merge
@@ -86,6 +87,74 @@ class TestTools:
     def test_dataflash_info(self):
         tool = BIN_info.DataflashLogInfo("testing/small.BIN")
         tool.read_and_report()
+
+    def test_dataflash_info_file_messages(self, monkeypatch, capsys):
+        class MockFileMsg:
+            def __init__(self, name, off, length):
+                self.FileName = name
+                self.Offset = off
+                self.Length = length
+
+            def get_type(self):
+                return "FILE"
+
+        class MockMlog:
+            def __init__(self, msgs):
+                self.msgs = iter(msgs)
+
+            def recv_match(self, blocking=False, type=None):
+                return next(self.msgs, None)
+
+        msgs = [
+            MockFileMsg("@ROMFS/sensors/IMU_CAL", 0, 64),
+            MockFileMsg("@ROMFS/sensors/IMU_CAL", 64, 32),
+            MockFileMsg("sys_config.txt", 0, 100),
+        ]
+        monkeypatch.setattr("pymavlink.mavutil.mavlink_connection", lambda *args, **kwargs: MockMlog(msgs))
+        tool = BIN_info.DataflashLogInfo("dummy.BIN")
+        tool.read_and_report()
+        captured = capsys.readouterr().out
+        assert "3 FILE records, embedded files:" in captured
+        assert "@ROMFS/sensors/IMU_CAL (96 bytes)" in captured
+        assert "sys_config.txt (100 bytes)" in captured
+
+    def test_dataflash_extract(self, tmp_path, monkeypatch):
+        class MockFileMsg:
+            def __init__(self, name, off, length):
+                self.FileName = name
+                self.Offset = off
+                self.Length = length
+                self.Data = b"x" * length
+
+            def get_type(self):
+                return "FILE"
+
+        class MockMlog:
+            def __init__(self, msgs):
+                self.msgs = iter(msgs)
+
+            def recv_match(self, blocking=False, type=None):
+                return next(self.msgs, None)
+
+        msgs = [
+            MockFileMsg("@ROMFS/sensors/IMU_CAL", 0, 64),
+            MockFileMsg("@ROMFS/sensors/IMU_CAL", 64, 32),
+            MockFileMsg("sys_config.txt", 0, 100),
+        ]
+        monkeypatch.setattr("pymavlink.mavutil.mavlink_connection", lambda *args, **kwargs: MockMlog(msgs))
+
+        test_bin = tmp_path / "dummy.BIN"
+        test_bin.touch()
+
+        extractor = BIN_extract_files.DataflashFileExtractor(str(test_bin))
+        extractor.extract()
+
+        out_dir = tmp_path / "dummy_extracted"
+        assert out_dir.is_dir()
+        assert (out_dir / "ROMFS_sensors_IMU_CAL").is_file()
+        assert (out_dir / "ROMFS_sensors_IMU_CAL").stat().st_size == 96
+        assert (out_dir / "sys_config.txt").is_file()
+        assert (out_dir / "sys_config.txt").stat().st_size == 100
 
     def test_bin_graph_alt(self):
         BIN_graph_alt.process_reader(FileReader("testing/small.BIN", ["AHR2", "XKF1", "BARO", "ORGN", "POS"]))

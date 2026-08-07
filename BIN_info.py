@@ -27,8 +27,10 @@ class DataflashLogInfo:
         gps_week_ms = 0
 
         count_orgn_records = 0
+        count_file_records = 0
+        embedded_files = {}
 
-        while (msg := mlog.recv_match(blocking=False, type=["MSG", "GPS", "ORGN"])) is not None:
+        while (msg := mlog.recv_match(blocking=False, type=["MSG", "GPS", "ORGN", "FILE"])) is not None:
             if msg.get_type() == "MSG":
                 message = msg.Message
                 if message not in self.message_counts:
@@ -46,6 +48,17 @@ class DataflashLogInfo:
                 origin_type = "EKF origin" if msg.Type == 0 else "AHRS home"
                 print(f"{origin_type} set after {msg.TimeUS / 1e6:.1f} seconds: ({msg.Lat}, {msg.Lng}, {msg.Alt})")
 
+            elif msg.get_type() == "FILE":
+                count_file_records += 1
+                name = getattr(msg, "FileName", "")
+                if isinstance(name, bytes):
+                    name = name.decode("utf-8", errors="replace")
+                name = name.rstrip("\x00").strip()
+                if name:
+                    offset = getattr(msg, "Offset", 0)
+                    length = getattr(msg, "Length", 0)
+                    embedded_files[name] = max(embedded_files.get(name, 0), offset + length)
+
         if count_orgn_records == 0:
             print("No ORGN records, origin was not set")
 
@@ -55,6 +68,15 @@ class DataflashLogInfo:
             print(f"{count_gps_records} GPS records, gps_week is always 0, no datetime information")
         else:
             print(f"{count_gps_records} GPS records, last record gps_week {gps_week}, gps_week_ms {gps_week_ms}")
+
+        if count_file_records == 0:
+            print("No FILE records, no embedded files")
+        elif not embedded_files:
+            print(f"{count_file_records} FILE records, no file names found")
+        else:
+            print(f"{count_file_records} FILE records, embedded files:")
+            for name, size in sorted(embedded_files.items()):
+                print(f"    {name} ({size} bytes)")
 
         print("List of messages, with counts:")
         for item in sorted(self.message_counts.items()):
