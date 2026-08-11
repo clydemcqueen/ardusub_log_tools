@@ -1,166 +1,183 @@
 #!/usr/bin/env python3
 
 """
-Read BIN files and plot VISO latency and the effect on Position Control (lurching).
+Read BIN files and plot VISO (Visual Odometry) data alongside EKF estimated position,
+EKF innovations, and thruster outputs (RCOU).
 
 Plots:
-1. VISO Message Interval (Lag) vs Time.
-2. Position Controller Acceleration (PSCN.AN / PSCE.AE) vs Time.
+1. VISO Delta Position (PosDX, PosDY) and Confidence (conf)
+2. EKF Estimated Position (PN, PE)
+3. EKF Innovations (IPN, IPE)
+4. Thruster PWMs (RCOU C1..C6)
 """
 
 import argparse
+import os
 
 import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
 
 import util
 from segment_reader import add_segment_args, choose_reader_list
 from table_types import MODE_NAMES
 
-MODE_COLORS = {
-    "SURFTRAK": "green",
-    "GUIDED": "cyan",
-    "POS_HOLD": "orange",
-    "ALT_HOLD": "blue",
-    "STABILIZE": "magenta",
-    "MANUAL": "gray",
-    "SURFACE": "purple",
-}
+WANTED_TYPES = ["MODE", "VISO", "XKF3", "XKF1", "RCOU"]
 
 
-def get_mode_name(mode_num):
+def get_mode_name(mode_num: int) -> str:
     return MODE_NAMES.get(mode_num, f"Unknown({mode_num})")
 
 
-def load_data(reader):
-    data = {
-        "MODE": [],
-        "VISO": [],
-        "PSCN": [],
-        "PSCE": [],
-    }
+def process_reader(reader, pdf_outfile: str | None = None, show_plot: bool = True):
+    viso_data = {"TimeUS": [], "dX": [], "dY": [], "dZ": [], "conf": []}
+    ekf_innov_data = {"TimeUS": [], "IPN": [], "IPE": [], "IVN": [], "IVE": []}
+    ekf_pos_data = {"TimeUS": [], "PN": [], "PE": [], "PD": []}
+    rcout_data = {"TimeUS": [], "C1": [], "C2": [], "C3": [], "C4": [], "C5": [], "C6": []}
+    mode_data = {"TimeUS": [], "ModeNum": []}
 
-    wanted_types = set(data.keys())
+    print(f"Reading {reader.name}...")
 
     for msg in reader:
         mtype = msg.get_type()
-        if mtype in wanted_types:
-            data[mtype].append(msg.to_dict())
+        d = msg.to_dict()
 
-    dfs = {}
-    for k, v in data.items():
-        if v:
-            dfs[k] = pd.DataFrame(v)
-        else:
-            dfs[k] = pd.DataFrame()
+        if "TimeUS" not in d and not hasattr(msg, "TimeUS"):
+            continue
+        time_us = getattr(msg, "TimeUS", d.get("TimeUS", 0))
 
-    return dfs
+        if mtype == "MODE":
+            mode_num = d.get("ModeNum", d.get("Mode", -1))
+            mode_data["TimeUS"].append(time_us)
+            mode_data["ModeNum"].append(mode_num)
 
+        elif mtype == "VISO":
+            viso_data["TimeUS"].append(time_us)
+            viso_data["dX"].append(d.get("PosDX", d.get("dX", 0.0)))
+            viso_data["dY"].append(d.get("PosDY", d.get("dY", 0.0)))
+            viso_data["dZ"].append(d.get("PosDZ", d.get("dZ", 0.0)))
+            viso_data["conf"].append(d.get("conf", 0.0))
 
-def plot_viso(dfs, pdf_outfile, csv_outfile, show_plot):
-    if dfs["VISO"].empty:
-        print("No VISO data found. Cannot plot.")
+        elif mtype == "XKF3":
+            if d.get("C", d.get("Core", 0)) != 0:
+                continue
+            ekf_innov_data["TimeUS"].append(time_us)
+            ekf_innov_data["IPN"].append(d.get("IPN", 0.0))
+            ekf_innov_data["IPE"].append(d.get("IPE", 0.0))
+            ekf_innov_data["IVN"].append(d.get("IVN", 0.0))
+            ekf_innov_data["IVE"].append(d.get("IVE", 0.0))
+
+        elif mtype == "XKF1":
+            if d.get("C", d.get("Core", 0)) != 0:
+                continue
+            ekf_pos_data["TimeUS"].append(time_us)
+            ekf_pos_data["PN"].append(d.get("PN", d.get("PosN", 0.0)))
+            ekf_pos_data["PE"].append(d.get("PE", d.get("PosE", 0.0)))
+            ekf_pos_data["PD"].append(d.get("PD", d.get("PosD", 0.0)))
+
+        elif mtype == "RCOU":
+            rcout_data["TimeUS"].append(time_us)
+            rcout_data["C1"].append(d.get("C1", 0))
+            rcout_data["C2"].append(d.get("C2", 0))
+            rcout_data["C3"].append(d.get("C3", 0))
+            rcout_data["C4"].append(d.get("C4", 0))
+            rcout_data["C5"].append(d.get("C5", 0))
+            rcout_data["C6"].append(d.get("C6", 0))
+
+    if not viso_data["TimeUS"] and not ekf_pos_data["TimeUS"]:
+        print(f"No VISO or EKF position data found in {reader.name}")
         return
 
-    # Base time on VISO
-    viso_df = dfs["VISO"][["TimeUS", "dt"]].copy()
-    viso_df.sort_values("TimeUS", inplace=True)
+    all_ts = (
+        viso_data["TimeUS"]
+        + ekf_pos_data["TimeUS"]
+        + ekf_innov_data["TimeUS"]
+        + rcout_data["TimeUS"]
+        + mode_data["TimeUS"]
+    )
+    t0 = min(all_ts) if all_ts else 0
 
-    # Calculate interval between received messages
-    viso_df["VISO_Interval"] = viso_df["TimeUS"].diff() / 1e6
+    viso_t_sec = [(t - t0) / 1e6 for t in viso_data["TimeUS"]]
+    ekf_pos_t_sec = [(t - t0) / 1e6 for t in ekf_pos_data["TimeUS"]]
+    ekf_innov_t_sec = [(t - t0) / 1e6 for t in ekf_innov_data["TimeUS"]]
+    rcout_t_sec = [(t - t0) / 1e6 for t in rcout_data["TimeUS"]]
 
-    t0 = viso_df["TimeUS"].iloc[0]
-    viso_df["TimeS"] = (viso_df["TimeUS"] - t0) / 1e6
+    fig, axes = plt.subplots(4, 1, figsize=(12, 10), sharex=True)
 
-    if not dfs["MODE"].empty:
-        mode_df = dfs["MODE"][["TimeUS", "ModeNum"]].copy()
-        mode_df.sort_values("TimeUS", inplace=True)
-    else:
-        mode_df = pd.DataFrame([{"TimeUS": t0, "ModeNum": -1}])
-
-    # Process PSCN and PSCE
-    if not dfs["PSCN"].empty:
-        pscn_df = dfs["PSCN"].copy()
-        pscn_df.sort_values("TimeUS", inplace=True)
-        pscn_df["TimeS"] = (pscn_df["TimeUS"] - t0) / 1e6
-        if "AN" in pscn_df.columns:
-            pscn_df["AccelN"] = pscn_df["AN"]
-        elif "Acc" in pscn_df.columns:
-            pscn_df["AccelN"] = pscn_df["Acc"]
-        else:
-            pscn_df["AccelN"] = np.nan
-    else:
-        pscn_df = pd.DataFrame({"TimeUS": [], "TimeS": [], "AccelN": []})
-
-    if not dfs["PSCE"].empty:
-        psce_df = dfs["PSCE"].copy()
-        psce_df.sort_values("TimeUS", inplace=True)
-        psce_df["TimeS"] = (psce_df["TimeUS"] - t0) / 1e6
-        if "AE" in psce_df.columns:
-            psce_df["AccelE"] = psce_df["AE"]
-        elif "Acc" in psce_df.columns:
-            psce_df["AccelE"] = psce_df["Acc"]
-        else:
-            psce_df["AccelE"] = np.nan
-    else:
-        psce_df = pd.DataFrame({"TimeUS": [], "TimeS": [], "AccelE": []})
-
-    # Merge MODE onto VISO to color the lines
-    merged_viso = pd.merge_asof(viso_df, mode_df, on="TimeUS", direction="backward")
-    merged_viso["ModeNum"] = merged_viso["ModeNum"].ffill().bfill()
-    merged_viso["ModeName"] = merged_viso["ModeNum"].map(get_mode_name)
-
-    if csv_outfile:
-        merged_viso.to_csv(csv_outfile, index=False)
-        print(f"CSV saved to {csv_outfile}")
-
-    if not (pdf_outfile or show_plot):
-        return
-
-    # Plot
-    fig, axes = plt.subplots(2, 1, figsize=(12, 12), sharex=True)
-
-    # --- PLOT 1: VISO Interval ---
+    # Subplot 1: VISO Delta Position & Confidence
     ax_viso = axes[0]
-    ax_viso.set_title("VISO Message Interval (Lag)")
-    ax_viso.set_ylabel("Interval (s)")
+    if viso_t_sec:
+        ax_viso.plot(viso_t_sec, viso_data["dX"], label="VISO dX (Forward)", color="blue")
+        ax_viso.plot(viso_t_sec, viso_data["dY"], label="VISO dY (Right)", color="cyan")
+        ax_viso.set_ylabel("Delta (m)")
+        ax_viso.legend(loc="upper left")
+
+        if any(c > 0 for c in viso_data["conf"]):
+            ax_conf = ax_viso.twinx()
+            ax_conf.plot(viso_t_sec, viso_data["conf"], label="Confidence", color="gray", linestyle="--", alpha=0.5)
+            ax_conf.set_ylabel("Conf (0-1)")
+            ax_conf.set_ylim(-0.05, 1.05)
+            ax_conf.legend(loc="upper right")
+    ax_viso.set_title(f"VISO Delta Position (from SLAM) - {os.path.basename(reader.name)}")
     ax_viso.grid(True)
-    ax_viso.set_ylim(0, 2.5)
-    ax_viso.axhline(0.4, color="r", linestyle="--", label="400ms")
 
-    # Color segments by mode
-    merged_viso["ModeChange"] = merged_viso["ModeNum"].diff().ne(0).cumsum()
+    # Subplot 2: EKF Position
+    ax_pos = axes[1]
+    if ekf_pos_t_sec:
+        ax_pos.plot(ekf_pos_t_sec, ekf_pos_data["PN"], label="EKF PN (North)", color="green")
+        ax_pos.plot(ekf_pos_t_sec, ekf_pos_data["PE"], label="EKF PE (East)", color="orange")
+        ax_pos.set_ylabel("Position (m)")
+        ax_pos.legend(loc="upper left")
+    ax_pos.set_title("EKF Estimated Position (World Frame)")
+    ax_pos.grid(True)
 
-    for _, group in merged_viso.groupby("ModeChange"):
-        mode_num = group["ModeNum"].iloc[0]
-        mode_name = get_mode_name(mode_num)
-        color = MODE_COLORS.get(mode_name, "gray")
+    # Subplot 3: EKF Innovations
+    ax_innov = axes[2]
+    if ekf_innov_t_sec:
+        ax_innov.plot(ekf_innov_t_sec, ekf_innov_data["IPN"], label="IPN (North Innov)", color="purple")
+        ax_innov.plot(ekf_innov_t_sec, ekf_innov_data["IPE"], label="IPE (East Innov)", color="magenta")
+        ax_innov.set_ylabel("Innovation (m)")
+        ax_innov.legend(loc="upper left")
+    ax_innov.set_title("EKF Innovations (High = rejecting VISO)")
+    ax_innov.grid(True)
 
-        label = mode_name if mode_name not in [line.get_label() for line in ax_viso.get_lines()] else None
-        ax_viso.plot(group["TimeS"], group["VISO_Interval"], color=color, label=label, marker=".", markersize=2)
+    # Subplot 4: RCOUT (Thrusters)
+    ax_rcout = axes[3]
+    if rcout_t_sec:
+        for ch in ["C1", "C2", "C3", "C4"]:
+            if rcout_data[ch]:
+                ax_rcout.plot(rcout_t_sec, rcout_data[ch], label=f"Ch{ch[1]} (Thruster)")
+        ax_rcout.set_ylabel("PWM")
+        ax_rcout.set_xlabel("Time (s)")
+        ax_rcout.legend(loc="upper left")
+    ax_rcout.set_title("RCOut (Thrusters)")
+    ax_rcout.grid(True)
 
-    ax_viso.legend(loc="upper right", fontsize="small")
+    # Highlight POS_HOLD mode segments if available
+    if mode_data["TimeUS"]:
+        current_mode = None
+        mode_start_t = None
+        pos_hold_labeled = False
 
-    # --- PLOT 2: PSCN / PSCE acceleration ---
-    ax_accel = axes[1]
-    ax_accel.set_title("Position Controller Acceleration (Lurching)")
-    ax_accel.set_xlabel("Time (s)")
-    ax_accel.set_ylabel("Acceleration (m/s/s)")
-    ax_accel.grid(True)
+        for i, t_us in enumerate(mode_data["TimeUS"]):
+            m_num = mode_data["ModeNum"][i]
+            m_name = get_mode_name(m_num)
+            t_sec = (t_us - t0) / 1e6
+            if m_name != current_mode:
+                if current_mode == "POS_HOLD" and mode_start_t is not None:
+                    lbl = "POS_HOLD" if not pos_hold_labeled else None
+                    pos_hold_labeled = True
+                    for ax in axes:
+                        ax.axvspan(mode_start_t, t_sec, color="yellow", alpha=0.15, label=lbl)
+                current_mode = m_name
+                mode_start_t = t_sec
 
-    # Plot north acceleration
-    if not pscn_df.empty:
-        ax_accel.plot(pscn_df["TimeS"], pscn_df["AccelN"], color="blue", label="North accel", alpha=0.7)
-
-    # Plot east acceleration
-    if not psce_df.empty:
-        ax_accel.plot(psce_df["TimeS"], psce_df["AccelE"], color="orange", label="East accel", alpha=0.7)
-
-    # Shrink legend for accel plot to avoid covering data
-    ax_accel.legend(loc="upper right", fontsize="small", ncol=2)
+        if current_mode == "POS_HOLD" and mode_start_t is not None:
+            end_t_sec = (max(all_ts) - t0) / 1e6
+            lbl = "POS_HOLD" if not pos_hold_labeled else None
+            for ax in axes:
+                ax.axvspan(mode_start_t, end_t_sec, color="yellow", alpha=0.15, label=lbl)
 
     plt.tight_layout()
+
     if pdf_outfile:
         plt.savefig(pdf_outfile)
         print(f"Plot saved to {pdf_outfile}")
@@ -168,30 +185,51 @@ def plot_viso(dfs, pdf_outfile, csv_outfile, show_plot):
     if show_plot:
         plt.show()
 
+    plt.close(fig)
+
+    # Stats summary
+    print(f"\n--- Stats for {reader.name} ---")
+    if viso_data["dX"]:
+        print(
+            f"  VISO PosDX mean: {sum(viso_data['dX']) / len(viso_data['dX']):.4f}, "
+            f"max: {max(viso_data['dX']):.4f}, min: {min(viso_data['dX']):.4f}"
+        )
+        print(
+            f"  VISO PosDY mean: {sum(viso_data['dY']) / len(viso_data['dY']):.4f}, "
+            f"max: {max(viso_data['dY']):.4f}, min: {min(viso_data['dY']):.4f}"
+        )
+        if viso_data["conf"]:
+            print(f"  VISO conf mean: {sum(viso_data['conf']) / len(viso_data['conf']):.2f}")
+
+    if ekf_innov_data["IPN"]:
+        print(
+            f"  EKF IPN mean: {sum(ekf_innov_data['IPN']) / len(ekf_innov_data['IPN']):.4f}, "
+            f"max: {max(ekf_innov_data['IPN']):.4f}, min: {min(ekf_innov_data['IPN']):.4f}"
+        )
+        print(
+            f"  EKF IPE mean: {sum(ekf_innov_data['IPE']) / len(ekf_innov_data['IPE']):.4f}, "
+            f"max: {max(ekf_innov_data['IPE']):.4f}, min: {min(ekf_innov_data['IPE']):.4f}"
+        )
+
+    if rcout_data["C1"]:
+        print(f"  RCOut Ch1 mean: {sum(rcout_data['C1']) / len(rcout_data['C1']):.1f}")
+        print(f"  RCOut Ch2 mean: {sum(rcout_data['C2']) / len(rcout_data['C2']):.1f}")
+        print(f"  RCOut Ch3 mean: {sum(rcout_data['C3']) / len(rcout_data['C3']):.1f}")
+        print(f"  RCOut Ch4 mean: {sum(rcout_data['C4']) / len(rcout_data['C4']):.1f}")
+
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description=__doc__)
     add_segment_args(parser, ".BIN")
     parser.add_argument("--pdf", action="store_true", help="Write plot to PDF instead of showing it")
-    parser.add_argument("--csv", action="store_true", help="Write results to CSV")
-
     args = parser.parse_args()
-    readers = choose_reader_list(args, None, ".BIN")
+
+    readers = choose_reader_list(args, WANTED_TYPES, ".BIN")
 
     for reader in readers:
-        print(f"Processing {reader.name}...")
-        dfs = load_data(reader)
-
-        pdf_outfile = None
-        if args.pdf:
-            pdf_outfile = util.get_outfile_name(reader.name, "", ".pdf")
-
-        csv_outfile = None
-        if args.csv:
-            csv_outfile = util.get_outfile_name(reader.name, "", ".csv")
-
-        show_plot = not (args.pdf or args.csv)
-        plot_viso(dfs, pdf_outfile, csv_outfile, show_plot)
+        pdf_outfile = util.get_outfile_name(reader.name, "", ".pdf") if args.pdf else None
+        show_plot = not args.pdf
+        process_reader(reader, pdf_outfile=pdf_outfile, show_plot=show_plot)
 
 
 if __name__ == "__main__":

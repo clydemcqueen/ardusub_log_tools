@@ -1,4 +1,4 @@
-# VISO DataFlash Message
+# VISO DataFlash Message -- from VISION_POSITION_DELTA MAVLink messages
 Commit: abe1721cf5
 
 **Purpose**: Logs Visual Odometry body-frame deltas.

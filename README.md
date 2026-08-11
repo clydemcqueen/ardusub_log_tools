@@ -22,6 +22,7 @@ Other requirements are listed in [requirements.txt](requirements.txt).
 * [Dealing with BAD_DATA message](docs/bad_data.md)
 * [Understanding timestamps and synchronizing logs](docs/timesync.md)
 * [Working with BlueOS mcap logs](docs/working_with_mcap.md)
+* [Dataflash table definitions](dataflash)
 
 ## Segments
 
@@ -267,8 +268,10 @@ options:
 
 ## All tools
 
+* [BIN_battery.py](BIN_battery.py) - Provide information about the battery type and usage from a dataflash (BIN) file.
 * [BIN_ekf_status.py](BIN_ekf_status.py) - Report on EKF3 status (XKF4.SS field).
 * [BIN_explode.py](BIN_explode.py) - Read ArduSub dataflash messages from a BIN file and write a csv file for each message type.
+* [BIN_extract_files.py](BIN_extract_files.py) - Extract embedded files from a dataflash (BIN) file.
 * [BIN_filter.py](BIN_filter.py) - Read Dataflash (BIN) file(s), filter messages, and write new BIN file(s) with the kept messages.
 * [BIN_graph_alt.py](BIN_graph_alt.py) - Read an ArduSub BIN file and produce a graph of altitude readings.
 * [BIN_gyro_bias_stats.py](BIN_gyro_bias_stats.py) - Read dataflash logs and report on high / low XKF1.G? (gyro_bias) values.
@@ -280,6 +283,7 @@ options:
 * [BIN_messages.py](BIN_messages.py) - Read a dataflash (BIN) file and write the entries in the MSG and EV tables to stdout.
 * [BIN_param.py](BIN_param.py) - Read PARM messages from a dataflash file and write them to a params file.
 * [BIN_plot_surftrak.py](BIN_plot_surftrak.py) - Read BIN files and plot rangefinder vs target for SURFTRAK and GUIDED above-terrain modes.
+* [BIN_plot_viso.py](BIN_plot_viso.py) - Read BIN files and plot VISO (Visual Odometry) data alongside EKF estimated position, EKF innovations, and thruster outputs (RCOU).
 * [check_offset_stability.py](check_offset_stability.py) - Analyze the stability of the timestamp offset (unix_time - boot_time) in a tlog file.
 * [check_rtc_time.py](check_rtc_time.py) - Check log files (Dataflash .BIN and MAVLink .tlog) for the presence of GPS or Unix time.
 * [dive.py](dive.py) - Read all BIN and tlog files in a directory and figure out how they line up.
