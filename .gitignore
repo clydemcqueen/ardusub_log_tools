@@ -16,3 +16,6 @@ venv/
 # Temp data
 tmp
 dive_logs
+
+# If we are in a ros2 workspace
+COLCON_IGNORE
