@@ -2,14 +2,20 @@
 
 ## FAQ
 
+Q: What versions of BlueOS are supported by these mcap tools?
+* v1.15.0-beta.37. (This version does not save video by default, so the mcap files are fairly small.)
+
+Q: Where will I find mcap files? They are not in the BlueOS _Log Browser_.
+* Go to the _File Browser_, drill into `userdata/recorder`.
+
 Q: When does BlueOS create a new mcap file?
 * BlueOS creates a new mcap file every time the Sub is armed. It is closed when the Sub is disarmed.
 
 Q: Can I download an open mcap file from BlueOS at the end if a dive, or do I have to wait for it to close?
-* Not sure, but you can disarm the Sub to close it.
+* You should wait for it to close. You can disarm the Sub to close it.
 
 Q: Do mcap files record the same information as QGC-generated tlog files?
-* Mostly, yes. See differences below.
+* Mostly, yes. See the differences below.
 
 Q: How do I parse mcap files in Python?
 * See [mcap_types.py](../mcap_types.py) for a simple example.
