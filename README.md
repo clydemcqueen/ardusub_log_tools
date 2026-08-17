@@ -269,7 +269,7 @@ options:
 ## All tools
 
 * [BIN_battery.py](BIN_battery.py) - Provide information about the battery type and usage from a dataflash (BIN) file.
-* [BIN_ekf_status.py](BIN_ekf_status.py) - Report on EKF3 status (XKF4.SS field).
+* [BIN_ekf_status.py](BIN_ekf_status.py) - Report on EKF3 status (XKF4.SS and XKFS.SS fields).
 * [BIN_explode.py](BIN_explode.py) - Read ArduSub dataflash messages from a BIN file and write a csv file for each message type.
 * [BIN_extract_files.py](BIN_extract_files.py) - Extract embedded files from a dataflash (BIN) file.
 * [BIN_filter.py](BIN_filter.py) - Read Dataflash (BIN) file(s), filter messages, and write new BIN file(s) with the kept messages.

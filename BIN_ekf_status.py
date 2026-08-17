@@ -1,65 +1,95 @@
 #!/usr/bin/env python3
 
 """
-Report on EKF3 status (XKF4.SS field).
+Report on EKF3 status (XKF4.SS and XKFS.SS fields).
+
+EKF status bits:
+  const             EKF_CONST_POS_MODE      Not enough information to estimate xy position
+  att               EKF_ATTITUDE            Good estimate for attitude (roll, pitch yaw)
+  pos_xy rel        EKF_POS_HORIZ_REL       Good estimate for relative xy position
+  pos_xy abs        EKF_POS_HORIZ_ABS       Good estimate for absolute xy position
+  pos_xy pred_rel   EKF_PRED_POS_HORIZ_REL  Good prediction for relative xy position
+  pos_xy pred_abs   EKF_PRED_POS_HORIZ_ABS  Good prediction for absolute xy position
+  pos_z abs         EKF_POS_VERT_ABS        Good estimate for absolute z position
+  pos_z agl         EKF_POS_VERT_AGL        Good estimate for z position "above ground level"
+  vel xy            EKF_VELOCITY_HORIZ      Good estimate for xy velocity
+  vel z             EKF_VELOCITY_VERT       Good estimate for z velocity
+
+Example EKF status reports:
+
+SITL (GPS):                           att pos_xy: [rel abs pred_rel pred_abs] pos_z: [abs agl] vel: [xy z]
+Sub with just a barometer:      const att pos_xy: [                         ] pos_z: [abs agl] vel: [xy z]
+Sub with a DVL:                       att pos_xy: [rel     pred_rel         ] pos_z: [abs agl] vel: [xy z]
 """
 
+import datetime
 from argparse import ArgumentParser
 
+import pymavlink.dialects.v20.ardupilotmega as apm
 from pymavlink import mavutil
 
 import util
 
-# TODO copy process_ekf_status_report from tlog_timeline.py to reduce output
-
-STATUS_BITS = [
-    "attitude          ",  # 0 - true if attitude estimate is valid
-    "horiz_vel         ",  # 1 - true if horizontal velocity estimate is valid
-    "vert_vel          ",  # 2 - true if the vertical velocity estimate is valid
-    "horiz_pos_rel     ",  # 3 - true if the relative horizontal position estimate is valid
-    "horiz_pos_abs     ",  # 4 - true if the absolute horizontal position estimate is valid
-    "vert_pos          ",  # 5 - true if the vertical position estimate is valid
-    "terrain_alt       ",  # 6 - true if the terrain height estimate is valid
-    "const_pos_mode    ",  # 7 - true if we are in const position mode
-    "pred_horiz_pos_rel",  # 8 - true if filter expects it can produce a good relative horizontal position estimate - used before takeoff
-    "pred_horiz_pos_abs",  # 9 - true if filter expects it can produce a good absolute horizontal position estimate - used before takeoff
-    "takeoff_detected  ",  # 10 - true if optical flow takeoff has been detected
-    "takeoff           ",  # 11 - true if filter is compensating for baro errors during takeoff
-    "touchdown         ",  # 12 - true if filter is compensating for baro errors during touchdown
-    "using_gps         ",  # 13 - true if we are using GPS position
-    "gps_glitching     ",  # 14 - true if GPS glitching is affecting navigation accuracy
-    "gps_quality_good  ",  # 15 - true if we can use GPS for navigation
-    "initialized       ",  # 16 - true if the EKF has ever been healthy
-    "rejecting_airspeed",  # 17 - true if we are rejecting airspeed data
-    "dead_reckoning    ",  # 18 - true if we are dead reckoning (e.g. no position or velocity source)
+SOURCE_SETS = [
+    "primary (0)",
+    "secondary (1)",
+    "tertiary (2)",
 ]
+
+
+def format_ekf_status(flags: int) -> str:
+    if flags == 0:
+        return "EKF uninitialized"
+
+    s = f"EKF status: {flags:6}"
+    s += f" {'const' if flags & apm.EKF_CONST_POS_MODE else '':5}"
+    s += f" {'att' if flags & apm.EKF_ATTITUDE else '':3}"
+    s += " pos_xy: ["
+    s += f"{'rel' if flags & apm.EKF_POS_HORIZ_REL else '':3}"
+    s += f" {'abs' if flags & apm.EKF_POS_HORIZ_ABS else '':3}"
+    s += f" {'pred_rel' if flags & apm.EKF_PRED_POS_HORIZ_REL else '':8}"
+    s += f" {'pred_abs' if flags & apm.EKF_PRED_POS_HORIZ_ABS else '':8}"
+    s += "] pos_z: ["
+    s += f"{'abs' if flags & apm.EKF_POS_VERT_ABS else '':3}"
+    s += f" {'agl' if flags & apm.EKF_POS_VERT_AGL else '':3}"
+    s += "] vel: ["
+    s += f"{'xy' if flags & apm.EKF_VELOCITY_HORIZ else '':2}"
+    s += f" {'z' if flags & apm.EKF_VELOCITY_VERT else '':1}"
+    s += "]"
+    return s
 
 
 class FilterStatusReport:
     def __init__(self, infile: str):
         self.infile = infile
 
-        # Count # of msg values
-        self.message_counts = {}
-
     def read_and_report(self):
         print(f"Results for {self.infile}")
         mlog = mavutil.mavlink_connection(self.infile, robust_parsing=False, dialect="ardupilotmega")
 
-        prev_status = 0
+        print("Time                | Elapsed : Message")
 
-        while (msg := mlog.recv_match(blocking=False, type=["XKF4"])) is not None:
-            curr_status = msg.SS
+        first_ts = None
+        prev_status = None
+        prev_ss = None
 
-            if curr_status != prev_status:
-                for bit in range(19):
-                    prev_val = bool(prev_status & 1 << bit)
-                    curr_val = bool(curr_status & 1 << bit)
-                    if curr_val != prev_val:
-                        print(f"{util.time_us_str(msg.TimeUS)} {'+' if curr_val else '-'} {STATUS_BITS[bit]}")
-                print()
+        while (msg := mlog.recv_match(blocking=False, type=["XKF4", "XKFS"])) is not None:
+            ts = getattr(msg, "_timestamp", msg.TimeUS * 1e-6)
+            if first_ts is None:
+                first_ts = ts
 
-            prev_status = curr_status
+            prefix = datetime.datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M:%S") + f" | {ts - first_ts:7.2f} : "
+
+            msg_type = msg.get_type()
+            if msg_type == "XKF4":
+                if msg.SS != prev_status:
+                    print(f"{prefix}{format_ekf_status(msg.SS)}")
+                    prev_status = msg.SS
+            elif msg_type == "XKFS":
+                if msg.SS != prev_ss:
+                    ss_str = SOURCE_SETS[msg.SS] if 0 <= msg.SS < len(SOURCE_SETS) else f"unknown ({msg.SS})"
+                    print(f"{prefix}Source set: {ss_str}")
+                    prev_ss = msg.SS
 
 
 def main():
