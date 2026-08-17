@@ -9,6 +9,7 @@
 
 import pytest
 
+import BIN_ekf_status
 import BIN_extract_files
 import BIN_graph_alt
 import BIN_info
@@ -158,6 +159,10 @@ class TestTools:
 
     def test_bin_graph_alt(self):
         BIN_graph_alt.process_reader(FileReader("testing/small2.BIN", ["AHR2", "XKF1", "BARO", "ORGN", "POS"]))
+
+    def test_bin_ekf_status(self):
+        tool = BIN_ekf_status.FilterStatusReport("testing/small2.BIN")
+        tool.read_and_report()
 
     def test_tlog_merge(self):
         tool = tlog_merge.TelemetryLogReader(
