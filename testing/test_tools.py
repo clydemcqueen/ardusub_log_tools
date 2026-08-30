@@ -14,8 +14,14 @@ import BIN_extract_files
 import BIN_graph_alt
 import BIN_info
 import BIN_merge
+import BIN_plot_local
 import map_maker
-import plot_local_position
+import mcap_dump_extension_logs
+import mcap_explode
+import mcap_explode_extension_logs
+import mcap_plot_local
+import mcap_to_tlog
+import mcap_wl_ugps_acoustic_info
 import show_types
 import table_types
 import tlog_bad_data
@@ -23,6 +29,7 @@ import tlog_info
 import tlog_map_maker
 import tlog_merge
 import tlog_param
+import tlog_plot_local
 import tlog_scan
 import util
 from file_reader import FileReader
@@ -56,18 +63,18 @@ class TestTools:
     def test_nmea_map_maker(self):
         map_maker.build_map_from_txt("testing/nmea_log.txt", "testing/nmea_log.html", False, [None, None], 18)
 
-    def test_plot_local_position(self):
-        plot_local_position.plot_local_position(
-            FileReader("testing/small.tlog", plot_local_position.MSG_TYPES), "testing/small.pdf"
+    def test_tlog_plot_local(self):
+        tlog_plot_local.plot_local_position(
+            FileReader("testing/small.tlog", tlog_plot_local.MSG_TYPES), "testing/small.pdf"
         )
 
-    def test_plot_local_position_segment(self):
+    def test_tlog_plot_local_segment(self):
         segment_reader = SegmentReader(
             Segment(1683220544, 1683220546, "segment1"),
-            FileReader("testing/small.tlog", plot_local_position.MSG_TYPES),
+            FileReader("testing/small.tlog", tlog_plot_local.MSG_TYPES),
             None,
         )
-        plot_local_position.plot_local_position(segment_reader, "testing/segment1.pdf")
+        tlog_plot_local.plot_local_position(segment_reader, "testing/segment1.pdf")
 
     def test_tlog_types(self):
         tool = show_types.TypeFinder("testing/small.tlog")
@@ -276,3 +283,126 @@ class TestTools:
     def test_unknown_comp_and_state_name(self):
         assert table_types.comp_name(230) == "mav_comp_id_230"
         assert table_types.state_name(999) == "mav_state_999"
+
+    def test_mcap_explode(self, tmp_path):
+        out_prefix = str(tmp_path / "recorder_20260816_203739")
+        reader = mcap_explode.McapLogReader(
+            "testing/recorder_20260816_203739.mcap",
+            ["AHRS", "HEARTBEAT"],
+            500000,
+            False,
+            None,
+            None,
+            False,
+            False,
+            False,
+        )
+        reader.infile = out_prefix + ".mcap"
+        reader.read_mcap()
+        assert len(reader.tables["AHRS"]) == 1113
+        assert len(reader.tables["HEARTBEAT"]) == 346
+
+        reader.add_rate_field()
+        assert "HEARTBEAT.rate" in reader.tables["HEARTBEAT"]._rows[0]
+
+        reader.write_msg_csv_files()
+        ahrs_csv = tmp_path / "recorder_20260816_203739_AHRS.csv"
+        heartbeat_csv = tmp_path / "recorder_20260816_203739_HEARTBEAT.csv"
+        assert ahrs_csv.is_file()
+        assert heartbeat_csv.is_file()
+
+    def test_mcap_resolve_field(self):
+        assert mcap_explode.resolve_field_value("mavtype", {"type": "MAV_TYPE_SUBMARINE"}) == ("type", 12)
+        assert mcap_explode.resolve_field_value("base_mode", "") == ("base_mode", 0)
+        assert mcap_explode.resolve_field_value("base_mode", "MAV_MODE_FLAG_SAFETY_ARMED") == ("base_mode", 128)
+        assert mcap_explode.resolve_field_value("param_id", "BRD_SAFETYENABLE") == ("param_id", "BRD_SAFETYENABLE")
+
+    def test_mcap_plot_local(self, tmp_path):
+        outfile = str(tmp_path / "recorder.pdf")
+        mcap_plot_local.plot_mcap_local("testing/recorder_20260816_203739.mcap", outfile, dvl=True)
+        assert (tmp_path / "recorder.pdf").is_file()
+
+    def test_bin_plot_local(self, tmp_path):
+        outfile = str(tmp_path / "small2.pdf")
+        BIN_plot_local.plot_bin_local(FileReader("testing/small2.BIN", BIN_plot_local.MSG_TYPES), outfile, dvl=True)
+        assert (tmp_path / "small2.pdf").is_file()
+
+    def test_mcap_to_tlog(self, tmp_path):
+        import shutil
+
+        from pymavlink import mavutil
+
+        test_mcap = tmp_path / "test.mcap"
+        shutil.copy("testing/recorder_20260816_203739.mcap", test_mcap)
+        mcap_to_tlog.mcap_to_tlog(str(test_mcap))
+
+        out_tlog = tmp_path / "test.tlog"
+        assert out_tlog.is_file()
+
+        conn = mavutil.mavlink_connection(str(out_tlog), dialect="ardupilotmega")
+        bad_count = 0
+        good_count = 0
+        while True:
+            msg = conn.recv_msg()
+            if msg is None:
+                break
+            if msg.get_type() == "BAD_DATA":
+                bad_count += 1
+            else:
+                good_count += 1
+
+        assert bad_count == 0
+        assert good_count == 10361
+
+    def test_mcap_dump_extension_logs(self, tmp_path):
+        import shutil
+
+        test_mcap = tmp_path / "test.mcap"
+        shutil.copy("testing/recorder_20260826_181307_no_video.mcap", test_mcap)
+        counts = mcap_dump_extension_logs.dump_extension_logs(str(test_mcap))
+
+        assert counts["waterlinked.ugps"] == 779
+        assert counts["clydemcqueen.wl_ugps_external"] == 120
+        assert counts["blueos.major_tom"] == 92
+        assert counts["clydemcqueen.surftrak_fixit"] == 21
+
+        assert (tmp_path / "test_waterlinked.ugps.txt").is_file()
+        assert (tmp_path / "test_clydemcqueen.wl_ugps_external.txt").is_file()
+        assert (tmp_path / "test_blueos.major_tom.txt").is_file()
+        assert (tmp_path / "test_clydemcqueen.surftrak_fixit.txt").is_file()
+
+    def test_mcap_explode_extension_logs_csv(self, tmp_path):
+        import shutil
+
+        test_mcap = tmp_path / "test.mcap"
+        shutil.copy("testing/recorder_20260826_181307_no_video.mcap", test_mcap)
+        counts = mcap_explode_extension_logs.explode_extension_logs(str(test_mcap), use_json=False)
+
+        assert counts["wl_ugps_external"] == 40
+        assert counts["waterlinked.ugps"] == 23
+
+        assert (tmp_path / "test_wl_ugps_external.csv").is_file()
+        assert (tmp_path / "test_waterlinked.ugps.csv").is_file()
+
+    def test_mcap_explode_extension_logs_json(self, tmp_path):
+        import shutil
+
+        test_mcap = tmp_path / "test.mcap"
+        shutil.copy("testing/recorder_20260826_181307_no_video.mcap", test_mcap)
+        counts = mcap_explode_extension_logs.explode_extension_logs(str(test_mcap), use_json=True)
+
+        assert counts["wl_ugps_external"] == 40
+        assert counts["waterlinked.ugps"] == 23
+
+        assert (tmp_path / "test_wl_ugps_external.json").is_file()
+        assert (tmp_path / "test_waterlinked.ugps.json").is_file()
+
+    def test_mcap_wl_ugps_acoustic_info(self, capsys):
+        info = mcap_wl_ugps_acoustic_info.AcousticLogInfo("testing/recorder_20260826_181307_no_video.mcap")
+        info.read_and_report()
+        captured = capsys.readouterr().out
+
+        assert "Total readings: 23" in captured
+        assert "Valid acoustic fixes: 0 / 23 (0.00%)" in captured
+        assert "Time of first valid acoustic fix: None" in captured
+        assert "Transducer 0 (R1, -x, aft)" in captured
