@@ -22,12 +22,6 @@ Q: How do I parse mcap files in Python?
 
 ## How mcap files differ from QGC-generated tlog files
 
-### Tools
-
-The following tools are useful for understanding the differences:
-* [mcap_to_tlog.py](../mcap_to_tlog.py) will extract MAVLink messages from an mcap file, and create a tlog file.
-* [mcap_tlog_diff.py](../mcap_tlog_diff.py) will compare a QGC-generated tlog file to a BlueOS-generated mcap file.
-
 ### Span
 
 QGC-generated tlog files cover the entire time that QGC was open, so you might end up with 1 tlog file for a dive.

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Look for LOCATION_POSITION_NED and VISION_POSITION_DELTA messages in tlog files, plot x and y, and write PDF files.
+Look for LOCAL_POSITION_NED and VISION_POSITION_DELTA messages in tlog files, plot x and y, and write PDF files.
 
 Supports segments.
 """
