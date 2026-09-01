@@ -3,6 +3,9 @@
 """
 Read MAVLink PARAM_VALUE messages from a tlog file (telemetry log), reconstruct the parameter state of a vehicle, and
 write the parameters to a QGC-compatible params file.
+
+NOTE: this tool worked pretty well when we were using QGC-generated tlog files, but the BlueOS-generated mcap and tlog
+do not contain a full list of parameters, and so we can't use them. Switch to BIN_param.py.
 """
 
 import os
@@ -281,6 +284,8 @@ def main():
         files = util.get_blueos_tlog_paths(files, args.recurse)
     elif args.qgc:
         files = util.get_qgc_tlog_paths(files, args.recurse)
+
+    print("NOTE: BlueOS-generated mcap and tlog files do not contain the full set of parameters!")
     print(f"Processing {len(files)} files")
 
     previous_file = None
