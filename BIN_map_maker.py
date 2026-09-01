@@ -44,6 +44,7 @@ def build_map_from_BIN(reader, outfile, verbose, center, zoom, hdop_max):
             continue
 
         if msg_type not in tables:
+            print(f"Good {msg_type} messages in {reader.name}")
             tables[msg_type] = []
 
         tables[msg_type].append(data)
@@ -82,6 +83,9 @@ def main():
         msg_types = args.types.split(",")
 
     readers = choose_reader_list(args, msg_types, ".BIN")
+
+    print("GPS: GPS_INPUT received, light grey line")
+    print("POS: EKF output, blue line")
 
     for reader in readers:
         outfile = util.get_outfile_name(reader.name, "", ".html")

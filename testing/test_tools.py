@@ -14,7 +14,9 @@ import BIN_extract_files
 import BIN_graph_alt
 import BIN_info
 import BIN_merge
+import BIN_param
 import BIN_plot_local
+import BIN_timeline
 import map_maker
 import mcap_dump_extension_logs
 import mcap_explode
@@ -31,6 +33,7 @@ import tlog_merge
 import tlog_param
 import tlog_plot_local
 import tlog_scan
+import tlog_timeline
 import util
 from file_reader import FileReader
 from segment_reader import Segment, SegmentFormatException, SegmentReader, parse_segment
@@ -190,6 +193,17 @@ class TestTools:
     def test_tlog_param(self):
         tool = tlog_param.TelemetryLogParam("testing/small.tlog", True)
         tool.write_params_file("testing/small.params")
+
+    def test_bin_param(self):
+        from pymavlink import mavutil
+
+        mlog = mavutil.mavlink_connection("testing/small2.BIN", robust_parsing=False, dialect="ardupilotmega")
+        params = BIN_param.DataFlashParams()
+        while (msg := mlog.recv_match(blocking=False, type=["PARM"])) is not None:
+            params.add(msg)
+        params.write_params_file("testing/small2.params")
+        assert len(params.params) > 0
+        BIN_param.print_changes(params, params)
 
     def test_tlog_scan(self):
         tool = tlog_scan.Scanner("testing/small.tlog", ["GLOBAL_POSITION_INT"])
@@ -406,3 +420,19 @@ class TestTools:
         assert "Valid acoustic fixes: 0 / 23 (0.00%)" in captured
         assert "Time of first valid acoustic fix: None" in captured
         assert "Transducer 0 (R1, -x, aft)" in captured
+
+    def test_bin_timeline(self, capsys):
+        reader = FileReader("testing/small2.BIN", BIN_timeline.MSG_TYPES)
+        BIN_timeline.Timeline(reader, ansi=False)
+        captured = capsys.readouterr().out
+        assert "Arming motors" in captured
+        assert "DISARMED MANUAL (19)" in captured
+        assert "Event: SURFACED" in captured
+        assert "Global origin set to" in captured
+        assert "EKF status:" in captured
+
+    def test_tlog_timeline(self, capsys):
+        reader = FileReader("testing/small.tlog", tlog_timeline.MSG_TYPES)
+        tlog_timeline.Timeline(reader, ansi=False)
+        captured = capsys.readouterr().out
+        assert "Time" in captured

@@ -112,6 +112,8 @@ tlog_plot_local.py $SEGMENTS *.tlog
 * [BIN_plot_local.py](BIN_plot_local.py) - Look for XKF1 and VISO messages in BIN files, plot x and y, and write PDF files.
 * [BIN_plot_surftrak.py](BIN_plot_surftrak.py) - Read BIN files and plot rangefinder vs target for SURFTRAK and GUIDED above-terrain modes.
 * [BIN_plot_viso.py](BIN_plot_viso.py) - Read BIN files and plot VISO (Visual Odometry) data alongside EKF estimated position, EKF innovations, and thruster outputs (RCOU).
+* [BIN_timeline.py](BIN_timeline.py) - Read Dataflash messages from a BIN file and generate a timeline.
+
 
 ## Tools that read tlog and BIN files
 
