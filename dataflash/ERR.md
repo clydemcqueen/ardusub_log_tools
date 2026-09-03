@@ -7,5 +7,7 @@ Commit: abe1721cf5
 | Field | Description | Units/Note |
 | :--- | :--- | :--- |
 | **TimeUS** | Time since system startup | microseconds |
-| **Subsys** | Subsystem in which the error occurred | See `LogErrorSubsystem` enum |
-| **ECode** | Subsystem-specific error code | See `LogErrorCode` for the subsystem |
+| **Subsys** | Subsystem in which the error occurred | See [`LogErrorSubsystem`](../docs/error_codes.md) |
+| **ECode** | Subsystem-specific error code | See [`LogErrorCode`](../docs/error_codes.md) |
+
+For a complete reference of all subsystems, error codes, and common dive event signatures, see [ArduSub Error Codes Guide](../docs/error_codes.md).

@@ -86,6 +86,180 @@ log_error_code = {
     "GPS_GLITCH": 2,
 }
 
+SUB_MODES = {
+    0: "STABILIZE",
+    1: "ACRO",
+    2: "ALT_HOLD",
+    3: "AUTO",
+    4: "GUIDED",
+    7: "CIRCLE",
+    9: "SURFACE",
+    16: "POSHOLD",
+    19: "MANUAL",
+    20: "MOTOR_DETECT",
+    21: "SURFTRAK",
+}
+
+
+def decode_error(subsys_id: int, ecode: int) -> tuple[str, str]:
+    """
+    Decodes ArduSub 4.5 Dataflash ERR Subsys and ECode numbers into (subsys_name, ecode_name).
+    """
+    try:
+        subsys = LogErrorSubsystem(subsys_id)
+        subsys_name = subsys.name
+    except ValueError:
+        subsys_name = f"UNKNOWN_{subsys_id}"
+
+    # Subsystem-specific decoding
+    if subsys_name == "FLIGHT_MODE":
+        return subsys_name, SUB_MODES.get(ecode, f"MODE_{ecode}")
+
+    if subsys_name == "EKF_PRIMARY":
+        return subsys_name, f"CORE_{ecode}"
+
+    if subsys_name == "FAILSAFE_FENCE":
+        if ecode == 0:
+            return subsys_name, "FAILSAFE_RESOLVED"
+        breaches = []
+        if ecode & 1:
+            breaches.append("ALT_MAX")
+        if ecode & 2:
+            breaches.append("CIRCLE")
+        if ecode & 4:
+            breaches.append("POLYGON")
+        if ecode & 8:
+            breaches.append("ALT_MIN")
+        return subsys_name, "|".join(breaches) if breaches else f"BREACH_{ecode}"
+
+    # Failsafe subsystems
+    if subsys_name.startswith("FAILSAFE_") or subsys_name in ("PILOT_INPUT", "CPU", "THRUST_LOSS_CHECK"):
+        if subsys_name == "FAILSAFE_SENSORS" and ecode == 3:
+            return subsys_name, "BAD_DEPTH"
+        if ecode == 0:
+            return subsys_name, "FAILSAFE_RESOLVED"
+        if ecode == 1:
+            return subsys_name, "FAILSAFE_OCCURRED"
+
+    # EKF variance checks
+    if subsys_name == "EKFCHECK":
+        if ecode == 0:
+            return subsys_name, "EKFCHECK_VARIANCE_CLEARED"
+        if ecode == 2:
+            return subsys_name, "EKFCHECK_BAD_VARIANCE"
+
+    # Barometer / Depth
+    if subsys_name == "BARO":
+        baro_codes = {
+            0: "ERROR_RESOLVED",
+            1: "FAILED_TO_INITIALISE",
+            2: "BARO_GLITCH",
+            3: "BAD_DEPTH",
+            4: "UNHEALTHY",
+        }
+        if ecode in baro_codes:
+            return subsys_name, baro_codes[ecode]
+
+    # GPS
+    if subsys_name == "GPS":
+        gps_codes = {
+            0: "ERROR_RESOLVED",
+            1: "FAILED_TO_INITIALISE",
+            2: "GPS_GLITCH",
+            4: "UNHEALTHY",
+        }
+        if ecode in gps_codes:
+            return subsys_name, gps_codes[ecode]
+
+    # Compass
+    if subsys_name == "COMPASS":
+        compass_codes = {
+            0: "ERROR_RESOLVED",
+            1: "FAILED_TO_INITIALISE",
+            4: "UNHEALTHY",
+        }
+        if ecode in compass_codes:
+            return subsys_name, compass_codes[ecode]
+
+    # Navigation
+    if subsys_name == "NAVIGATION":
+        nav_codes = {
+            0: "ERROR_RESOLVED",
+            2: "FAILED_TO_SET_DESTINATION",
+            3: "RESTARTED_RTL",
+            4: "FAILED_CIRCLE_INIT",
+            5: "DEST_OUTSIDE_FENCE",
+            6: "RTL_MISSING_RNGFND",
+        }
+        if ecode in nav_codes:
+            return subsys_name, nav_codes[ecode]
+
+    # Crash check
+    if subsys_name == "CRASH_CHECK":
+        crash_codes = {
+            0: "ERROR_RESOLVED",
+            1: "CRASH_CHECK_CRASH",
+            2: "CRASH_CHECK_LOSS_OF_CONTROL",
+        }
+        if ecode in crash_codes:
+            return subsys_name, crash_codes[ecode]
+
+    # Radio
+    if subsys_name == "RADIO":
+        radio_codes = {
+            0: "ERROR_RESOLVED",
+            1: "FAILED_TO_INITIALISE",
+            2: "RADIO_LATE_FRAME",
+        }
+        if ecode in radio_codes:
+            return subsys_name, radio_codes[ecode]
+
+    # Main scheduler
+    if subsys_name == "MAIN":
+        if ecode == 0:
+            return subsys_name, "ERROR_RESOLVED"
+        if ecode == 1:
+            return subsys_name, "MAIN_INS_DELAY"
+
+    # Internal error
+    if subsys_name == "INTERNAL_ERROR":
+        if ecode == 0:
+            return subsys_name, "ERROR_RESOLVED"
+        if ecode == 1:
+            return subsys_name, "INTERNAL_ERRORS_DETECTED"
+
+    # Terrain
+    if subsys_name == "TERRAIN":
+        if ecode == 0:
+            return subsys_name, "ERROR_RESOLVED"
+        if ecode == 2:
+            return subsys_name, "MISSING_TERRAIN_DATA"
+
+    # Parachutes
+    if subsys_name == "PARACHUTES":
+        parachute_codes = {
+            0: "ERROR_RESOLVED",
+            2: "PARACHUTE_TOO_LOW",
+            3: "PARACHUTE_LANDED",
+        }
+        if ecode in parachute_codes:
+            return subsys_name, parachute_codes[ecode]
+
+    # Flip
+    if subsys_name == "FLIP":
+        if ecode == 0:
+            return subsys_name, "ERROR_RESOLVED"
+        if ecode == 2:
+            return subsys_name, "FLIP_ABANDONED"
+
+    # Fallback to general codes
+    general_codes = {
+        0: "ERROR_RESOLVED",
+        1: "FAILED_TO_INITIALISE",
+        4: "UNHEALTHY",
+    }
+    return subsys_name, general_codes.get(ecode, str(ecode))
+
 
 class LogEvent(Enum):
     ARMED = 10
@@ -193,18 +367,13 @@ class DataflashLogReader:
                 except ValueError:
                     print(f"Warning: unknown event ID {raw_data['Id']}")
             elif msg_type == "ERR":
-                try:
-                    subsys = LogErrorSubsystem(raw_data["Subsys"])
-                    # There are duplicate error codes, so find all matching names
-                    ecode_names = [name for name, code in log_error_code.items() if code == raw_data["ECode"]]
-                    self._messages.append(
-                        {
-                            "timestamp": timestamp,
-                            "message": f"Error: Subsys {subsys.name}, ECode {','.join(ecode_names)}",
-                        }
-                    )
-                except ValueError:
-                    print(f"Warning: unknown subsystem ID {raw_data['Subsys']}")
+                subsys_name, ecode_name = decode_error(raw_data["Subsys"], raw_data["ECode"])
+                self._messages.append(
+                    {
+                        "timestamp": timestamp,
+                        "message": f"Error: Subsys {subsys_name}, ECode {ecode_name}",
+                    }
+                )
             else:
                 # Should not happen
                 print(f"Error: unexpected message type {msg_type}")
