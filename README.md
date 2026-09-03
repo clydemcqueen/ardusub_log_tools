@@ -13,6 +13,7 @@ Other requirements are listed in [requirements.txt](requirements.txt).
 * [Understanding timestamps and synchronizing logs](docs/timesync.md)
 * [Working with BlueOS mcap logs](docs/working_with_mcap.md)
 * [Dataflash table definitions](dataflash)
+* [ArduSub Error Codes and Subsystems Reference](docs/error_codes.md)
 
 ## File globbing and recursion
 

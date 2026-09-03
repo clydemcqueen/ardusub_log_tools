@@ -30,7 +30,7 @@ import datetime
 import pymavlink.dialects.v20.ardupilotmega as apm
 
 import table_types
-from BIN_messages import LogErrorSubsystem, LogEvent, log_error_code
+from BIN_messages import LogEvent, decode_error
 from BIN_param import DataflashParam
 from segment_reader import add_segment_args, choose_reader_list
 from tlog_param import NOISY_PARAMS
@@ -230,12 +230,10 @@ class Timeline:
     def process_err(self, msg):
         subsys_id = getattr(msg, "Subsys", None)
         ecode = getattr(msg, "ECode", None)
-        try:
-            subsys = LogErrorSubsystem(subsys_id)
-            ecode_names = [name for name, code in log_error_code.items() if code == ecode]
-            ecode_str = ",".join(ecode_names) if ecode_names else str(ecode)
-            self.report(f"Error: Subsys {subsys.name}, ECode {ecode_str}", self.colors.status_text)
-        except ValueError:
+        if subsys_id is not None and ecode is not None:
+            subsys_name, ecode_name = decode_error(subsys_id, ecode)
+            self.report(f"Error: Subsys {subsys_name}, ECode {ecode_name}", self.colors.status_text)
+        else:
             self.report(f"Error: Subsys unknown ({subsys_id}), ECode {ecode}", self.colors.status_text)
 
     def process_mavc(self, msg):
