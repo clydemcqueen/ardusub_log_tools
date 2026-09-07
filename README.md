@@ -131,6 +131,7 @@ tlog_plot_local.py $SEGMENTS *.tlog
 * [mcap_dump_extension_logs.py](mcap_dump_extension_logs.py) - Extract extension logs from mcap files and write each extension's logs to a text file.
 * [mcap_explode.py](mcap_explode.py) - Read MAVLink messages from an mcap file and write a csv file for each message type.
 * [mcap_explode_extension_logs.py](mcap_explode_extension_logs.py) - Extract structured telemetry and diagnostic data from extension logs in mcap files to CSV or JSON files.
+* [mcap_extract_video.py](mcap_extract_video.py) - Extract video stream(s) from mcap files and write to MP4 format.
 * [mcap_plot_local.py](mcap_plot_local.py) - Look for LOCAL_POSITION_NED and VISION_POSITION_DELTA messages in mcap files, plot x and y, and write PDF files.
 * [mcap_strip_video.py](mcap_strip_video.py) - Open mcap files and copy all non-video channels to new mcap files (reduces file size by ~97%).
 * [mcap_tlog_diff.py](mcap_tlog_diff.py) - Compare a QGC-generated tlog to an mcap file.
