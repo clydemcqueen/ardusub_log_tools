@@ -344,6 +344,92 @@ class TestTools:
         mcap_plot_local.plot_mcap_local("testing/recorder_20260816_203739.mcap", outfile, dvl=True)
         assert (tmp_path / "recorder.pdf").is_file()
 
+    def test_mcap_explode_extension_tables(self, tmp_path):
+        out_prefix = str(tmp_path / "rec")
+        reader = mcap_explode.McapLogReader(
+            "testing/recorder_20260826_181307_no_video.mcap",
+            ["wl_ugps", "wl_ugps_external"],
+            500000,
+            False,
+            None,
+            None,
+            False,
+            False,
+            False,
+        )
+        reader.infile = out_prefix + ".mcap"
+        reader.read_mcap()
+        assert len(reader.tables["wl_ugps"]) == 23
+        assert len(reader.tables["wl_ugps_external"]) == 40
+        assert "wl_ugps.acoustic_x" in reader.tables["wl_ugps"].get_dataframe(False).columns
+        assert "wl_ugps_external.lat" in reader.tables["wl_ugps_external"]._rows[0]
+
+        reader.add_rate_field()
+        assert "wl_ugps.rate" in reader.tables["wl_ugps"]._rows[0]
+        assert "wl_ugps_external.rate" in reader.tables["wl_ugps_external"]._rows[0]
+
+        reader.write_msg_csv_files()
+        assert (tmp_path / "rec_asl_wl_ugps.csv").is_file()
+        assert (tmp_path / "rec_asl_wl_ugps_external.csv").is_file()
+
+    def test_mcap_explode_merge(self, tmp_path):
+        out_prefix = str(tmp_path / "rec_merge")
+        reader = mcap_explode.McapLogReader(
+            "testing/recorder_20260826_181307_no_video.mcap",
+            ["HEARTBEAT", "wl_ugps"],
+            500000,
+            False,
+            None,
+            None,
+            False,
+            False,
+            False,
+        )
+        reader.infile = out_prefix + ".mcap"
+        reader.read_mcap()
+        reader.write_merged_csv_file()
+        merged_csv = tmp_path / "rec_merge_asl_merged.csv"
+        assert merged_csv.is_file()
+        import pandas as pd
+
+        df = pd.read_csv(merged_csv)
+        assert "HEARTBEAT.custom_mode" in df.columns
+        assert "wl_ugps.master_lat" in df.columns
+
+    def test_mcap_explode_segment(self, tmp_path):
+        seg = Segment(1787767988.0, 1787767998.0, "seg1")
+        out_prefix = str(tmp_path / "seg1")
+        reader = mcap_explode.McapLogReader(
+            "testing/recorder_20260826_181307_no_video.mcap",
+            ["wl_ugps", "HEARTBEAT"],
+            500000,
+            False,
+            None,
+            None,
+            False,
+            False,
+            False,
+            segment=seg,
+        )
+        reader.infile = out_prefix + ".mcap"
+        reader.read_mcap()
+        assert len(reader.tables["wl_ugps"]) == 14
+        assert len(reader.tables["HEARTBEAT"]) == 58
+        reader.write_msg_csv_files()
+        assert (tmp_path / "seg1_asl_wl_ugps.csv").is_file()
+        assert (tmp_path / "seg1_asl_HEARTBEAT.csv").is_file()
+
+    def test_mcap_explode_extension_logs_segment(self, tmp_path):
+        seg = Segment(1787767988.0, 1787767998.0, "seg1")
+        out_prefix = str(tmp_path / "seg1")
+        counts = mcap_explode_extension_logs.explode_extension_logs(
+            "testing/recorder_20260826_181307_no_video.mcap",
+            segment=seg,
+            outfile_prefix=out_prefix,
+        )
+        assert counts["waterlinked.ugps"] == 14
+        assert (tmp_path / "seg1_asl_waterlinked.ugps.csv").is_file()
+
     def test_bin_plot_local(self, tmp_path):
         outfile = str(tmp_path / "small2.pdf")
         BIN_plot_local.plot_bin_local(FileReader("testing/small2.BIN", BIN_plot_local.MSG_TYPES), outfile, dvl=True)
