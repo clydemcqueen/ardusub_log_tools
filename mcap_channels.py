@@ -6,7 +6,6 @@ Open an mcap file and report on the contents.
 
 import argparse
 import json
-import os
 from collections import Counter
 
 from mcap.reader import make_reader
@@ -42,9 +41,7 @@ def count_mcap_messages(file_path, extract=False):
                     if len(parts) >= 2:
                         service_name = parts[1]
                         if service_name not in extract_files:
-                            base_name = os.path.splitext(os.path.basename(file_path))[0]
-                            dir_name = os.path.dirname(file_path)
-                            out_path = os.path.join(dir_name, f"{base_name}_{service_name}.txt")
+                            out_path = util.get_outfile_name(file_path, suffix=f"_{service_name}", ext=".txt")
                             extract_files[service_name] = open(out_path, "w", encoding="utf-8")
                             print(f"Extracting {channel.topic} to {out_path}")
 

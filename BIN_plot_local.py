@@ -107,7 +107,7 @@ def main():
 
     readers = choose_reader_list(args, MSG_TYPES, ".BIN")
     for reader in readers:
-        plot_bin_local(reader, util.get_outfile_name(reader.name, "", ".pdf"), args.dvl)
+        plot_bin_local(reader, util.get_outfile_name(reader.name, suffix="_local", ext=".pdf"), args.dvl)
 
 
 if __name__ == "__main__":

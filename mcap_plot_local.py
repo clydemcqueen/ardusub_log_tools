@@ -97,7 +97,7 @@ def main():
 
     files = util.expand_path(args.paths, args.recurse, ".mcap")
     for file in files:
-        outfile = util.get_outfile_name(file, "", ".pdf")
+        outfile = util.get_outfile_name(file, suffix="_local", ext=".pdf")
         plot_mcap_local(file, outfile, args.dvl)
 
 

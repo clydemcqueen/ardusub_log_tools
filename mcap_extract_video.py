@@ -173,16 +173,16 @@ def extract_video_from_mcap(
 
                 if channel.id not in writers:
                     if single_channel:
-                        file_suffix = f"_{suffix}" if suffix else ""
+                        file_suffix = f"_{suffix}" if suffix else "_video"
                     else:
                         stream_tag = clean_channel_suffix(channel.topic)
                         file_suffix = f"_{stream_tag}_{suffix}" if suffix else f"_{stream_tag}"
 
+                    default_out_path = util.get_outfile_name(file_path, suffix=file_suffix, ext=".mp4")
                     if out_dir:
-                        base = os.path.splitext(os.path.basename(file_path))[0]
-                        out_path = os.path.join(out_dir, f"{base}{file_suffix}.mp4")
+                        out_path = os.path.join(out_dir, os.path.basename(default_out_path))
                     else:
-                        out_path = util.get_outfile_name(file_path, suffix=file_suffix, ext=".mp4")
+                        out_path = default_out_path
 
                     # Parse first message to detect format
                     _, _, vformat, raw_data = parse_compressed_video(

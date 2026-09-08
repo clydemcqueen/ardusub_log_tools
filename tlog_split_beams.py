@@ -4,7 +4,6 @@
 Read DISTANCE_SENSOR messages from a tlog file and write one csv file per (src, comp, orientation) tuple.
 """
 
-import os
 from typing import Any, Dict, List, Tuple
 
 import pandas as pd
@@ -47,10 +46,11 @@ class BeamSplitter:
             data["covariance"].append(msg.covariance)
 
     def write_csv_files(self):
-        base_name = os.path.splitext(self.path)[0]
         for (sys_id, comp_id, orientation), data in self.sensor_data.items():
             df = pd.DataFrame(data)
-            output_file = f"{base_name}_sys{sys_id}_comp{comp_id}_orient{orientation}.csv"
+            output_file = util.get_outfile_name(
+                self.path, suffix=f"_sys{sys_id}_comp{comp_id}_orient{orientation}", ext=".csv"
+            )
             df.to_csv(output_file, index=False)
 
 

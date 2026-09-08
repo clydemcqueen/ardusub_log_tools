@@ -77,7 +77,7 @@ def main():
     readers = choose_reader_list(args, msg_types)
 
     for reader in readers:
-        outfile = util.get_outfile_name(reader.name, "", ".html")
+        outfile = util.get_outfile_name(reader.name, suffix="_map", ext=".html")
         build_map_from_tlog(reader, outfile, args.verbose, [args.lat, args.lon], args.zoom, args.hdop_max)
 
 

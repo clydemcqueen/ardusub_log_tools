@@ -86,8 +86,8 @@ def main():
     exclude_types = args.exclude.split(",") if args.exclude else None
 
     for input_file in files:
-        base, ext = os.path.splitext(input_file)
-        output_file = f"{base}_filtered{ext}"
+        _, ext = os.path.splitext(input_file)
+        output_file = util.get_outfile_name(input_file, suffix="_filtered", ext=ext)
         filter_bin(input_file, output_file, keep_types, exclude_types, args.start, args.stop, args.verbose)
 
 

@@ -14,7 +14,7 @@ class TestTools:
     def test_tlog_filter(self):
         # Create a reader for a small tlog file
         reader = FileReader("testing/small.tlog", None)
-        output_filename = "testing/small_filtered.tlog"
+        output_filename = "testing/small_asl_filtered.tlog"
 
         # Filter messages, keeping only ATTITUDE messages
         tlog_filter.filter_tlog(reader, ["ATTITUDE"], None, None, 500000, False)
@@ -45,8 +45,8 @@ class TestTools:
             SegmentReader(segment1, FileReader("testing/small.tlog", None), None),
             SegmentReader(segment2, FileReader("testing/small.tlog", None), None),
         ]
-        output_filename1 = "testing/segment1_filtered.tlog"
-        output_filename2 = "testing/segment2_filtered.tlog"
+        output_filename1 = "testing/segment1_asl_filtered.tlog"
+        output_filename2 = "testing/segment2_asl_filtered.tlog"
 
         # Filter messages, keeping only ATTITUDE messages
         for reader in readers:
