@@ -156,6 +156,10 @@ class Table:
             return RCChannelsTable(table_name)
         elif msg_type == "VISION_POSITION_DELTA":
             return VisionPositionDeltaTable(table_name)
+        elif msg_type in ("wl_ugps", "waterlinked.ugps"):
+            return WlUgpsTable(table_name, filter_bad)
+        elif msg_type == "wl_ugps_external":
+            return WlUgpsExternalTable(table_name, filter_bad)
         else:
             return Table(table_name)
 
@@ -396,4 +400,36 @@ class VisionPositionDeltaTable(Table):
 
         row[f"{self._table_name}.x"], row[f"{self._table_name}.y"], row[f"{self._table_name}.z"] = self.pose.position
 
+        super().append(row)
+
+
+class WlUgpsTable(Table):
+    def __init__(self, table_name: str, filter_bad: bool = False):
+        super().__init__(table_name)
+        self._filter_bad = filter_bad
+
+    def append(self, row: dict):
+        def field(f: str):
+            return f"{self._table_name}.{f}"
+
+        if self._filter_bad:
+            if field("global_lat") in row and row[field("global_lat")] == 0 and row[field("global_lon")] == 0:
+                return
+        super().append(row)
+
+
+class WlUgpsExternalTable(Table):
+    def __init__(self, table_name: str, filter_bad: bool = False):
+        super().__init__(table_name)
+        self._filter_bad = filter_bad
+
+    def append(self, row: dict):
+        def field(f: str):
+            return f"{self._table_name}.{f}"
+
+        if self._filter_bad:
+            if field("lat") in row and row[field("lat")] == 0 and row[field("lon")] == 0:
+                return
+            if field("fix_quality") in row and row[field("fix_quality")] is not None and row[field("fix_quality")] < 1:
+                return
         super().append(row)
