@@ -23,6 +23,7 @@ import map_maker
 import mcap_dump_extension_logs
 import mcap_explode
 import mcap_explode_extension_logs
+import mcap_map_maker
 import mcap_plot_local
 import mcap_to_tlog
 import mcap_wl_ugps_acoustic_info
@@ -530,3 +531,31 @@ class TestTools:
         tlog_timeline.Timeline(reader, ansi=False)
         captured = capsys.readouterr().out
         assert "Time" in captured
+
+    def test_mcap_map_maker_legend(self, capsys):
+        mcap_map_maker.print_legend(mcap_map_maker.SOURCES)
+        captured = capsys.readouterr().out
+        assert "Global position sources" in captured
+        assert "orange" in captured
+        assert "red" in captured
+        assert "cyan" in captured
+        assert "magenta" in captured
+        assert "light grey" in captured
+        assert "dark grey" in captured
+        assert "blue" in captured
+
+    def test_mcap_map_maker(self, tmp_path):
+        mcap_file = "testing/recorder_20260826_181307_no_video.mcap"
+        outfile = tmp_path / "test_map.html"
+        wanted_keys = {s[0] for s in mcap_map_maker.SOURCES}
+        sources_data = mcap_map_maker.parse_mcap_sources(
+            mcap_file, wanted_keys, hdop_max=100.0, segment=None, raw=False
+        )
+        assert "ugps_global" in sources_data
+        mcap_map_maker.build_map_from_points(
+            sources_data, str(outfile), False, [None, None], 18, mcap_map_maker.SOURCES
+        )
+        assert outfile.is_file()
+        content = outfile.read_text(encoding="utf-8")
+        assert "Global Position Sources" in content
+        assert "leaflet" in content.lower()
