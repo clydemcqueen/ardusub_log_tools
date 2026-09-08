@@ -227,7 +227,7 @@ def main():
     readers = choose_reader_list(args, WANTED_TYPES, ".BIN")
 
     for reader in readers:
-        pdf_outfile = util.get_outfile_name(reader.name, "", ".pdf") if args.pdf else None
+        pdf_outfile = util.get_outfile_name(reader.name, suffix="_viso", ext=".pdf") if args.pdf else None
         show_plot = not args.pdf
         process_reader(reader, pdf_outfile=pdf_outfile, show_plot=show_plot)
 

@@ -31,6 +31,14 @@ class TestSplitByMode(unittest.TestCase):
     def cleanup(self):
         # Remove any generated files in testing dir matching pattern
         patterns = [
+            "*_asl_MANUAL*.tlog",
+            "*_asl_MANUAL*.BIN",
+            "*_asl_SURFTRAK*.tlog",
+            "*_asl_SURFTRAK*.BIN",
+            "*_asl_ALT_HOLD*.tlog",
+            "*_asl_ALT_HOLD*.BIN",
+            "*_asl_STABILIZE*.tlog",
+            "*_asl_STABILIZE*.BIN",
             "*_MANUAL*.tlog",
             "*_MANUAL*.BIN",
             "*_SURFTRAK*.tlog",
@@ -57,16 +65,16 @@ class TestSplitByMode(unittest.TestCase):
         result = self.run_script([self.small_tlog])
         self.assertEqual(result.returncode, 0)
 
-        # Expect small_MANUAL1.tlog
-        expected = os.path.join(self.testing_dir, "small_MANUAL1.tlog")
+        # Expect small_asl_MANUAL1.tlog
+        expected = os.path.join(self.testing_dir, "small_asl_MANUAL1.tlog")
         self.assertTrue(os.path.exists(expected), f"Expected {expected} to exist")
 
     def test_small_bin(self):
         result = self.run_script([self.small_bin])
         self.assertEqual(result.returncode, 0)
 
-        # Expect small_MANUAL1.BIN
-        expected = os.path.join(self.testing_dir, "small2_MANUAL1.BIN")
+        # Expect small2_asl_MANUAL1.BIN
+        expected = os.path.join(self.testing_dir, "small2_asl_MANUAL1.BIN")
         self.assertTrue(os.path.exists(expected), f"Expected {expected} to exist")
 
     def disabled_test_large_tlog(self):
@@ -75,12 +83,12 @@ class TestSplitByMode(unittest.TestCase):
 
         # Expect multiple files
         expected_files = [
-            "00118-2025-10-08_18-03-06_MANUAL1.tlog",
-            "00118-2025-10-08_18-03-06_SURFTRAK1.tlog",
-            "00118-2025-10-08_18-03-06_ALT_HOLD1.tlog",
-            "00118-2025-10-08_18-03-06_SURFTRAK2.tlog",
-            "00118-2025-10-08_18-03-06_ALT_HOLD2.tlog",
-            "00118-2025-10-08_18-03-06_MANUAL2.tlog",
+            "00118-2025-10-08_18-03-06_asl_MANUAL1.tlog",
+            "00118-2025-10-08_18-03-06_asl_SURFTRAK1.tlog",
+            "00118-2025-10-08_18-03-06_asl_ALT_HOLD1.tlog",
+            "00118-2025-10-08_18-03-06_asl_SURFTRAK2.tlog",
+            "00118-2025-10-08_18-03-06_asl_ALT_HOLD2.tlog",
+            "00118-2025-10-08_18-03-06_asl_MANUAL2.tlog",
         ]
 
         for f in expected_files:
@@ -93,12 +101,12 @@ class TestSplitByMode(unittest.TestCase):
 
         # Expect multiple files
         expected_files = [
-            "00000062_MANUAL1.BIN",
-            "00000062_SURFTRAK1.BIN",
-            "00000062_ALT_HOLD1.BIN",
-            "00000062_SURFTRAK2.BIN",
-            "00000062_ALT_HOLD2.BIN",
-            "00000062_MANUAL2.BIN",
+            "00000062_asl_MANUAL1.BIN",
+            "00000062_asl_SURFTRAK1.BIN",
+            "00000062_asl_ALT_HOLD1.BIN",
+            "00000062_asl_SURFTRAK2.BIN",
+            "00000062_asl_ALT_HOLD2.BIN",
+            "00000062_asl_MANUAL2.BIN",
         ]
 
         for f in expected_files:

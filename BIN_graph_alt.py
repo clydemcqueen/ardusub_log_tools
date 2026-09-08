@@ -12,6 +12,7 @@ import os
 import matplotlib.pyplot as plt
 
 import file_reader
+import util
 
 
 def process_reader(reader):
@@ -93,7 +94,7 @@ def process_reader(reader):
     plt.grid(True)
 
     # Save to PDF
-    pdf_path = os.path.splitext(reader.name)[0] + ".pdf"
+    pdf_path = util.get_outfile_name(reader.name, suffix="_alt", ext=".pdf")
     plt.savefig(pdf_path)
     plt.close()
 

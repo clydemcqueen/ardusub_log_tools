@@ -193,9 +193,8 @@ def main():
     for infile in files:
         print("-------------------")
         print(infile)
-        dirname, basename = os.path.split(infile)
-        root, ext = os.path.splitext(basename)
-        outfile = os.path.join(dirname, root + ".html")
+        outfile = util.get_outfile_name(infile, suffix="_map", ext=".html")
+        _, ext = os.path.splitext(infile)
 
         if ext == ".csv":
             build_map_from_csv(infile, outfile, args.verbose, [args.lat, args.lon], args.zoom)

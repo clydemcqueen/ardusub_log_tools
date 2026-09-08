@@ -7,6 +7,8 @@
 # Run a particular test:
 # python -m pytest -rP testing/test_tools.py::TestTools::test_add_rate_field
 
+import os
+
 import pytest
 
 import BIN_ekf_status
@@ -44,6 +46,8 @@ class TestTools:
         tool = BIN_merge.DataflashLogReader("testing/small2.BIN", ["VIBE"], 10000, 10000, False, False, -1.0, -1.0)
         tool.read()
         tool.write_merged_csv_file()
+        if os.path.exists("testing/small2_asl_merged.csv"):
+            os.remove("testing/small2_asl_merged.csv")
 
     def test_tlog_map_maker(self):
         tlog_map_maker.build_map_from_tlog(
@@ -160,7 +164,7 @@ class TestTools:
         extractor = BIN_extract_files.DataflashFileExtractor(str(test_bin))
         extractor.extract()
 
-        out_dir = tmp_path / "dummy_extracted"
+        out_dir = tmp_path / "dummy_asl_extracted"
         assert out_dir.is_dir()
         assert (out_dir / "ROMFS_sensors_IMU_CAL").is_file()
         assert (out_dir / "ROMFS_sensors_IMU_CAL").stat().st_size == 96
@@ -169,6 +173,8 @@ class TestTools:
 
     def test_bin_graph_alt(self):
         BIN_graph_alt.process_reader(FileReader("testing/small2.BIN", ["AHR2", "XKF1", "BARO", "ORGN", "POS"]))
+        if os.path.exists("testing/small2_asl_alt.pdf"):
+            os.remove("testing/small2_asl_alt.pdf")
 
     def test_bin_ekf_status(self):
         tool = BIN_ekf_status.FilterStatusReport("testing/small2.BIN")
@@ -181,6 +187,8 @@ class TestTools:
         tool.read_tlog()
         tool.add_rate_field()
         tool.write_merged_csv_file()
+        if os.path.exists("testing/small_asl_merged.csv"):
+            os.remove("testing/small_asl_merged.csv")
 
     def test_tlog_merge_segment(self):
         segment_reader = SegmentReader(
@@ -320,8 +328,8 @@ class TestTools:
         assert "HEARTBEAT.rate" in reader.tables["HEARTBEAT"]._rows[0]
 
         reader.write_msg_csv_files()
-        ahrs_csv = tmp_path / "recorder_20260816_203739_AHRS.csv"
-        heartbeat_csv = tmp_path / "recorder_20260816_203739_HEARTBEAT.csv"
+        ahrs_csv = tmp_path / "recorder_20260816_203739_asl_AHRS.csv"
+        heartbeat_csv = tmp_path / "recorder_20260816_203739_asl_HEARTBEAT.csv"
         assert ahrs_csv.is_file()
         assert heartbeat_csv.is_file()
 
@@ -350,7 +358,7 @@ class TestTools:
         shutil.copy("testing/recorder_20260816_203739.mcap", test_mcap)
         mcap_to_tlog.mcap_to_tlog(str(test_mcap))
 
-        out_tlog = tmp_path / "test.tlog"
+        out_tlog = tmp_path / "test_asl.tlog"
         assert out_tlog.is_file()
 
         conn = mavutil.mavlink_connection(str(out_tlog), dialect="ardupilotmega")
@@ -380,10 +388,10 @@ class TestTools:
         assert counts["blueos.major_tom"] == 92
         assert counts["clydemcqueen.surftrak_fixit"] == 21
 
-        assert (tmp_path / "test_waterlinked.ugps.txt").is_file()
-        assert (tmp_path / "test_clydemcqueen.wl_ugps_external.txt").is_file()
-        assert (tmp_path / "test_blueos.major_tom.txt").is_file()
-        assert (tmp_path / "test_clydemcqueen.surftrak_fixit.txt").is_file()
+        assert (tmp_path / "test_asl_waterlinked.ugps.txt").is_file()
+        assert (tmp_path / "test_asl_clydemcqueen.wl_ugps_external.txt").is_file()
+        assert (tmp_path / "test_asl_blueos.major_tom.txt").is_file()
+        assert (tmp_path / "test_asl_clydemcqueen.surftrak_fixit.txt").is_file()
 
     def test_mcap_explode_extension_logs_csv(self, tmp_path):
         import shutil
@@ -395,8 +403,8 @@ class TestTools:
         assert counts["wl_ugps_external"] == 40
         assert counts["waterlinked.ugps"] == 23
 
-        assert (tmp_path / "test_wl_ugps_external.csv").is_file()
-        assert (tmp_path / "test_waterlinked.ugps.csv").is_file()
+        assert (tmp_path / "test_asl_wl_ugps_external.csv").is_file()
+        assert (tmp_path / "test_asl_waterlinked.ugps.csv").is_file()
 
     def test_mcap_explode_extension_logs_json(self, tmp_path):
         import shutil
@@ -408,8 +416,8 @@ class TestTools:
         assert counts["wl_ugps_external"] == 40
         assert counts["waterlinked.ugps"] == 23
 
-        assert (tmp_path / "test_wl_ugps_external.json").is_file()
-        assert (tmp_path / "test_waterlinked.ugps.json").is_file()
+        assert (tmp_path / "test_asl_wl_ugps_external.json").is_file()
+        assert (tmp_path / "test_asl_waterlinked.ugps.json").is_file()
 
     def test_mcap_wl_ugps_acoustic_info(self, capsys):
         info = mcap_wl_ugps_acoustic_info.AcousticLogInfo("testing/recorder_20260826_181307_no_video.mcap")

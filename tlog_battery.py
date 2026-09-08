@@ -123,7 +123,7 @@ def process_reader(reader, terse: bool, plot: bool):
         print(f"    Energy consumed: {energy_consumed:.2f} Wh")
 
     if plot and plot_timestamps:
-        output_filename = util.get_outfile_name(reader.name, ext=".pdf")
+        output_filename = util.get_outfile_name(reader.name, suffix="_battery", ext=".pdf")
 
         fig, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True, figsize=(10, 10))
 

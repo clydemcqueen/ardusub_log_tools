@@ -159,10 +159,21 @@ def get_qgc_tlog_paths(paths: list[str], recurse: bool) -> list[str]:
 
 
 def get_outfile_name(infile: str, suffix: str = "", ext: str = ".csv"):
-    """Given input file path, return <path to infile>/<infile root>suffix.ext"""
+    """Given input file path, return <path to infile>/<infile root>suffix.ext with _asl_ included in the suffix."""
     dirname, basename = os.path.split(infile)
     root, _ = os.path.splitext(basename)
-    return os.path.join(dirname, root + suffix + ext)
+
+    if suffix:
+        if suffix.startswith("_asl_"):
+            full_suffix = suffix
+        elif suffix.startswith("_"):
+            full_suffix = f"_asl{suffix}"
+        else:
+            full_suffix = f"_asl_{suffix}"
+    else:
+        full_suffix = "_asl"
+
+    return os.path.join(dirname, root + full_suffix + ext)
 
 
 def get_rtc_shift(tlog_conn, rewind=False) -> float | None:

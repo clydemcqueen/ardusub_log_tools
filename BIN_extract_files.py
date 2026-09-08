@@ -65,7 +65,7 @@ class DataflashFileExtractor:
             return
 
         base_name = os.path.splitext(os.path.basename(self.infile))[0]
-        out_dir = os.path.join(os.path.dirname(self.infile), f"{base_name}_extracted")
+        out_dir = os.path.join(os.path.dirname(self.infile), f"{base_name}_asl_extracted")
 
         os.makedirs(out_dir, exist_ok=True)
         print(f"  Found {len(files)} files. Writing to {out_dir}/")

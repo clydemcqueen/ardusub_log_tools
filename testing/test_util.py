@@ -78,3 +78,24 @@ class TestUtil:
         ]
 
         assert result == expected
+
+    def test_get_outfile_name(self):
+        # Default suffix and ext
+        assert util.get_outfile_name("path/to/foo.mcap") == "path/to/foo_asl.csv"
+
+        # Suffix with leading underscore
+        assert util.get_outfile_name("path/to/foo.mcap", suffix="_HEARTBEAT") == "path/to/foo_asl_HEARTBEAT.csv"
+
+        # Suffix without leading underscore
+        assert util.get_outfile_name("path/to/foo.mcap", suffix="HEARTBEAT") == "path/to/foo_asl_HEARTBEAT.csv"
+
+        # Suffix already containing _asl_
+        assert util.get_outfile_name("path/to/foo.mcap", suffix="_asl_HEARTBEAT") == "path/to/foo_asl_HEARTBEAT.csv"
+
+        # Custom extension
+        assert (
+            util.get_outfile_name("path/to/foo.tlog", suffix="_filtered", ext=".tlog")
+            == "path/to/foo_asl_filtered.tlog"
+        )
+        assert util.get_outfile_name("path/to/foo.BIN", suffix="_battery", ext=".pdf") == "path/to/foo_asl_battery.pdf"
+        assert util.get_outfile_name("foo.mcap", suffix="_no_video", ext=".mcap") == "foo_asl_no_video.mcap"

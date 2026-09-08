@@ -259,11 +259,11 @@ def main():
 
         pdf_outfile = None
         if args.pdf:
-            pdf_outfile = util.get_outfile_name(reader.name, "", ".pdf")
+            pdf_outfile = util.get_outfile_name(reader.name, suffix="_surftrak", ext=".pdf")
 
         csv_outfile = None
         if args.csv:
-            csv_outfile = util.get_outfile_name(reader.name, "", ".csv")
+            csv_outfile = util.get_outfile_name(reader.name, suffix="_surftrak", ext=".csv")
 
         show_plot = not (args.pdf or args.csv)
         plot_surftrak(dfs, pdf_outfile, csv_outfile, show_plot)

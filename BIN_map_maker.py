@@ -88,7 +88,7 @@ def main():
     print("POS: EKF output, blue line")
 
     for reader in readers:
-        outfile = util.get_outfile_name(reader.name, "", ".html")
+        outfile = util.get_outfile_name(reader.name, suffix="_map", ext=".html")
         build_map_from_BIN(reader, outfile, args.verbose, [args.lat, args.lon], args.zoom, args.hdop_max)
 
 

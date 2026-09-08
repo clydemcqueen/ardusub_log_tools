@@ -27,8 +27,7 @@ def filter_tlog(reader, msg_types, sysid, compid, max_msgs, verbose):
     """
     Filter messages and write them to a new tlog file.
     """
-    output_filename = util.get_outfile_name(reader.name, suffix="_filtered")
-    output_filename = os.path.splitext(output_filename)[0] + ".tlog"
+    output_filename = util.get_outfile_name(reader.name, suffix="_filtered", ext=".tlog")
     print(f"Writing {output_filename}")
 
     with open(output_filename, "wb") as outfile:

@@ -27,6 +27,12 @@ tool.py --recurse directory
 tool.py --recurse .
 ~~~
 
+## Generated files
+
+Tools that generate output files use the path and basename from the input file, and then add a suffix to the name.
+The suffix will at least include "\_asl\_" to make these files easy to find and filter.
+For example, `mcap_explode.py --types HEARTBEAT path/to/input/foo.mcap` will generate `path/to/input/foo_asl_HEARTBEAT.csv`.
+
 ## Segments
 
 Several tlog tools support `--keep start_time,end_time,name` options, which is a way to specify which parts of the
@@ -114,7 +120,6 @@ tlog_plot_local.py $SEGMENTS *.tlog
 * [BIN_plot_surftrak.py](BIN_plot_surftrak.py) - Read BIN files and plot rangefinder vs target for SURFTRAK and GUIDED above-terrain modes.
 * [BIN_plot_viso.py](BIN_plot_viso.py) - Read BIN files and plot VISO (Visual Odometry) data alongside EKF estimated position, EKF innovations, and thruster outputs (RCOU).
 * [BIN_timeline.py](BIN_timeline.py) - Read Dataflash messages from a BIN file and generate a timeline.
-
 
 ## Tools that read tlog and BIN files
 

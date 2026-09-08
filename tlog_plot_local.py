@@ -86,7 +86,7 @@ def main():
 
     readers = choose_reader_list(args, MSG_TYPES)
     for reader in readers:
-        plot_local_position(reader, util.get_outfile_name(reader.name, "", ".pdf"), args.dvl)
+        plot_local_position(reader, util.get_outfile_name(reader.name, suffix="_local", ext=".pdf"), args.dvl)
 
 
 if __name__ == "__main__":

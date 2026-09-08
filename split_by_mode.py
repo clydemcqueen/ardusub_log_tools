@@ -10,6 +10,8 @@ import struct
 
 from pymavlink import mavutil
 
+import util
+
 # Force MAVLink 2.0
 os.environ["MAVLINK20"] = "1"
 
@@ -103,8 +105,8 @@ def process_bin(input_file, requested_modes):
                     count = segment_count.get(mode_name, 0) + 1
                     segment_count[mode_name] = count
 
-                    base, ext = os.path.splitext(input_file)
-                    outfile_name = f"{base}_{mode_name}{count}{ext}"
+                    _, ext = os.path.splitext(input_file)
+                    outfile_name = util.get_outfile_name(input_file, suffix=f"_{mode_name}{count}", ext=ext)
                     print(f"Starting {outfile_name}")
                     outfile = open(outfile_name, "wb")
 
@@ -162,8 +164,8 @@ def process_tlog(input_file, requested_modes):
                     count = segment_count.get(mode_name, 0) + 1
                     segment_count[mode_name] = count
 
-                    base, ext = os.path.splitext(input_file)
-                    outfile_name = f"{base}_{mode_name}{count}{ext}"
+                    _, ext = os.path.splitext(input_file)
+                    outfile_name = util.get_outfile_name(input_file, suffix=f"_{mode_name}{count}", ext=ext)
                     print(f"Starting {outfile_name}")
                     outfile = open(outfile_name, "wb")
 

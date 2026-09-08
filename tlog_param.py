@@ -307,7 +307,7 @@ def main():
                 print_changes(previous_file, current_file)
             previous_file = current_file
         else:
-            current_file.write_params_file(util.get_outfile_name(infile, ext=".params"))
+            current_file.write_params_file(util.get_outfile_name(infile, suffix="_params", ext=".params"))
 
 
 if __name__ == "__main__":

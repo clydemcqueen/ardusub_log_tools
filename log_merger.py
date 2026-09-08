@@ -46,6 +46,6 @@ class LogMerger:
         if merged_df is None:
             print("Nothing to write")
         else:
-            filename = util.get_outfile_name(self.infile)
+            filename = util.get_outfile_name(self.infile, suffix="_merged")
             print(f"Writing {len(merged_df)} rows to {filename}")
             merged_df.to_csv(filename)
