@@ -6,6 +6,12 @@ Extract structured telemetry and diagnostic data from BlueOS extension logs in M
 Writes data to CSV (default) or JSON files for interesting extensions:
 - wl_ugps_external: vessel location, heading, and HTTP response
 - waterlinked.ugps: depth/orientation, global locator, acoustic solution, GPS_INPUT, and master position per pass
+
+Global position summary:
+- WL_UGPS_EXTERNAL_FIELDS.lat,lon,orientation: Vessel position, output from satellite compass, input to G2
+- WATERLINKED_UGPS_FIELDS.master_lat,lon,orientation: Vessel position, polled from G2 (should be the same as above w/ a small lag)
+- WATERLINKED_UGPS_FIELDS.global_lat,lon,orientation: ROV position, polled from G2, composite of vessel position and acoustic solution
+- WATERLINKED_UGPS_FIELDS.gps_input_lat,lon,yaw: ROV position (should be same as above, scaled as appropriate)
 """
 
 import argparse
@@ -20,7 +26,7 @@ from segment_reader import Segment, add_segment_args, build_segment_name, parse_
 
 WL_UGPS_EXTERNAL_FIELDS = [
     "timestamp",
-    "lat",
+    "lat",  # Vessel position and orientation, sent to G2
     "lon",
     "orientation",
     "cog",
@@ -41,7 +47,7 @@ WATERLINKED_UGPS_FIELDS = [
     "mav_heading",
     "orientation_sent",
     "orientation_resp",
-    "global_lat",
+    "global_lat",  # ROV position and orientation, from G2
     "global_lon",
     "global_orientation",
     "global_numsats",
@@ -53,7 +59,7 @@ WATERLINKED_UGPS_FIELDS = [
     "acoustic_x",
     "acoustic_y",
     "acoustic_z",
-    "acoustic_std",
+    "acoustic_std",  # Acoustic stdev in meters
     "receiver_valid_0",
     "receiver_valid_1",
     "receiver_valid_2",
@@ -70,16 +76,16 @@ WATERLINKED_UGPS_FIELDS = [
     "receiver_nsd_1",
     "receiver_nsd_2",
     "receiver_nsd_3",
-    "gps_input_lat",
+    "gps_input_lat",  # ROV position and orientation, what gets sent to ArduSub
     "gps_input_lon",
     "gps_input_fix_type",
     "gps_input_hdop",
     "gps_input_vdop",
-    "gps_input_horiz_accuracy",
+    "gps_input_horiz_accuracy",  # Acoustic stdev in meters
     "gps_input_satellites_visible",
     "gps_input_yaw",
-    "gps_input_resp",
-    "master_lat",
+    "gps_input_resp",  # Response from ArduSub
+    "master_lat",  # Vessel position and orientation, from G2
     "master_lon",
     "master_orientation",
     "master_numsats",
