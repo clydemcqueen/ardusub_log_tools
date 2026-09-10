@@ -27,8 +27,8 @@ from mcap.reader import make_reader
 
 import util
 from map_maker import MapMaker, add_map_maker_args
-from mcap_explode import resolve_field_value
 from mcap_explode_extension_logs import WaterlinkedUgpsParser, WlUgpsExternalParser
+from mcap_merge import resolve_field_value
 from segment_reader import Segment, add_segment_args, build_segment_name, parse_segment_args
 
 # Sources ordered by drawing z-order (bottom to top).

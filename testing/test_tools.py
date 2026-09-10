@@ -21,9 +21,9 @@ import BIN_plot_local
 import BIN_timeline
 import map_maker
 import mcap_dump_extension_logs
-import mcap_explode
 import mcap_explode_extension_logs
 import mcap_map_maker
+import mcap_merge
 import mcap_plot_local
 import mcap_to_tlog
 import mcap_wl_ugps_acoustic_info
@@ -309,7 +309,7 @@ class TestTools:
 
     def test_mcap_explode(self, tmp_path):
         out_prefix = str(tmp_path / "recorder_20260816_203739")
-        reader = mcap_explode.McapLogReader(
+        reader = mcap_merge.McapLogReader(
             "testing/recorder_20260816_203739.mcap",
             ["AHRS", "HEARTBEAT"],
             500000,
@@ -335,10 +335,10 @@ class TestTools:
         assert heartbeat_csv.is_file()
 
     def test_mcap_resolve_field(self):
-        assert mcap_explode.resolve_field_value("mavtype", {"type": "MAV_TYPE_SUBMARINE"}) == ("type", 12)
-        assert mcap_explode.resolve_field_value("base_mode", "") == ("base_mode", 0)
-        assert mcap_explode.resolve_field_value("base_mode", "MAV_MODE_FLAG_SAFETY_ARMED") == ("base_mode", 128)
-        assert mcap_explode.resolve_field_value("param_id", "BRD_SAFETYENABLE") == ("param_id", "BRD_SAFETYENABLE")
+        assert mcap_merge.resolve_field_value("mavtype", {"type": "MAV_TYPE_SUBMARINE"}) == ("type", 12)
+        assert mcap_merge.resolve_field_value("base_mode", "") == ("base_mode", 0)
+        assert mcap_merge.resolve_field_value("base_mode", "MAV_MODE_FLAG_SAFETY_ARMED") == ("base_mode", 128)
+        assert mcap_merge.resolve_field_value("param_id", "BRD_SAFETYENABLE") == ("param_id", "BRD_SAFETYENABLE")
 
     def test_mcap_plot_local(self, tmp_path):
         outfile = str(tmp_path / "recorder.pdf")
@@ -347,7 +347,7 @@ class TestTools:
 
     def test_mcap_explode_extension_tables(self, tmp_path):
         out_prefix = str(tmp_path / "rec")
-        reader = mcap_explode.McapLogReader(
+        reader = mcap_merge.McapLogReader(
             "testing/recorder_20260826_181307_no_video.mcap",
             ["wl_ugps", "wl_ugps_external"],
             500000,
@@ -375,7 +375,7 @@ class TestTools:
 
     def test_mcap_explode_merge(self, tmp_path):
         out_prefix = str(tmp_path / "rec_merge")
-        reader = mcap_explode.McapLogReader(
+        reader = mcap_merge.McapLogReader(
             "testing/recorder_20260826_181307_no_video.mcap",
             ["HEARTBEAT", "wl_ugps"],
             500000,
@@ -397,10 +397,69 @@ class TestTools:
         assert "HEARTBEAT.custom_mode" in df.columns
         assert "wl_ugps.master_lat" in df.columns
 
+    def test_mcap_merge(self, tmp_path):
+        out_prefix = str(tmp_path / "rec_merge_tool")
+        reader = mcap_merge.McapLogReader(
+            "testing/recorder_20260826_181307_no_video.mcap",
+            ["HEARTBEAT", "wl_ugps"],
+            500000,
+            False,
+            None,
+            None,
+            False,
+            False,
+            False,
+        )
+        reader.infile = out_prefix + ".mcap"
+        reader.read_mcap()
+        reader.write_merged_csv_file()
+        merged_csv = tmp_path / "rec_merge_tool_asl_merged.csv"
+        assert merged_csv.is_file()
+        import pandas as pd
+
+        df = pd.read_csv(merged_csv)
+        assert "HEARTBEAT.custom_mode" in df.columns
+        assert "wl_ugps.master_lat" in df.columns
+
+    def test_mcap_merge_cli(self, tmp_path):
+        import shutil
+        import subprocess
+        import sys
+        from pathlib import Path
+
+        test_mcap = tmp_path / "test.mcap"
+        shutil.copy("testing/recorder_20260826_181307_no_video.mcap", test_mcap)
+
+        cmd = [
+            sys.executable,
+            "mcap_merge.py",
+            "--types",
+            "HEARTBEAT",
+            str(test_mcap),
+        ]
+        res = subprocess.run(cmd, capture_output=True, text=True, cwd=Path(".").resolve())
+        assert res.returncode == 0, f"mcap_merge failed:\nSTDOUT: {res.stdout}\nSTDERR: {res.stderr}"
+        assert (tmp_path / "test_asl_merged.csv").is_file()
+        assert not (tmp_path / "test_asl_HEARTBEAT.csv").is_file()
+
+        # Explode CLI should write per-type file and not merged file
+        cmd_explode = [
+            sys.executable,
+            "mcap_explode.py",
+            "--types",
+            "HEARTBEAT",
+            str(test_mcap),
+        ]
+        res_explode = subprocess.run(cmd_explode, capture_output=True, text=True, cwd=Path(".").resolve())
+        assert res_explode.returncode == 0, (
+            f"mcap_explode failed:\nSTDOUT: {res_explode.stdout}\nSTDERR: {res_explode.stderr}"
+        )
+        assert (tmp_path / "test_asl_HEARTBEAT.csv").is_file()
+
     def test_mcap_explode_segment(self, tmp_path):
         seg = Segment(1787767988.0, 1787767998.0, "seg1")
         out_prefix = str(tmp_path / "seg1")
-        reader = mcap_explode.McapLogReader(
+        reader = mcap_merge.McapLogReader(
             "testing/recorder_20260826_181307_no_video.mcap",
             ["wl_ugps", "HEARTBEAT"],
             500000,
