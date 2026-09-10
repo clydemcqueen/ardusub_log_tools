@@ -1,0 +1,32 @@
+{
+  "sites": [
+    {
+      "name": "Jack_Block_Park",
+      "project": "Port_of_Seattle",
+      "date": "2026-09-02",
+      "transects": [
+        {
+          "name": "T1",
+          "start_tc": "09:25:23",
+          "end_tc": "09:35:37"
+        },
+        {
+          "name": "T2",
+          "start_tc": "09:41:15",
+          "end_tc": "09:50:42"
+        },
+        {
+          "name": "T3",
+          "start_tc": "09:57:56",
+          "end_tc": "10:09:17"
+        },
+        {
+          "name": "T4",
+          "start_tc": "10:33:04",
+          "end_tc": "10:42:08"
+        }
+      ]
+    }
+  ],
+  "timezone": "America/Los_Angeles"
+}

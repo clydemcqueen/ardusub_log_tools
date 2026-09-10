@@ -78,11 +78,11 @@ WATERLINKED_UGPS_FIELDS = [
     "receiver_nsd_3",
     "gps_input_lat",  # ROV position and orientation, what gets sent to ArduSub
     "gps_input_lon",
-    "gps_input_fix_type",
-    "gps_input_hdop",
-    "gps_input_vdop",
-    "gps_input_horiz_accuracy",  # Acoustic stdev in meters
-    "gps_input_satellites_visible",
+    "gps_input_fix_type",  # global_fix_quality if acoustic_valid else 0
+    "gps_input_hdop",  # global_hdop
+    "gps_input_vdop",  # acoustic_std
+    "gps_input_horiz_accuracy",  # acoustic_std
+    "gps_input_satellites_visible",  # max(global_numsats, 6)
     "gps_input_yaw",
     "gps_input_resp",  # Response from ArduSub
     "master_lat",  # Vessel position and orientation, from G2
