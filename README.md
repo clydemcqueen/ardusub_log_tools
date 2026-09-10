@@ -35,13 +35,57 @@ For example, `mcap_explode.py --types HEARTBEAT path/to/input/foo.mcap` will gen
 
 ## Segments
 
-Several tlog tools support `--keep start_time,end_time,name` options, which is a way to specify which parts of the
-file you are interested in processing. Only these messages between `start_time` and `end_time` are processed; the rest
+Several tools support segment options, which is a way to specify which parts of the
+file you are interested in processing. Only messages between `start_time` and `end_time` are processed; the rest
 of the file is ignored.
 
-The timestamps must be specified in Unix time (seconds since January 1st, 1970 UTC).
+Segments can be specified either via command-line options (`--keep start,end,name`) or via a JSON specification (`--segments path/to/plan.json` or inline JSON).
 
-If you provide multiple tlog files they are logically concatenated, which allows a segment to span multiple files.
+### Command-line segment specification (`--keep`)
+Timestamps must be specified in Unix time (seconds since January 1st, 1970 UTC):
+~~~
+tool.py --keep 1694812410,1694813075,transect1 *.tlog
+~~~
+
+### JSON segment specification (`--segments` / `-s`)
+Callers can provide segments via a JSON file or inline JSON string using `-s` or `--segments`. The format is compatible with operational plan files like `utc_plan.json` as well as simplified segment lists.
+
+**Format 1: Operational plan (`utc_plan.json`)**
+~~~json
+{
+  "sites": [
+    {
+      "name": "Jack_Block_Park",
+      "project": "Port_of_Seattle",
+      "date": "2026-09-02",
+      "transects": [
+        {
+          "name": "T1",
+          "start_tc": "09:25:23",
+          "end_tc": "09:35:37"
+        }
+      ]
+    }
+  ],
+  "timezone": "America/Los_Angeles"
+}
+~~~
+
+**Format 2: Simplified segment list**
+~~~json
+{
+  "timezone": "America/Los_Angeles",
+  "date": "2026-09-02",
+  "segments": [
+    {"name": "s1", "start": 1788366323.0, "end": 1788366937.0},
+    {"name": "s2", "start": "2026-09-02T09:41:15-07:00", "end": "2026-09-02T09:50:42-07:00"},
+    {"name": "s3", "start_tc": "09:57:56", "end_tc": "10:09:17"}
+  ]
+}
+~~~
+Or as a top-level list `[{"name": "s1", "start": ..., "end": ...}]`.
+
+If you provide multiple log files they are logically concatenated, which allows a segment to span multiple files.
 
 Tools that generate files will generate one file per segment, and the name of the segment will appear in the file name.
 
