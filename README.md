@@ -168,9 +168,6 @@ tlog_plot_local.py $SEGMENTS *.tlog
 ## Tools that read tlog and BIN files
 
 * [check_rtc_time.py](check_rtc_time.py) - Check log files (Dataflash .BIN and MAVLink .tlog) for the presence of GPS or Unix time.
-* [dive.py](dive.py) - Read all BIN and tlog files in a directory and figure out how they line up.
-* [dive_iter.py](dive_iter.py) - Iterate through chronological MAVLink messages from overlapping tlog and BIN files.
-* [opt_rtc_shift.py](opt_rtc_shift.py) - Optimize the RTC shift value by comparing data that appears in both tlog and BIN files.
 * [show_types.py](show_types.py) - Read messages from tlog (telemetry) and BIN (dataflash) logs and report on the message types found.
 * [split_by_mode.py](split_by_mode.py) - Split ArduSub log files (tlog and BIN) into separate files based on flight modes.
 
@@ -188,6 +185,10 @@ tlog_plot_local.py $SEGMENTS *.tlog
 * [mcap_to_tlog.py](mcap_to_tlog.py) - Convert MCAP files containing MAVLink messages to tlog files readable by pymavlink.
 * [mcap_types.py](mcap_types.py) - Read messages from mcap files and report on the message types found(similar to show_types.py).
 * [mcap_wl_ugps_acoustic_info.py](mcap_wl_ugps_acoustic_info.py) - Read Water Linked UGPS extension logs from an MCAP file and print a summary of acoustic tracking performance.
+
+## Tools that work on a dive (multiple files of various types)
+
+* [dive_tools.py](dive_logs.py) - Read all BIN and mcap files in a directory and figure out how they line up.
 
 ## Other tools
 
