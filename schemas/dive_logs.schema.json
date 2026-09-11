@@ -1,0 +1,257 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/clydemcqueen/ardusub_log_tools/schemas/dive_logs.schema.json",
+  "title": "ArduSubDiveLogs",
+  "description": "Log alignment and correspondence metadata for ArduSub Dataflash (BIN) and telemetry (tlog, MCAP) logs in a directory.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "directory",
+    "created_iso",
+    "boots",
+    "bin_files",
+    "mcap_files"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Semantic version of this alignment schema.",
+      "default": "1.0.0"
+    },
+    "directory": {
+      "type": "string",
+      "description": "Target directory containing the dive log files."
+    },
+    "created_iso": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when this alignment was generated (ISO 8601 UTC)."
+    },
+    "boots": {
+      "type": "array",
+      "description": "Autopilot boot cycles (power cycles where TimeUS starts at 0).",
+      "items": {
+        "type": "object",
+        "required": [
+          "boot_id",
+          "rtc_shift_s",
+          "start_iso",
+          "end_iso",
+          "duration_s",
+          "alignment_method",
+          "signal_optimized",
+          "bin_files",
+          "mcap_files"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "boot_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Unique 1-based index identifying the autopilot boot cycle in chronological order."
+          },
+          "rtc_shift_s": {
+            "type": ["number", "null"],
+            "description": "Offset in seconds to add to autopilot uptime (TimeUS/1e6) to produce UTC epoch time. Null if unaligned."
+          },
+          "start_iso": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "description": "Estimated or verified autopilot boot time (ISO 8601 UTC)."
+          },
+          "end_iso": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "description": "Estimated or verified autopilot shutdown / log end time (ISO 8601 UTC)."
+          },
+          "duration_s": {
+            "type": ["number", "null"],
+            "minimum": 0,
+            "description": "Total elapsed power cycle duration in seconds."
+          },
+          "alignment_method": {
+            "type": "string",
+            "enum": [
+              "bin_rtc_message",
+              "bin_gps_fix",
+              "mcap_rtc_shift",
+              "interpolated",
+              "unaligned"
+            ],
+            "description": "Primary method used to establish rtc_shift_s."
+          },
+          "signal_optimized": {
+            "type": "boolean",
+            "default": false,
+            "description": "True if rtc_shift_s was refined using the depth trace signal optimizer (opt_rtc_shift)."
+          },
+          "depth_correlation_r": {
+            "type": ["number", "null"],
+            "description": "Pearson correlation coefficient r between BIN and MCAP depth tracks on the shared uptime axis (null if unverified)."
+          },
+          "bin_files": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Basenames of BIN files belonging to this boot cycle."
+          },
+          "mcap_files": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Basenames of MCAP files belonging to this boot cycle."
+          }
+        }
+      }
+    },
+    "bin_files": {
+      "type": "array",
+      "description": "ArduSub Dataflash (.BIN) logs found in the directory.",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "boot_id",
+          "uptime_start_s",
+          "uptime_end_s",
+          "duration_s",
+          "mcap_files"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Basename of the .BIN file (e.g. '00000161.BIN')."
+          },
+          "boot_id": {
+            "type": ["integer", "null"],
+            "description": "Identifier of the parent boot cycle, or null if unassociated."
+          },
+          "log_disarmed": {
+            "type": ["integer", "null"],
+            "enum": [0, 1],
+            "description": "Value of LOG_DISARMED parameter (0 = log only while armed, 1 = log always)."
+          },
+          "ardusub_version": {
+            "type": ["string", "null"],
+            "description": "ArduSub firmware version string (e.g. '4.5.0' or '4.7.0')."
+          },
+          "uptime_start_s": {
+            "type": "number",
+            "minimum": 0,
+            "description": "First logged message timestamp in autopilot uptime seconds (TimeUS/1e6)."
+          },
+          "uptime_end_s": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Last logged message timestamp in autopilot uptime seconds (TimeUS/1e6)."
+          },
+          "duration_s": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Duration spanned by logged messages in seconds."
+          },
+          "start_iso": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "description": "Wall-clock start time in ISO 8601 UTC (uptime_start_s + rtc_shift_s)."
+          },
+          "end_iso": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "description": "Wall-clock end time in ISO 8601 UTC (uptime_end_s + rtc_shift_s)."
+          },
+          "has_rtc_message": {
+            "type": "boolean",
+            "default": false,
+            "description": "True if the BIN file contains ArduPilot RTC log messages with a valid epoch."
+          },
+          "has_gps_fix": {
+            "type": "boolean",
+            "default": false,
+            "description": "True if the BIN file contains GPS messages with a valid week and timestamp."
+          },
+          "mcap_files": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Basenames of MCAP files that temporally overlap this BIN file."
+          }
+        }
+      }
+    },
+    "mcap_files": {
+      "type": "array",
+      "description": "BlueOS MAVLink recordings (.mcap) found in the directory.",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "boot_id",
+          "start_iso",
+          "end_iso",
+          "duration_s",
+          "bin_files"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Basename of the .mcap file (e.g. 'recorder_20260831_165221.mcap')."
+          },
+          "boot_id": {
+            "type": ["integer", "null"],
+            "description": "Identifier of the parent boot cycle, or null if unassociated."
+          },
+          "start_iso": {
+            "type": "string",
+            "format": "date-time",
+            "description": "First message log_time in ISO 8601 UTC."
+          },
+          "end_iso": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Last message log_time in ISO 8601 UTC."
+          },
+          "duration_s": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Elapsed recording duration in seconds."
+          },
+          "uptime_start_s": {
+            "type": ["number", "null"],
+            "minimum": 0,
+            "description": "First observed ArduSub time_boot_ms in seconds (time_boot_ms / 1000)."
+          },
+          "uptime_end_s": {
+            "type": ["number", "null"],
+            "minimum": 0,
+            "description": "Last observed ArduSub time_boot_ms in seconds (time_boot_ms / 1000)."
+          },
+          "sample_rtc_shift_s": {
+            "type": ["number", "null"],
+            "description": "1st percentile estimate of rtc_shift_s measured within this MCAP file."
+          },
+          "flight_modes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Unique ArduSub flight modes recorded in this MCAP (in order of appearance)."
+          },
+          "bin_files": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Basenames of BIN files that temporally overlap this MCAP file."
+          }
+        }
+      }
+    }
+  }
+}

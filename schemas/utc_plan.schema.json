@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/clydemcqueen/ardusub_log_tools/schemas/utc_plan.schema.json",
+  "title": "UtcPlan",
+  "description": "Operational dive survey plan describing survey sites, dates, timezones, and planned transect time windows.",
+  "type": "object",
+  "required": [
+    "sites",
+    "timezone"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "URI of the JSON schema."
+    },
+    "schema_version": {
+      "type": "string",
+      "description": "Semantic version of this operational plan schema.",
+      "default": "1.0.0"
+    },
+    "timezone": {
+      "type": "string",
+      "description": "Default IANA time zone identifier (e.g. 'America/Los_Angeles' or 'UTC') for interpreting wall-clock timecodes.",
+      "examples": [
+        "America/Los_Angeles",
+        "UTC"
+      ]
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "description": "Optional default survey date (YYYY-MM-DD) if shared across all sites."
+    },
+    "sites": {
+      "type": "array",
+      "description": "List of survey sites visited during the dive operations.",
+      "items": {
+        "type": "object",
+        "title": "Site",
+        "description": "A survey site containing location metadata and planned transects.",
+        "required": [
+          "name",
+          "project",
+          "date",
+          "transects"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Unique name or identifier for the survey site (e.g. 'Jack_Block_Park', 'Centennial_Park')."
+          },
+          "project": {
+            "type": "string",
+            "description": "Project, client, or expedition identifier associated with the site (e.g. 'Port_of_Seattle', 'testing')."
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "description": "Survey date for this site in ISO 8601 YYYY-MM-DD format."
+          },
+          "timezone": {
+            "type": "string",
+            "description": "Optional site-specific time zone override (e.g. 'America/Los_Angeles')."
+          },
+          "notes": {
+            "type": "string",
+            "description": "Optional operational notes or context for this survey site."
+          },
+          "transects": {
+            "type": "array",
+            "description": "Ordered list of planned survey transects conducted at this site.",
+            "items": {
+              "type": "object",
+              "title": "Transect",
+              "description": "A planned scientific survey transect defined by a start and end timecode window.",
+              "required": [
+                "name",
+                "start_tc",
+                "end_tc"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Unique label or identifier for the transect within the site (e.g. 'T1', 'T2', 'T5')."
+                },
+                "start_tc": {
+                  "type": "string",
+                  "pattern": "^([01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(\\.\\d+)?$",
+                  "description": "Transect planned start timecode in local wall-clock time (HH:MM:SS or HH:MM:SS.sss)."
+                },
+                "end_tc": {
+                  "type": "string",
+                  "pattern": "^([01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(\\.\\d+)?$",
+                  "description": "Transect planned stop / end timecode in local wall-clock time (HH:MM:SS or HH:MM:SS.sss)."
+                },
+                "start": {
+                  "type": [
+                    "string",
+                    "number"
+                  ],
+                  "description": "Optional alternative start timestamp (epoch timestamp in seconds or ISO-8601 datetime string)."
+                },
+                "end": {
+                  "type": [
+                    "string",
+                    "number"
+                  ],
+                  "description": "Optional alternative end timestamp (epoch timestamp in seconds or ISO-8601 datetime string)."
+                },
+                "date": {
+                  "type": "string",
+                  "format": "date",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                  "description": "Optional transect-specific date override (YYYY-MM-DD)."
+                },
+                "timezone": {
+                  "type": "string",
+                  "description": "Optional transect-specific timezone override."
+                },
+                "notes": {
+                  "type": "string",
+                  "description": "Optional notes or operational observations for this transect."
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
