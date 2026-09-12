@@ -21,11 +21,12 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
+import util
+
 # Auto-fallback to project .venv if dependencies are not in current interpreter
 # TODO: remove this, it is an artifact of how the agent manages Python in a multi-project folder
 try:
     import numpy as np
-    from mcap.reader import make_reader
     from pymavlink import mavutil
 except ImportError:
     venv_python = os.path.abspath(os.path.join(os.path.dirname(__file__), ".venv", "bin", "python3"))
@@ -437,8 +438,9 @@ def scan_mcap_file(path: Path, verbose: bool = False) -> McapScan | None:
     if verbose:
         print(f"  [MCAP] Scanning {path.name}...")
 
-    first_log_time = None
-    last_log_time = None
+    info = util.get_mcap_summary_info(path)
+    first_log_time = info.start_time_s if info else None
+    last_log_time = info.end_time_s if info else None
     first_uptime = None
     last_uptime = None
     shift_samples: list[float] = []
@@ -449,86 +451,84 @@ def scan_mcap_file(path: Path, verbose: bool = False) -> McapScan | None:
     prev_armed: bool | None = None
 
     try:
-        with open(path, "rb") as f:
-            reader = make_reader(f)
-            # Scan messages across all topics starting with 'mavlink/'
-            for schema, channel, message in reader.iter_messages():
-                topic = channel.topic
-                if not (topic.startswith("mavlink/") or topic.startswith("mavlink_raw/")):
-                    continue
+        for schema, channel, message in util.iter_mcap_messages(
+            path,
+            message_types=["HEARTBEAT", "GLOBAL_POSITION_INT", "SYSTEM_TIME"],
+            sys_id=1,
+            comp_id=1,
+        ):
+            log_t = message.log_time_s
+            if first_log_time is None:
+                first_log_time = log_t
+            last_log_time = log_t
 
-                log_t = message.log_time / 1e9
-                if first_log_time is None:
-                    first_log_time = log_t
-                last_log_time = log_t
+            try:
+                data = message.json
+            except Exception:
+                continue
 
-                try:
-                    data = json.loads(message.data, strict=False)
-                except Exception:
-                    continue
+            header = data.get("header", {})
+            sys_id = header.get("system_id", 1)
+            comp_id = header.get("component_id", 1)
 
-                header = data.get("header", {})
-                sys_id = header.get("system_id", 1)
-                comp_id = header.get("component_id", 1)
+            # Focus on vehicle autopilot messages (sysid=1, compid=1)
+            if sys_id != 1 or comp_id != 1:
+                continue
 
-                # Focus on vehicle autopilot messages (sysid=1, compid=1)
-                if sys_id != 1 or comp_id != 1:
-                    continue
+            msg = data.get("message", {})
+            mtype = msg.get("type")
 
-                msg = data.get("message", {})
-                mtype = msg.get("type")
+            # Extract flight modes and arm state from HEARTBEAT
+            if mtype == "HEARTBEAT":
+                custom_mode = msg.get("custom_mode", 0)
+                if isinstance(custom_mode, dict):
+                    custom_mode = custom_mode.get("type", 0)
+                mname = get_sub_mode(custom_mode)
+                if not flight_modes or flight_modes[-1] != mname:
+                    flight_modes.append(mname)
 
-                # Extract flight modes and arm state from HEARTBEAT
-                if mtype == "HEARTBEAT":
-                    custom_mode = msg.get("custom_mode", 0)
-                    if isinstance(custom_mode, dict):
-                        custom_mode = custom_mode.get("type", 0)
-                    mname = get_sub_mode(custom_mode)
-                    if not flight_modes or flight_modes[-1] != mname:
-                        flight_modes.append(mname)
+                base_mode = msg.get("base_mode", 0)
+                is_armed = (
+                    "SAFETY_ARMED" in str(base_mode)
+                    if isinstance(base_mode, (str, dict))
+                    else bool(int(base_mode or 0) & 128)
+                )
+                if is_armed != prev_armed:
+                    t_now = last_uptime or (log_t - shift_samples[0] if shift_samples else None)
+                    if t_now is not None:
+                        arm_events.append((t_now, 1 if is_armed else 0))
+                    prev_armed = is_armed
 
-                    base_mode = msg.get("base_mode", 0)
-                    is_armed = (
-                        "SAFETY_ARMED" in str(base_mode)
-                        if isinstance(base_mode, (str, dict))
-                        else bool(int(base_mode or 0) & 128)
-                    )
-                    if is_armed != prev_armed:
-                        t_now = last_uptime or (log_t - shift_samples[0] if shift_samples else None)
-                        if t_now is not None:
-                            arm_events.append((t_now, 1 if is_armed else 0))
-                        prev_armed = is_armed
+            # Extract ArduSub uptime (time_boot_ms)
+            bms = msg.get("time_boot_ms")
+            if bms is not None and isinstance(bms, (int, float)) and bms > 0:
+                uptime_s = bms / 1000.0
+                if first_uptime is None:
+                    first_uptime = uptime_s
+                last_uptime = uptime_s
 
-                # Extract ArduSub uptime (time_boot_ms)
-                bms = msg.get("time_boot_ms")
-                if bms is not None and isinstance(bms, (int, float)) and bms > 0:
-                    uptime_s = bms / 1000.0
-                    if first_uptime is None:
-                        first_uptime = uptime_s
-                    last_uptime = uptime_s
+                # Candidate rtc_shift
+                shift_samples.append(log_t - uptime_s)
 
-                    # Candidate rtc_shift
-                    shift_samples.append(log_t - uptime_s)
+                # Extract depth from GLOBAL_POSITION_INT relative_alt (in mm)
+                if mtype == "GLOBAL_POSITION_INT" and "relative_alt" in msg:
+                    rel_alt = msg.get("relative_alt")
+                    if rel_alt is not None:
+                        depth_m = -float(rel_alt) / 1000.0
+                        depth_track.append((uptime_s, depth_m))
 
-                    # Extract depth from GLOBAL_POSITION_INT relative_alt (in mm)
-                    if mtype == "GLOBAL_POSITION_INT" and "relative_alt" in msg:
-                        rel_alt = msg.get("relative_alt")
-                        if rel_alt is not None:
-                            depth_m = -float(rel_alt) / 1000.0
-                            depth_track.append((uptime_s, depth_m))
-
-                # Extract MAVLink SYSTEM_TIME (time_unix_usec) from autopilot
-                if mtype == "SYSTEM_TIME":
-                    time_unix_usec = msg.get("time_unix_usec")
-                    bms_st = msg.get("time_boot_ms")
-                    if (
-                        time_unix_usec
-                        and isinstance(time_unix_usec, (int, float))
-                        and time_unix_usec > 1_000_000_000_000_000
-                    ):
-                        up_ref = (bms_st / 1000.0) if (bms_st and bms_st > 0) else last_uptime
-                        if up_ref is not None:
-                            sys_time_shifts.append((time_unix_usec / 1e6) - up_ref)
+            # Extract MAVLink SYSTEM_TIME (time_unix_usec) from autopilot
+            if mtype == "SYSTEM_TIME":
+                time_unix_usec = msg.get("time_unix_usec")
+                bms_st = msg.get("time_boot_ms")
+                if (
+                    time_unix_usec
+                    and isinstance(time_unix_usec, (int, float))
+                    and time_unix_usec > 1_000_000_000_000_000
+                ):
+                    up_ref = (bms_st / 1000.0) if (bms_st and bms_st > 0) else last_uptime
+                    if up_ref is not None:
+                        sys_time_shifts.append((time_unix_usec / 1e6) - up_ref)
 
     except Exception as ex:
         if verbose:

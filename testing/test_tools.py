@@ -20,6 +20,7 @@ import BIN_param
 import BIN_plot_local
 import BIN_timeline
 import map_maker
+import mcap_channels
 import mcap_dump_extension_logs
 import mcap_explode_extension_logs
 import mcap_map_maker
@@ -618,3 +619,37 @@ class TestTools:
         content = outfile.read_text(encoding="utf-8")
         assert "Global Position Sources" in content
         assert "leaflet" in content.lower()
+
+    def test_mcap_summary_info(self):
+        mcap_file = "testing/recorder_20260826_181307_no_video.mcap"
+        info = util.get_mcap_summary_info(mcap_file)
+        assert info is not None
+        assert info.message_count > 0
+        assert info.duration_s > 0
+        assert len(info.channels) > 0
+        assert len(info.channel_counts) > 0
+
+    def test_mcap_iter_messages(self):
+        mcap_file = "testing/recorder_20260826_181307_no_video.mcap"
+        msgs = list(util.iter_mcap_messages(mcap_file, message_types=["HEARTBEAT"], sys_id=1, comp_id=1))
+        assert len(msgs) > 0
+        for schema, channel, msg in msgs:
+            assert channel.topic == "mavlink/1/1/HEARTBEAT"
+            assert msg.log_time > 0
+            assert msg.log_time_s > 0
+            assert "type" in msg.json["message"]
+
+    def test_mcap_channels_tool(self, capsys):
+        mcap_file = "testing/recorder_20260826_181307_no_video.mcap"
+        # Test default fast path
+        mcap_channels.count_mcap_messages(mcap_file, extract=False, raw=False)
+        out_fast = capsys.readouterr().out
+        assert "Message Counts for" in out_fast
+
+        # Test raw fallback path
+        mcap_channels.count_mcap_messages(mcap_file, extract=False, raw=True)
+        out_raw = capsys.readouterr().out
+        assert "Message Counts for" in out_raw
+
+        # Outputs must match
+        assert out_fast == out_raw

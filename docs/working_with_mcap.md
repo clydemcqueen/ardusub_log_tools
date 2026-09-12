@@ -18,7 +18,35 @@ Q: Do mcap files record the same information as QGC-generated tlog files?
 * Mostly, yes. See the differences below.
 
 Q: How do I parse mcap files in Python?
-* See [mcap_types.py](../mcap_types.py) for a simple example.
+* Use `util.iter_mcap_messages()` and `util.get_mcap_summary_info()` in [util.py](../util.py). See below for details.
+
+## channel organization
+
+BlueOS records messages from the Zenoh message bus into MCAP channels:
+
+* Vehicle MAVLink: `mavlink/{system_id}/{component_id}/{MESSAGE_TYPE}`
+  * There are a few sub-topics for specific enum values/properties, e.g., `mavlink/1/1/HEARTBEAT/mavtype`.
+* Outgoing MAVLink: `mavlink/out`
+  * Aggregated stream of all outgoing MAVLink packets serialized as JSON. Note that messages sent by the vehicle autopilot appear both on `mavlink/1/1/{MESSAGE}` and in `mavlink/out`.
+* Extension logs: `extensions/logs/{extension_name}` (e.g., `extensions/logs/waterlinked.ugps`)
+* Service logs: `services/{service_name}/log` (e.g., `services/ardupilot-manager/log`, `services/wifi-manager/log`)
+* System information: `services/system_information/*`
+* Video streams: `video/*`
+
+## MCAP file structure & high-performance reading
+
+BlueOS writes MCAP files in `zstd`-compressed chunks with a complete index footer:
+* Statistics & Summary: Stored in the file footer. Contains the exact start and end timestamps and message count per channel.
+* MessageIndex: Each chunk index points to byte offsets for every message of each channel within decompressed chunk buffers.
+
+### Fast Reading with `util.py`
+
+The basic iterator (`mcap.reader.make_reader().iter_messages()`) can be slow because it decompresses and unpacks every single record in pure Python. Use the helper functions in [util.py](../util.py):
+
+* `util.get_mcap_summary_info(path)`:
+  Reads time bounds, channel names, and exact message counts in ~1 ms directly from the file footer without decompressing chunk records.
+* `util.iter_mcap_messages(path, message_types=[...], sys_id=1, comp_id=1, ...)`:
+  Uses the `MessageIndex` to jump directly to target message byte offsets in decompressed memory, 50x–150x faster than a simple iterator.
 
 ## How mcap files differ from QGC-generated tlog files
 

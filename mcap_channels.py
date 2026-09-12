@@ -13,7 +13,17 @@ from mcap.reader import make_reader
 import util
 
 
-def count_mcap_messages(file_path, extract=False):
+def count_mcap_messages(file_path, extract=False, raw=False):
+    # Fast path: read from footer summary statistics in ~1ms unless raw or extraction is requested
+    if not extract and not raw:
+        info = util.get_mcap_summary_info(file_path)
+        if info and info.channel_counts:
+            print(f"--- Message Counts for: {file_path} ---")
+            for topic, count in sorted(info.channel_counts.items(), key=lambda x: x[1], reverse=True):
+                print(f"{count:5d} | {topic}")
+            return
+
+    # Fallback / Raw / Extract path: iterate over all messages
     message_counts = Counter()
     extract_files = {}
 
@@ -73,11 +83,12 @@ def main():
     parser.add_argument("paths", nargs="+", help="files or directories")
     parser.add_argument("-r", "--recurse", action="store_true", help="enter directories")
     parser.add_argument("--extract", action="store_true", help="Extract services/*/log channels into text files")
+    parser.add_argument("--raw", action="store_true", help="Bypass summary and iterate raw records linearly")
     args = parser.parse_args()
     files = util.expand_path(args.paths, args.recurse, ".mcap")
 
     for file in files:
-        count_mcap_messages(file, extract=args.extract)
+        count_mcap_messages(file, extract=args.extract, raw=args.raw)
 
 
 if __name__ == "__main__":
