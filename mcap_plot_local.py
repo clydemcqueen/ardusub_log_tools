@@ -5,7 +5,6 @@ Look for LOCAL_POSITION_NED and VISION_POSITION_DELTA messages in mcap files, pl
 """
 
 import argparse
-import json
 
 import matplotlib
 
@@ -15,7 +14,6 @@ from geometry import Pose
 # Set backend before importing matplotlib.pyplot
 matplotlib.use("pdf")
 import matplotlib.pyplot as plt
-from mcap.reader import make_reader
 
 MSG_TYPES = ["LOCAL_POSITION_NED", "VISION_POSITION_DELTA", "GLOBAL_POSITION_INT"]
 
@@ -33,33 +31,37 @@ def plot_mcap_local(mcap_file: str, outfile: str, dvl: bool = False):
     pose = None
     last_global_msg = None
 
+    target_types = ["LOCAL_POSITION_NED"]
+    if dvl:
+        target_types.extend(["GLOBAL_POSITION_INT", "VISION_POSITION_DELTA"])
+
     try:
-        with open(mcap_file, "rb") as f:
-            reader = make_reader(f)
-            for schema, channel, message in reader.iter_messages(topics=["mavlink/out"]):
-                data = json.loads(message.data)
-                msg_data = data.get("message", {})
-                msg_type = msg_data.get("type")
+        for schema, channel, message in util.iter_mcap_messages(
+            mcap_file, message_types=target_types, sys_id=None, comp_id=None
+        ):
+            data = message.json
+            msg_data = data.get("message", {})
+            msg_type = msg_data.get("type")
 
-                if msg_type == "LOCAL_POSITION_NED":
-                    lpn_xs.append(msg_data["y"])
-                    lpn_ys.append(msg_data["x"])
-                elif dvl and msg_type == "GLOBAL_POSITION_INT":
-                    last_global_msg = msg_data
-                elif dvl and msg_type == "VISION_POSITION_DELTA":
-                    if pose is None and last_global_msg is not None:
-                        pose = Pose(
-                            (0, 0, last_global_msg.get("hdg", 0) / 100.0),
-                            (0, 0, -last_global_msg.get("relative_alt", 0) / 1000.0),
-                        )
-                    elif pose is None:
-                        pose = Pose((0, 0, 0), (0, 0, 0))
+            if msg_type == "LOCAL_POSITION_NED":
+                lpn_xs.append(msg_data["y"])
+                lpn_ys.append(msg_data["x"])
+            elif dvl and msg_type == "GLOBAL_POSITION_INT":
+                last_global_msg = msg_data
+            elif dvl and msg_type == "VISION_POSITION_DELTA":
+                if pose is None and last_global_msg is not None:
+                    pose = Pose(
+                        (0, 0, last_global_msg.get("hdg", 0) / 100.0),
+                        (0, 0, -last_global_msg.get("relative_alt", 0) / 1000.0),
+                    )
+                elif pose is None:
+                    pose = Pose((0, 0, 0), (0, 0, 0))
 
-                    if pose is not None:
-                        pose.add_angle_delta(msg_data.get("angle_delta", [0.0, 0.0, 0.0]))
-                        pose.add_position_delta(msg_data.get("position_delta", [0.0, 0.0, 0.0]))
-                        dvl_xs.append(pose.position[1])
-                        dvl_ys.append(pose.position[0])
+                if pose is not None:
+                    pose.add_angle_delta(msg_data.get("angle_delta", [0.0, 0.0, 0.0]))
+                    pose.add_position_delta(msg_data.get("position_delta", [0.0, 0.0, 0.0]))
+                    dvl_xs.append(pose.position[1])
+                    dvl_ys.append(pose.position[0])
 
     except Exception as e:
         print(f'CRASH WITH ERROR "{e}", PARTIAL RESULTS')
