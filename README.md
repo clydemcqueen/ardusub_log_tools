@@ -174,7 +174,7 @@ tlog_plot_local.py $SEGMENTS *.tlog
 ## Tools that read BlueOS-generated mcap files
 
 * [mcap_channels.py](mcap_channels.py) - Open mcap files and report on the channels.
-* [mcap_dump_extension_logs.py](mcap_dump_extension_logs.py) - Extract extension logs from mcap files and write each extension's logs to a text file.
+* [mcap_dump_logs.py](mcap_dump_logs.py) - Extract log messages (foxglove.Log type) from mcap files and write each log stream to a text file.
 * [mcap_explode.py](mcap_explode.py) - Read MAVLink messages from an mcap file and write a csv file for each message type.
 * [mcap_explode_extension_logs.py](mcap_explode_extension_logs.py) - Extract structured telemetry and diagnostic data from extension logs in mcap files to CSV or JSON files.
 * [mcap_extract_video.py](mcap_extract_video.py) - Extract video stream(s) from mcap files and write to MP4 format.

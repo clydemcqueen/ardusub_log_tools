@@ -21,7 +21,7 @@ import BIN_plot_local
 import BIN_timeline
 import map_maker
 import mcap_channels
-import mcap_dump_extension_logs
+import mcap_dump_logs
 import mcap_explode_extension_logs
 import mcap_map_maker
 import mcap_merge
@@ -528,7 +528,7 @@ class TestTools:
 
         test_mcap = tmp_path / "test.mcap"
         shutil.copy("testing/recorder_20260826_181307_no_video.mcap", test_mcap)
-        counts = mcap_dump_extension_logs.dump_extension_logs(str(test_mcap))
+        counts = mcap_dump_logs.dump_logs(str(test_mcap), extensions_only=True)
 
         assert counts["waterlinked.ugps"] == 779
         assert counts["clydemcqueen.wl_ugps_external"] == 120
@@ -539,6 +539,47 @@ class TestTools:
         assert (tmp_path / "test_asl_clydemcqueen.wl_ugps_external.txt").is_file()
         assert (tmp_path / "test_asl_blueos.major_tom.txt").is_file()
         assert (tmp_path / "test_asl_clydemcqueen.surftrak_fixit.txt").is_file()
+
+    def test_mcap_dump_logs(self, tmp_path):
+        import shutil
+
+        test_mcap = tmp_path / "test.mcap"
+        shutil.copy("testing/recorder_20260826_181307_no_video.mcap", test_mcap)
+        counts = mcap_dump_logs.dump_logs(str(test_mcap))
+
+        # Extensions
+        assert counts["waterlinked.ugps"] == 779
+        assert counts["clydemcqueen.wl_ugps_external"] == 120
+        assert counts["blueos.major_tom"] == 92
+        assert counts["clydemcqueen.surftrak_fixit"] == 21
+        # Services
+        assert counts["wifi-manager"] == 75
+        assert counts["beacon"] == 62
+        assert counts["kraken"] == 32
+        assert counts["helper"] == 22
+        assert counts["cable-guy"] == 18
+        assert counts["version-chooser"] == 17
+        assert counts["bag-of-holding"] == 16
+        assert counts["ping"] == 12
+        assert counts["ardupilot-manager"] == 2
+        # Frontend
+        assert counts["frontend_iTSFfEaSz"] == 2
+
+        assert (tmp_path / "test_asl_waterlinked.ugps.txt").is_file()
+        assert (tmp_path / "test_asl_wifi-manager.txt").is_file()
+        assert (tmp_path / "test_asl_ping.txt").is_file()
+        assert (tmp_path / "test_asl_frontend_iTSFfEaSz.txt").is_file()
+
+        # Test file with no extension logs
+        test_mcap2 = tmp_path / "test2.mcap"
+        shutil.copy("testing/recorder_20260816_203739.mcap", test_mcap2)
+        ext_counts = mcap_dump_logs.dump_logs(str(test_mcap2), extensions_only=True)
+        assert ext_counts == {}
+
+        all_counts = mcap_dump_logs.dump_logs(str(test_mcap2))
+        assert all_counts["wifi-manager"] == 317
+        assert all_counts["kraken"] == 176
+        assert (tmp_path / "test2_asl_wifi-manager.txt").is_file()
 
     def test_mcap_explode_extension_logs_csv(self, tmp_path):
         import shutil
