@@ -773,9 +773,10 @@ def _build_alignment(directory: Path, optimize: bool = True, verbose: bool = Fal
     if verbose:
         print(f"Scanning dive directory: {directory}")
 
-    # Discover logs
-    bin_paths = sorted(glob.glob(os.path.join(directory, "*.BIN")))
-    mcap_paths = sorted(glob.glob(os.path.join(directory, "*.mcap")))
+    # Discover logs, avoiding mcap files with video created by mcap_strip_video.py
+    bin_paths = sorted(glob.glob(os.path.join(directory, "**", "*.BIN"), recursive=True))
+    mcap_paths = sorted(glob.glob(os.path.join(directory, "**", "*.mcap"), recursive=True))
+    mcap_paths = [p for p in mcap_paths if not p.endswith("_video.mcap")]
 
     bin_scans: list[BinScan] = []
     for bp in bin_paths:
