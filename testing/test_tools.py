@@ -26,6 +26,7 @@ import mcap_explode_extension_logs
 import mcap_map_maker
 import mcap_merge
 import mcap_plot_local
+import mcap_strip_video
 import mcap_to_tlog
 import mcap_wl_ugps_acoustic_info
 import show_types
@@ -694,3 +695,98 @@ class TestTools:
 
         # Outputs must match
         assert out_fast == out_raw
+
+    def test_mcap_strip_video_standard(self, tmp_path):
+        from mcap.writer import Writer
+
+        input_file = tmp_path / "test_standard.mcap"
+        with open(input_file, "wb") as f:
+            w = Writer(f)
+            w.start()
+            s_vid = w.register_schema(name="foxglove.CompressedVideo", encoding="jsonschema", data=b"{}")
+            c_vid = w.register_channel(topic="video/cam0", message_encoding="json", schema_id=s_vid)
+            w.add_message(c_vid, 1000, b"video_frame", 1000)
+            s_tel = w.register_schema(name="telemetry", encoding="jsonschema", data=b"{}")
+            c_tel = w.register_channel(topic="mavlink/telem", message_encoding="json", schema_id=s_tel)
+            w.add_message(c_tel, 1000, b"telem_data", 1000)
+            w.finish()
+
+        orig_size = input_file.stat().st_size
+        success = mcap_strip_video.strip_video_from_mcap(str(input_file), in_place=False)
+        assert success
+        assert input_file.is_file()
+        assert input_file.stat().st_size == orig_size
+
+        out_file = tmp_path / "test_standard_asl_no_video.mcap"
+        assert out_file.is_file()
+        summary = util.get_mcap_summary_info(str(out_file))
+        assert summary is not None
+        assert not any("video" in k.lower() for k in summary.channel_counts)
+        assert any("telem" in k.lower() for k in summary.channel_counts)
+
+    def test_mcap_strip_video_in_place(self, tmp_path):
+        from mcap.writer import Writer
+
+        input_file = tmp_path / "dive.mcap"
+        with open(input_file, "wb") as f:
+            w = Writer(f)
+            w.start()
+            s_vid = w.register_schema(name="foxglove.CompressedVideo", encoding="jsonschema", data=b"{}")
+            c_vid = w.register_channel(topic="video/Streamdevvideo0/stream", message_encoding="json", schema_id=s_vid)
+            w.add_message(c_vid, 1000, b"video_frame", 1000)
+            s_tel = w.register_schema(name="telemetry", encoding="jsonschema", data=b"{}")
+            c_tel = w.register_channel(topic="telemetry", message_encoding="json", schema_id=s_tel)
+            w.add_message(c_tel, 1000, b"telem_data", 1000)
+            w.finish()
+
+        orig_size = input_file.stat().st_size
+        success = mcap_strip_video.strip_video_from_mcap(str(input_file), in_place=True)
+        assert success
+
+        video_backup = tmp_path / "dive_video.mcap"
+        assert video_backup.is_file()
+        assert video_backup.stat().st_size == orig_size
+        assert input_file.is_file()
+
+        # Check channels
+        summary_video = util.get_mcap_summary_info(str(video_backup))
+        summary_stripped = util.get_mcap_summary_info(str(input_file))
+        assert any("video" in k.lower() for k in summary_video.channel_counts)
+        assert not any("video" in k.lower() for k in summary_stripped.channel_counts)
+        assert any("telemetry" in k.lower() for k in summary_stripped.channel_counts)
+
+    def test_mcap_strip_video_in_place_safety_checks(self, tmp_path):
+        from mcap.writer import Writer
+
+        # 1. Test safety when target _video.mcap already exists
+        target_video = tmp_path / "test_video.mcap"
+        target_video.write_bytes(b"existing_video_content")
+        input_file = tmp_path / "test.mcap"
+        input_file.write_bytes(b"input_content")
+
+        success = mcap_strip_video.strip_video_from_mcap(str(input_file), in_place=True)
+        assert not success
+        # Ensure existing data was not overwritten
+        assert target_video.read_bytes() == b"existing_video_content"
+        assert input_file.read_bytes() == b"input_content"
+
+        # 2. Test safety when input file already ends with _video.mcap
+        success2 = mcap_strip_video.strip_video_from_mcap(str(target_video), in_place=True)
+        assert not success2
+        assert target_video.read_bytes() == b"existing_video_content"
+
+        # 3. Test safety when file has no video: file left unchanged, no _video.mcap created
+        no_vid_file = tmp_path / "novideo.mcap"
+        with open(no_vid_file, "wb") as f:
+            w = Writer(f)
+            w.start()
+            s_tel = w.register_schema(name="telemetry", encoding="jsonschema", data=b"{}")
+            c_tel = w.register_channel(topic="telemetry", message_encoding="json", schema_id=s_tel)
+            w.add_message(c_tel, 1000, b"telem_data", 1000)
+            w.finish()
+
+        orig_novid_size = no_vid_file.stat().st_size
+        success3 = mcap_strip_video.strip_video_from_mcap(str(no_vid_file), in_place=True)
+        assert success3
+        assert not (tmp_path / "novideo_video.mcap").exists()
+        assert no_vid_file.stat().st_size == orig_novid_size
