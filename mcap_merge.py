@@ -6,7 +6,7 @@ operation does a forward-fill (data is copied from the previous row), so the res
 substantially larger than the sum of the per-type csv files.
 
 Supports MAVLink telemetry from the "mavlink/out" channel as well as first-class extension
-tables such as wl_ugps and wl_ugps_external.
+tables such as wl_ugps, wl_ugps_external, and wl_dvl.
 
 Supports segments.
 """
@@ -20,7 +20,7 @@ from pymavlink.dialects.v20 import ardupilotmega as mavlink
 import table_types
 import util
 from log_merger import LogMerger
-from mcap_explode_extension_logs import WaterlinkedUgpsParser, WlUgpsExternalParser
+from mcap_explode_extension_logs import WaterlinkedDvlParser, WaterlinkedUgpsParser, WlUgpsExternalParser
 from segment_reader import Segment, add_segment_args, build_segment_name, parse_segment_args
 
 # Tables that look generally interesting (matching tlog_merge / tlog_explode)
@@ -87,6 +87,15 @@ def normalize_types(type_list: list[str]) -> list[str]:
             normalized.append("wl_ugps")
         elif t_lower == "wl_ugps_external":
             normalized.append("wl_ugps_external")
+        elif t_lower in (
+            "wl_dvl",
+            "wl-dvl",
+            "waterlinked.dvl",
+            "waterlinked_dvl",
+            "bluerobotics.water-linked-dvl",
+            "water-linked-dvl",
+        ):
+            normalized.append("wl_dvl")
         else:
             normalized.append(t_clean.upper())
     return normalized
@@ -159,9 +168,10 @@ class McapLogReader(LogMerger):
         file_to_read = filename if filename is not None else self.filename
         msg_count = 0
 
+        want_wl_dvl = self.types is not None and "wl_dvl" in self.types
         want_wl_ugps = self.types is not None and "wl_ugps" in self.types
         want_wl_external = self.types is not None and "wl_ugps_external" in self.types
-        want_mavlink = self.types is None or any(t not in ("wl_ugps", "wl_ugps_external") for t in self.types)
+        want_mavlink = self.types is None or any(t not in ("wl_ugps", "wl_ugps_external", "wl_dvl") for t in self.types)
 
         try:
             with open(file_to_read, "rb") as f:
@@ -173,6 +183,10 @@ class McapLogReader(LogMerger):
                     if want_mavlink:
                         for c in summary.channels.values():
                             if c.topic == "mavlink/out":
+                                topics.append(c.topic)
+                    if want_wl_dvl:
+                        for c in summary.channels.values():
+                            if "water-linked-dvl" in c.topic or "water-linked-dev" in c.topic or "wl_dvl" in c.topic:
                                 topics.append(c.topic)
                     if want_wl_external:
                         for c in summary.channels.values():
@@ -187,8 +201,37 @@ class McapLogReader(LogMerger):
                 else:
                     iter_kwargs = {}
 
+                wl_dvl_parser = WaterlinkedDvlParser() if want_wl_dvl else None
                 wl_external_parser = WlUgpsExternalParser() if want_wl_external else None
                 wl_ugps_parser = WaterlinkedUgpsParser() if want_wl_ugps else None
+
+                def append_wl_dvl_rows(rows):
+                    nonlocal msg_count
+                    for r in rows:
+                        r_ts = r["timestamp"]
+                        if self.system_time:
+                            if self.time_delta_s is None:
+                                continue
+                            ts = int((r_ts - self.time_delta_s) * 1000.0)
+                        else:
+                            ts = r_ts
+
+                        if self.segment is not None:
+                            if r_ts < self.segment.start or r_ts > self.segment.end:
+                                continue
+
+                        table_name = "wl_dvl"
+                        clean_data = {"timestamp": ts}
+                        for k, v in r.items():
+                            if k != "timestamp":
+                                clean_data[f"{table_name}.{k}"] = v
+
+                        if table_name not in self.tables:
+                            self.tables[table_name] = table_types.Table.create_table(
+                                table_name, table_name=table_name, filter_bad=not self.raw
+                            )
+                        self.tables[table_name].append(clean_data)
+                        msg_count += 1
 
                 def append_wl_external_rows(rows):
                     nonlocal msg_count
@@ -304,6 +347,13 @@ class McapLogReader(LogMerger):
                         self.tables[table_name].append(clean_data)
                         msg_count += 1
 
+                    elif wl_dvl_parser is not None and (
+                        "water-linked-dvl" in channel.topic
+                        or "water-linked-dev" in channel.topic
+                        or "wl_dvl" in channel.topic
+                    ):
+                        append_wl_dvl_rows(wl_dvl_parser.parse_message(message))
+
                     elif wl_external_parser is not None and "wl_ugps_external" in channel.topic:
                         append_wl_external_rows(wl_external_parser.parse_message(message))
 
@@ -316,6 +366,8 @@ class McapLogReader(LogMerger):
                     if self.verbose and msg_count % 20000 == 0:
                         print(f"{msg_count} messages")
 
+                if wl_dvl_parser is not None:
+                    append_wl_dvl_rows(wl_dvl_parser.finish())
                 if wl_external_parser is not None:
                     append_wl_external_rows(wl_external_parser.finish())
                 if wl_ugps_parser is not None:
