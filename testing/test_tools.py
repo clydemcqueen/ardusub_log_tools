@@ -608,6 +608,44 @@ class TestTools:
         assert (tmp_path / "test_asl_wl_ugps_external.json").is_file()
         assert (tmp_path / "test_asl_waterlinked.ugps.json").is_file()
 
+    def test_waterlinked_dvl_parser(self):
+        import os
+
+        parser = mcap_explode_extension_logs.WaterlinkedDvlParser()
+        example_lines = [
+            '192.168.2.1 - - [01/Sep/2026 16:20:17] "[37mGET /get_status HTTP/1.1[0m" 200 -',
+            '192.168.2.1 - - [01/Sep/2026 16:20:19] "[37mGET /get_status HTTP/1.1[0m" 200 -',
+            "2026-09-01 16:20:20.889 | INFO     | dvl:handle_velocity:378 - Invalid  dvl reading, ignoring it.",
+            '192.168.2.1 - - [01/Sep/2026 16:20:21] "[37mGET /get_status HTTP/1.1[0m" 200 -',
+            "2026-09-01 16:20:22.898 | INFO     | dvl:handle_velocity:378 - Invalid  dvl reading, ignoring it.",
+            '192.168.2.1 - - [01/Sep/2026 16:20:23] "[37mGET /get_status HTTP/1.1[0m" 200 -',
+            '192.168.2.1 - - [01/Sep/2026 16:20:25] "[37mGET /get_status HTTP/1.1[0m" 200 -',
+        ]
+        records = []
+        for i, line in enumerate(example_lines):
+            records.extend(parser.parse_line(line))
+
+        assert len(records) == 7
+        assert [r["status"] for r in records] == [0, 0, 1, 0, 1, 0, 0]
+        assert [r["timestamp"] for r in records] == [
+            1788279617.0,
+            1788279619.0,
+            1788279620.889,
+            1788279621.0,
+            1788279622.898,
+            1788279623.0,
+            1788279625.0,
+        ]
+        # Test fallback when line lacks timestamp
+        fallback_record = parser.parse_line("Invalid  dvl reading, ignoring it.")
+        assert fallback_record == []
+
+        if os.path.exists("tmp/recorder_20260901_161800.mcap"):
+            rows = mcap_explode_extension_logs.parse_bluerobotics_water_linked_dvl("tmp/recorder_20260901_161800.mcap")
+            assert len(rows) == 114
+            assert sum(1 for r in rows if r["status"] == 0) == 75
+            assert sum(1 for r in rows if r["status"] == 1) == 39
+
     def test_mcap_wl_ugps_acoustic_info(self, capsys):
         info = mcap_wl_ugps_acoustic_info.AcousticLogInfo("testing/recorder_20260826_181307_no_video.mcap")
         info.read_and_report()

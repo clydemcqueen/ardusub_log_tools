@@ -6,6 +6,7 @@ Extract structured telemetry and diagnostic data from BlueOS extension logs in M
 Writes data to CSV (default) or JSON files for interesting extensions:
 - wl_ugps_external: vessel location, heading, and HTTP response
 - waterlinked.ugps: depth/orientation, global locator, acoustic solution, GPS_INPUT, and master position per pass
+- bluerobotics.water-linked-dvl: write a status record, status = 0 for good get_status call, 1 for invalid DVL reading
 
 Global position summary:
 - WL_UGPS_EXTERNAL_FIELDS.lat,lon,orientation: Vessel position, output from satellite compass, input to G2
@@ -18,6 +19,8 @@ import argparse
 import ast
 import csv
 import json
+import re
+from datetime import datetime, timezone
 
 from mcap.reader import make_reader
 
@@ -97,6 +100,13 @@ WATERLINKED_UGPS_FIELDS = [
     "nmea_gprmc",
     "nmea_gpvtg",
 ]
+
+WATERLINKED_DVL_FIELDS = [
+    "timestamp",
+    "status",  # 0 for good get_status call, 1 for invalid DVL reading
+]
+
+BLUEROBOTICS_WATER_LINKED_DVL_FIELDS = WATERLINKED_DVL_FIELDS
 
 
 class WlUgpsExternalParser:
@@ -331,6 +341,90 @@ class WaterlinkedUgpsParser:
         return self.passes[start_count:]
 
 
+RE_LOGURU_TIMESTAMP = re.compile(r"(\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d+)?)")
+RE_HTTP_TIMESTAMP = re.compile(r"\[(\d{2})/([A-Za-z]{3})/(\d{4}) (\d{2}):(\d{2}):(\d{2})\]")
+MONTH_MAP = {
+    "Jan": 1,
+    "Feb": 2,
+    "Mar": 3,
+    "Apr": 4,
+    "May": 5,
+    "Jun": 6,
+    "Jul": 7,
+    "Aug": 8,
+    "Sep": 9,
+    "Oct": 10,
+    "Nov": 11,
+    "Dec": 12,
+}
+
+
+class WaterlinkedDvlParser:
+    """Parse status records from bluerobotics.water-linked-dvl."""
+
+    def __init__(self):
+        self.last_time = 0.0
+
+    @staticmethod
+    def extract_timestamp(text: str) -> float:
+        m = RE_LOGURU_TIMESTAMP.search(text)
+        if m:
+            try:
+                return datetime.fromisoformat(m.group(1)).replace(tzinfo=timezone.utc).timestamp()
+            except ValueError:
+                pass
+
+        m = RE_HTTP_TIMESTAMP.search(text)
+        if m:
+            day, mon_str, year, hour, minute, second = m.groups()
+            mon = MONTH_MAP.get(mon_str)
+            if mon:
+                try:
+                    return datetime(
+                        int(year), mon, int(day), int(hour), int(minute), int(second), tzinfo=timezone.utc
+                    ).timestamp()
+                except ValueError:
+                    pass
+
+        print(f"Could not parse timestamp in '{text}', dropping record")
+        return None
+
+    def parse_message(self, message) -> list[dict]:
+        try:
+            payload = json.loads(message.data.decode("utf-8"))
+            if isinstance(payload, dict):
+                text = payload.get("message", "")
+            else:
+                text = str(payload)
+        except Exception:
+            text = message.data.decode("utf-8", errors="replace")
+
+        return self.parse_line(text)
+
+    def parse_line(self, text: str) -> list[dict]:
+        if "GET /get_status" in text and re.search(r"\s200\b", text):
+            status = 0
+        elif re.search(r"invalid\s+dvl\s+reading", text, re.IGNORECASE):
+            status = 1
+        else:
+            return []
+
+        ts = self.extract_timestamp(text)
+        if ts is None:
+            return []
+        if ts < self.last_time:
+            print(f"Time went backwards: {self.last_time} -> {ts}, dropping record")
+            return []
+        self.last_time = ts
+        return [{"timestamp": ts, "status": status}]
+
+    def finish(self) -> list[dict]:
+        return []
+
+
+BlueroboticsWaterLinkedDvlParser = WaterlinkedDvlParser
+
+
 def parse_wl_ugps_external(mcap_file: str) -> list[dict]:
     """Parse vessel position and heading requests sent by wl_ugps_external."""
     parser = WlUgpsExternalParser()
@@ -379,6 +473,34 @@ def parse_waterlinked_ugps(mcap_file: str) -> list[dict]:
 
     passes.extend(parser.finish())
     return passes
+
+
+def parse_bluerobotics_water_linked_dvl(mcap_file: str) -> list[dict]:
+    """Parse status records from bluerobotics.water-linked-dvl."""
+    parser = WaterlinkedDvlParser()
+    rows = []
+    with open(mcap_file, "rb") as f:
+        reader = make_reader(f)
+        summary = reader.get_summary()
+        topic = None
+        if summary and summary.channels:
+            for c in summary.channels.values():
+                if "water-linked-dvl" in c.topic or "water-linked-dev" in c.topic:
+                    topic = c.topic
+                    break
+
+        iter_kwargs = {"topics": [topic]} if topic else {}
+
+        for schema, channel, message in reader.iter_messages(**iter_kwargs):
+            if "water-linked-dvl" not in channel.topic and "water-linked-dev" not in channel.topic:
+                continue
+            rows.extend(parser.parse_message(message))
+
+    rows.extend(parser.finish())
+    return rows
+
+
+parse_waterlinked_dvl = parse_bluerobotics_water_linked_dvl
 
 
 def write_csv(outfile: str, rows: list[dict], fieldnames: list[str]):
@@ -436,6 +558,20 @@ def explode_extension_logs(
             write_csv(out_path, ugps_passes, WATERLINKED_UGPS_FIELDS)
         counts["waterlinked.ugps"] = len(ugps_passes)
         print(f"  Wrote {len(ugps_passes):5d} passes to {out_path}")
+
+    # 3. Parse bluerobotics.water-linked-dvl
+    dvl_rows = parse_bluerobotics_water_linked_dvl(mcap_file)
+    if segment is not None:
+        dvl_rows = [r for r in dvl_rows if segment.start <= r["timestamp"] <= segment.end]
+
+    if dvl_rows:
+        out_path = util.get_outfile_name(target_prefix, suffix="_bluerobotics.water-linked-dvl", ext=ext)
+        if use_json:
+            write_json(out_path, dvl_rows)
+        else:
+            write_csv(out_path, dvl_rows, WATERLINKED_DVL_FIELDS)
+        counts["bluerobotics.water-linked-dvl"] = len(dvl_rows)
+        print(f"  Wrote {len(dvl_rows):5d} records to {out_path}")
 
     if not counts:
         print(f"  No extension data found in {mcap_file}")
