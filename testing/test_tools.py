@@ -18,6 +18,7 @@ import BIN_info
 import BIN_merge
 import BIN_param
 import BIN_plot_local
+import BIN_plot_transect
 import BIN_timeline
 import map_maker
 import mcap_channels
@@ -496,6 +497,89 @@ class TestTools:
         outfile = str(tmp_path / "small2.pdf")
         BIN_plot_local.plot_bin_local(FileReader("testing/small2.BIN", BIN_plot_local.MSG_TYPES), outfile, dvl=True)
         assert (tmp_path / "small2.pdf").is_file()
+
+    def test_bin_plot_transect(self, tmp_path):
+        import pandas as pd
+
+        reader = FileReader("testing/small2.BIN", None)
+        dfs = BIN_plot_transect.load_data(reader)
+        t0 = dfs["XKF1"]["TimeUS"].iloc[0]
+        dfs["TRNS"] = pd.DataFrame(
+            [
+                {
+                    "TimeUS": t0,
+                    "Mode": 21,
+                    "RFTarg": 2.0,
+                    "RFRead": 1.9,
+                    "SurfTarg": 2.0,
+                    "Depth": 1.0,
+                    "TargZ": -1.0,
+                    "Head": 0.0,
+                    "Spd": 0.5,
+                },
+                {
+                    "TimeUS": t0 + 100000,
+                    "Mode": 21,
+                    "RFTarg": 2.0,
+                    "RFRead": 2.0,
+                    "SurfTarg": 2.0,
+                    "Depth": 1.2,
+                    "TargZ": -1.0,
+                    "Head": 0.0,
+                    "Spd": 0.5,
+                },
+                {
+                    "TimeUS": t0 + 200000,
+                    "Mode": 4,
+                    "RFTarg": 2.0,
+                    "RFRead": 2.0,
+                    "SurfTarg": -1.0,
+                    "Depth": 1.5,
+                    "TargZ": 1.5,
+                    "Head": 0.0,
+                    "Spd": 0.5,
+                },
+            ]
+        )
+        pdf_out = str(tmp_path / "small2_transect.pdf")
+        csv_out = str(tmp_path / "small2_transect.csv")
+        BIN_plot_transect.plot_transect(dfs, pdf_out, csv_out, False, reader_name="small2.BIN")
+        assert (tmp_path / "small2_transect.pdf").is_file()
+        assert (tmp_path / "small2_transect.csv").is_file()
+        df_csv = pd.read_csv(csv_out)
+        assert "Spd" in df_csv.columns
+        assert df_csv["Spd"].iloc[0] == 0.5
+
+        # Test check_surftrak_targets with matching targets
+        clean_trns = pd.DataFrame(
+            [
+                {"TimeUS": 1000, "Mode": 21, "RFTarg": 2.0, "SurfTarg": 2.0},
+                {"TimeUS": 2000, "Mode": 21, "RFTarg": 2.0, "SurfTarg": 2.0},
+            ]
+        )
+        ok, problems = BIN_plot_transect.check_surftrak_targets({"TRNS": clean_trns}, "clean")
+        assert ok is True
+        assert len(problems) == 0
+
+        # Test check_surftrak_targets with mismatched target
+        mismatch_trns = pd.DataFrame(
+            [
+                {"TimeUS": 1000, "Mode": 21, "RFTarg": 1.9, "SurfTarg": 1.85},
+            ]
+        )
+        ok, problems = BIN_plot_transect.check_surftrak_targets({"TRNS": mismatch_trns}, "mismatch")
+        assert ok is False
+        assert len(problems) == 1
+
+        # Test check_surftrak_targets with unset target in SURFTRAK
+        unset_trns = pd.DataFrame(
+            [
+                {"TimeUS": 1000, "Mode": 21, "RFTarg": 2.0, "SurfTarg": -1.0},
+            ]
+        )
+        ok, problems = BIN_plot_transect.check_surftrak_targets({"TRNS": unset_trns}, "unset")
+        assert ok is False
+        assert len(problems) == 1
 
     def test_mcap_to_tlog(self, tmp_path):
         import shutil

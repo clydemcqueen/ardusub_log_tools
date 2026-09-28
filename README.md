@@ -161,7 +161,7 @@ tlog_plot_local.py $SEGMENTS *.tlog
 * [BIN_messages.py](BIN_messages.py) - Read a dataflash (BIN) file and write the entries in the MSG and EV tables to stdout.
 * [BIN_param.py](BIN_param.py) - Read PARM messages from a dataflash file and write them to a params file.
 * [BIN_plot_local.py](BIN_plot_local.py) - Look for XKF1 and VISO messages in BIN files, plot x and y, and write PDF files.
-* [BIN_plot_surftrak.py](BIN_plot_surftrak.py) - Read BIN files and plot rangefinder vs target for SURFTRAK and GUIDED above-terrain modes.
+* [BIN_plot_transect.py](BIN_plot_transect.py) - Read BIN files and plot transect path, vertical motion, rangefinder vs target, and speed across modes.
 * [BIN_plot_viso.py](BIN_plot_viso.py) - Read BIN files and plot VISO (Visual Odometry) data alongside EKF estimated position, EKF innovations, and thruster outputs (RCOU).
 * [BIN_timeline.py](BIN_timeline.py) - Read Dataflash messages from a BIN file and generate a timeline.
 
