@@ -19,3 +19,9 @@ dive_logs
 
 # If we are in a ros2 workspace
 COLCON_IGNORE
+
+# Python build and packaging artifacts
+build/
+dist/
+*.egg-info/
+.ruff_cache/
