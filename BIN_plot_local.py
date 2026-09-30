@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 MSG_TYPES = ["XKF1", "VISO", "AHR2", "ATT"]
 
 
-def plot_bin_local(reader, outfile: str, dvl: bool = False):
+def plot_bin_local(reader, outfile: str | None = None, dvl: bool = False, show: bool = False):
     """
     Read BIN file, get x and y values from XKF1 and optionally VISO.
     """
@@ -88,10 +88,12 @@ def plot_bin_local(reader, outfile: str, dvl: bool = False):
 
         plot.legend()
 
-        # [Over]write PDF
-        plt.savefig(outfile)
-        dvl_msg = f" and {len(dvl_xs)} DVL points" if len(dvl_xs) > 0 else ""
-        print(f"{outfile} written with {len(xkf_xs)} points{dvl_msg}")
+        if show:
+            plt.show()
+        if outfile:
+            plt.savefig(outfile)
+            dvl_msg = f" and {len(dvl_xs)} DVL points" if len(dvl_xs) > 0 else ""
+            print(f"{outfile} written with {len(xkf_xs)} points{dvl_msg}")
 
         # Close the figure to reclaim the memory
         plt.close(figure)

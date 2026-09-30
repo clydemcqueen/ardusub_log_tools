@@ -12,6 +12,14 @@ from pymavlink import mavutil
 
 import util
 
+try:
+    from ardusub_log_tools.core.output import resolve_outfile_name
+except ImportError:
+
+    def resolve_outfile_name(infile, suffix="", ext=".csv", output_dir=None):
+        return util.get_outfile_name(infile, suffix, ext)
+
+
 # Force MAVLink 2.0
 os.environ["MAVLINK20"] = "1"
 
@@ -51,7 +59,7 @@ def get_mode_name(mode_num, mapping):
     return f"MODE{mode_num}"
 
 
-def process_bin(input_file, requested_modes):
+def process_bin(input_file, requested_modes, output_dir=None):
     """
     Split a BIN file by mode.
     """
@@ -106,7 +114,9 @@ def process_bin(input_file, requested_modes):
                     segment_count[mode_name] = count
 
                     _, ext = os.path.splitext(input_file)
-                    outfile_name = util.get_outfile_name(input_file, suffix=f"_{mode_name}{count}", ext=ext)
+                    outfile_name = resolve_outfile_name(
+                        input_file, suffix=f"_{mode_name}{count}", ext=ext, output_dir=output_dir
+                    )
                     print(f"Starting {outfile_name}")
                     outfile = open(outfile_name, "wb")
 
@@ -123,7 +133,7 @@ def process_bin(input_file, requested_modes):
         print(f"Closed {outfile_name}")
 
 
-def process_tlog(input_file, requested_modes):
+def process_tlog(input_file, requested_modes, output_dir=None):
     """
     Split a tlog file by mode.
     """
@@ -165,7 +175,9 @@ def process_tlog(input_file, requested_modes):
                     segment_count[mode_name] = count
 
                     _, ext = os.path.splitext(input_file)
-                    outfile_name = util.get_outfile_name(input_file, suffix=f"_{mode_name}{count}", ext=ext)
+                    outfile_name = resolve_outfile_name(
+                        input_file, suffix=f"_{mode_name}{count}", ext=ext, output_dir=output_dir
+                    )
                     print(f"Starting {outfile_name}")
                     outfile = open(outfile_name, "wb")
 

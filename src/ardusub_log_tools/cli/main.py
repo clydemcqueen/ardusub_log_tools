@@ -488,19 +488,36 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
 
-    # In Phase 1, dispatch to initial routing / help stubs
-    if args.verb == "types":
-        # Dispatches to show_types logic
-        try:
-            import show_types
+    # Phase 2 Core Verbs
+    if args.verb == "explode":
+        from ardusub_log_tools.cli.explode import run_explode
 
-            # Translate args for show_types
-            sys.argv = ["show_types"] + (["-r"] if args.recurse else []) + args.paths
-            show_types.main()
-            return 0
-        except Exception as e:
-            print(f"Error running 'asl types': {e}", file=sys.stderr)
-            return 1
+        return run_explode(args)
+
+    elif args.verb == "merge":
+        from ardusub_log_tools.cli.merge import run_merge
+
+        return run_merge(args)
+
+    elif args.verb == "types":
+        from ardusub_log_tools.cli.types import run_types
+
+        return run_types(args)
+
+    elif args.verb == "map":
+        from ardusub_log_tools.cli.map import run_map
+
+        return run_map(args)
+
+    elif args.verb == "plot":
+        from ardusub_log_tools.cli.plot import run_plot
+
+        return run_plot(args)
+
+    elif args.verb == "split":
+        from ardusub_log_tools.cli.split import run_split
+
+        return run_split(args)
 
     elif args.verb == "dive":
         try:
@@ -539,6 +556,55 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Error running 'asl battery': {e}", file=sys.stderr)
             return 1
 
+    elif args.verb == "mission":
+        try:
+            import mission_dump
+
+            cmd_argv = ["mission_dump"] + args.paths
+            sys.argv = cmd_argv
+            mission_dump.main()
+            return 0
+        except Exception as e:
+            print(f"Error running 'asl mission': {e}", file=sys.stderr)
+            return 1
+
+    elif args.verb == "ekf":
+        try:
+            import BIN_ekf_status
+
+            cmd_argv = ["BIN_ekf_status"] + (["-r"] if args.recurse else []) + args.paths
+            sys.argv = cmd_argv
+            BIN_ekf_status.main()
+            return 0
+        except Exception as e:
+            print(f"Error running 'asl ekf': {e}", file=sys.stderr)
+            return 1
+
+    elif args.verb == "compass":
+        try:
+            import BIN_mag_stats
+
+            cmd_argv = ["BIN_mag_stats"] + (["-r"] if args.recurse else []) + args.paths
+            sys.argv = cmd_argv
+            BIN_mag_stats.main()
+            return 0
+        except Exception as e:
+            print(f"Error running 'asl compass': {e}", file=sys.stderr)
+            return 1
+
+    elif args.verb == "ugps":
+        try:
+            import mcap_wl_ugps_acoustic_info
+
+            for path in args.paths:
+                info = mcap_wl_ugps_acoustic_info.AcousticLogInfo(path)
+                info.read()
+                info.report()
+            return 0
+        except Exception as e:
+            print(f"Error running 'asl ugps': {e}", file=sys.stderr)
+            return 1
+
     elif args.verb == "mcap":
         if args.mcap_cmd == "strip-video":
             try:
@@ -568,6 +634,42 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"Error running 'asl mcap channels': {e}", file=sys.stderr)
                 return 1
 
+        elif args.mcap_cmd == "extract-video":
+            try:
+                import mcap_extract_video
+
+                cmd_argv = ["mcap_extract_video"] + (["-r"] if args.recurse else []) + args.paths
+                sys.argv = cmd_argv
+                mcap_extract_video.main()
+                return 0
+            except Exception as e:
+                print(f"Error running 'asl mcap extract-video': {e}", file=sys.stderr)
+                return 1
+
+        elif args.mcap_cmd == "to-tlog":
+            try:
+                import mcap_to_tlog
+
+                cmd_argv = ["mcap_to_tlog"] + args.paths
+                sys.argv = cmd_argv
+                mcap_to_tlog.main()
+                return 0
+            except Exception as e:
+                print(f"Error running 'asl mcap to-tlog': {e}", file=sys.stderr)
+                return 1
+
+        elif args.mcap_cmd == "diff-tlog":
+            try:
+                import mcap_tlog_diff
+
+                cmd_argv = ["mcap_tlog_diff", args.mcap_path, args.tlog_path]
+                sys.argv = cmd_argv
+                mcap_tlog_diff.main()
+                return 0
+            except Exception as e:
+                print(f"Error running 'asl mcap diff-tlog': {e}", file=sys.stderr)
+                return 1
+
     elif args.verb == "bin":
         if args.bin_cmd == "extract-files":
             try:
@@ -581,13 +683,28 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"Error running 'asl bin extract-files': {e}", file=sys.stderr)
                 return 1
 
-    # Verb placeholder for Phase 2 implementation
-    print(f"[ASL Phase 1 Scaffold] Verb '{args.verb}' parsed successfully with arguments:")
-    for k, v in vars(args).items():
-        if k != "verb":
-            print(f"  {k}: {v}")
-    print("\nFull verb handler will be connected in Phase 2.")
-    return 0
+    elif args.verb == "timeline":
+        from ardusub_log_tools.cli.timeline import run_timeline
+
+        return run_timeline(args)
+
+    elif args.verb == "messages":
+        from ardusub_log_tools.cli.messages import run_messages
+
+        return run_messages(args)
+
+    elif args.verb == "params":
+        from ardusub_log_tools.cli.params import run_params
+
+        return run_params(args)
+
+    elif args.verb == "info":
+        from ardusub_log_tools.cli.info import run_info
+
+        return run_info(args)
+
+    print(f"Unknown verb '{args.verb}'", file=sys.stderr)
+    return 1
 
 
 if __name__ == "__main__":

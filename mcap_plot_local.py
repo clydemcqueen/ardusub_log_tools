@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 MSG_TYPES = ["LOCAL_POSITION_NED", "VISION_POSITION_DELTA", "GLOBAL_POSITION_INT"]
 
 
-def plot_mcap_local(mcap_file: str, outfile: str, dvl: bool = False):
+def plot_mcap_local(mcap_file: str, outfile: str | None = None, dvl: bool = False, show: bool = False):
     """
     Read MCAP file, extract x and y values, and generate a 2D PDF plot.
     """
@@ -79,10 +79,12 @@ def plot_mcap_local(mcap_file: str, outfile: str, dvl: bool = False):
 
         plot.legend()
 
-        # [Over]write PDF
-        plt.savefig(outfile)
-        dvl_msg = f" and {len(dvl_xs)} DVL points" if len(dvl_xs) > 0 else ""
-        print(f"{outfile} written with {len(lpn_xs)} points{dvl_msg}")
+        if show:
+            plt.show()
+        if outfile:
+            plt.savefig(outfile)
+            dvl_msg = f" and {len(dvl_xs)} DVL points" if len(dvl_xs) > 0 else ""
+            print(f"{outfile} written with {len(lpn_xs)} points{dvl_msg}")
 
         # Close the figure to reclaim the memory
         plt.close(figure)

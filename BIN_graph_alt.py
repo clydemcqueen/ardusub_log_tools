@@ -15,7 +15,7 @@ import file_reader
 import util
 
 
-def process_reader(reader):
+def process_reader(reader, outfile: str | None = None, show: bool = False):
     ahr2_t = []
     ahr2_alt = []
 
@@ -93,12 +93,14 @@ def process_reader(reader):
     plt.legend()
     plt.grid(True)
 
-    # Save to PDF
-    pdf_path = util.get_outfile_name(reader.name, suffix="_alt", ext=".pdf")
-    plt.savefig(pdf_path)
+    # Save to PDF or show
+    if show:
+        plt.show()
+    else:
+        pdf_path = outfile if outfile is not None else util.get_outfile_name(reader.name, suffix="_alt", ext=".pdf")
+        plt.savefig(pdf_path)
+        print(f"Saved graph to {pdf_path}")
     plt.close()
-
-    print(f"Saved graph to {pdf_path}")
 
 
 def main():
