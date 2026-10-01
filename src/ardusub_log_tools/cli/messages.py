@@ -11,14 +11,13 @@ from collections import Counter
 
 from pymavlink import mavutil
 
-import util
+from ardusub_log_tools.backends.dataflash import LogEvent, decode_error
+from ardusub_log_tools.core import util
 from ardusub_log_tools.core.mcap_events import iter_mcap_statustext
 from ardusub_log_tools.core.output import resolve_outfile_name
 
 
 def _extract_bin_messages(bin_file: str) -> list[tuple[float, str]]:
-    from BIN_messages import LogEvent, decode_error
-
     mlog = mavutil.mavlink_connection(bin_file, robust_parsing=False, dialect="ardupilotmega")
     items = []
     while (msg := mlog.recv_match(blocking=False, type=["MSG", "EV", "ERR"])) is not None:

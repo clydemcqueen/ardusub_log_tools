@@ -9,7 +9,14 @@ from typing import Any, Iterator
 
 import pymavlink.dialects.v20.ardupilotmega as apm
 
-import util
+from ardusub_log_tools.backends.telemetry import (
+    EK3_SRCn_POSXY,
+    EK3_SRCn_POSZ,
+    EK3_SRCn_VELXY,
+    EK3_SRCn_VELZ,
+    EK3_SRCn_YAW,
+)
+from ardusub_log_tools.core import util
 
 
 def resolve_enum_value(v: Any) -> int:
@@ -51,14 +58,6 @@ class McapParam:
         return f"{self.value:.6f}"
 
     def comment(self) -> str | None:
-        from tlog_param import (
-            EK3_SRCn_POSXY,
-            EK3_SRCn_POSZ,
-            EK3_SRCn_VELXY,
-            EK3_SRCn_VELZ,
-            EK3_SRCn_YAW,
-        )
-
         if self.id.startswith("EK3_SRC"):
             val_int = int(self.value)
             if self.id.endswith("POSXY"):

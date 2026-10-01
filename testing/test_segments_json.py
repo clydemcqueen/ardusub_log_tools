@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from segment_reader import SegmentFormatException, parse_segment_json
+from ardusub_log_tools.core.segment_reader import SegmentFormatException, parse_segment_json
 
 
 def test_parse_utc_plan_json():
@@ -148,7 +148,9 @@ def test_mcap_explode_cli_segments(tmp_path):
 
     cmd = [
         sys.executable,
-        "mcap_explode.py",
+        "-m",
+        "ardusub_log_tools.cli.main",
+        "explode",
         "-s",
         str(plan_path),
         "--types",
@@ -186,7 +188,9 @@ def test_mcap_map_maker_cli_segments(tmp_path):
 
     cmd = [
         sys.executable,
-        "mcap_map_maker.py",
+        "-m",
+        "ardusub_log_tools.cli.main",
+        "map",
         "-s",
         str(plan_path),
         str(test_mcap),

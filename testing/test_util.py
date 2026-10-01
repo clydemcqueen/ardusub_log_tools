@@ -1,4 +1,4 @@
-import util
+from ardusub_log_tools.core import util
 
 
 class TestUtil:

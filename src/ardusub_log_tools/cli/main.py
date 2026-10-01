@@ -9,12 +9,6 @@ from __future__ import annotations
 
 import argparse
 import sys
-from pathlib import Path
-
-# Ensure repository root is on sys.path for Phase 1 bridges to existing modules
-_REPO_ROOT = str(Path(__file__).resolve().parents[3])
-if _REPO_ROOT not in sys.path:
-    sys.path.insert(0, _REPO_ROOT)
 
 from ardusub_log_tools import __version__
 
@@ -488,7 +482,6 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
 
-    # Phase 2 Core Verbs
     if args.verb == "explode":
         from ardusub_log_tools.cli.explode import run_explode
 
@@ -521,17 +514,17 @@ def main(argv: list[str] | None = None) -> int:
 
     elif args.verb == "dive":
         try:
-            import dive_logs
+            from ardusub_log_tools.core.dive_logs import DiveLogs, print_summary
 
-            cmd_argv = ["dive_logs", args.directory]
-            if args.output:
-                cmd_argv.extend(["-o", args.output])
-            if args.no_opt:
-                cmd_argv.append("--no-opt")
-            if args.verbose:
-                cmd_argv.append("-v")
-            sys.argv = cmd_argv
-            dive_logs.main()
+            dive_logs = DiveLogs.build(
+                args.directory,
+                optimize=not args.no_opt,
+                verbose=args.verbose,
+                force=getattr(args, "force", False),
+            )
+            out_path = dive_logs.save(args.output)
+            print_summary(dive_logs)
+            print(f"Saved alignment metadata to: {out_path}\n")
             return 0
         except Exception as e:
             print(f"Error running 'asl dive': {e}", file=sys.stderr)
@@ -539,18 +532,24 @@ def main(argv: list[str] | None = None) -> int:
 
     elif args.verb == "battery":
         try:
-            # Detect file type or run appropriate tool
-            first_file = args.paths[0] if args.paths else ""
-            if first_file.endswith(".BIN"):
-                import BIN_battery as batt_mod
-            else:
-                import tlog_battery as batt_mod
+            from ardusub_log_tools.core.file_reader import FileReaderList
+            from ardusub_log_tools.diagnostics.battery import analyze_battery
 
-            cmd_argv = (
-                ["battery"] + (["--terse"] if args.terse else []) + (["--plot"] if args.plot else []) + args.paths
+            first_file = args.paths[0] if args.paths else ""
+            types = ["BAT"] if first_file.endswith(".BIN") else ["BATTERY_STATUS"]
+            ext = ".BIN" if first_file.endswith(".BIN") else ".tlog"
+
+            sub_args = argparse.Namespace(
+                path=args.paths,
+                recurse=getattr(args, "recurse", False),
+                blueos=False,
+                qgc=False,
             )
-            sys.argv = cmd_argv
-            batt_mod.main()
+            readers = FileReaderList(sub_args, types, ext=ext)
+            for reader in readers:
+                if not args.terse:
+                    print(f"Processing {reader.name}...")
+                analyze_battery(reader, terse=args.terse, plot=args.plot)
             return 0
         except Exception as e:
             print(f"Error running 'asl battery': {e}", file=sys.stderr)
@@ -558,11 +557,22 @@ def main(argv: list[str] | None = None) -> int:
 
     elif args.verb == "mission":
         try:
-            import mission_dump
+            from ardusub_log_tools.core.segment_reader import choose_reader_list
+            from ardusub_log_tools.diagnostics.mission import MSG_TYPES, MissionReader
 
-            cmd_argv = ["mission_dump"] + args.paths
-            sys.argv = cmd_argv
-            mission_dump.main()
+            sub_args = argparse.Namespace(
+                path=args.paths,
+                recurse=getattr(args, "recurse", False),
+                keep=getattr(args, "keep", None),
+                segments=getattr(args, "segments", None),
+                all=False,
+                blueos=False,
+                qgc=False,
+            )
+            readers = choose_reader_list(sub_args, MSG_TYPES)
+            for reader in readers:
+                print(f"Results for {reader.name}")
+                MissionReader(reader)
             return 0
         except Exception as e:
             print(f"Error running 'asl mission': {e}", file=sys.stderr)
@@ -570,11 +580,15 @@ def main(argv: list[str] | None = None) -> int:
 
     elif args.verb == "ekf":
         try:
-            import BIN_ekf_status
+            from ardusub_log_tools.core import util
+            from ardusub_log_tools.diagnostics.ekf import FilterStatusReport
 
-            cmd_argv = ["BIN_ekf_status"] + (["-r"] if args.recurse else []) + args.paths
-            sys.argv = cmd_argv
-            BIN_ekf_status.main()
+            files = util.expand_path(args.paths, getattr(args, "recurse", False), ".BIN")
+            print(f"Processing {len(files)} files")
+            for file in files:
+                print("-------------------")
+                reader = FilterStatusReport(file)
+                reader.read_and_report()
             return 0
         except Exception as e:
             print(f"Error running 'asl ekf': {e}", file=sys.stderr)
@@ -582,11 +596,13 @@ def main(argv: list[str] | None = None) -> int:
 
     elif args.verb == "compass":
         try:
-            import BIN_mag_stats
+            from ardusub_log_tools.core import util
+            from ardusub_log_tools.diagnostics.compass import analyze_mag_stats
 
-            cmd_argv = ["BIN_mag_stats"] + (["-r"] if args.recurse else []) + args.paths
-            sys.argv = cmd_argv
-            BIN_mag_stats.main()
+            files = util.expand_path(args.paths, getattr(args, "recurse", False), ".BIN")
+            print(f"Processing {len(files)} files")
+            for file in files:
+                analyze_mag_stats(file)
             return 0
         except Exception as e:
             print(f"Error running 'asl compass': {e}", file=sys.stderr)
@@ -594,12 +610,15 @@ def main(argv: list[str] | None = None) -> int:
 
     elif args.verb == "ugps":
         try:
-            import mcap_wl_ugps_acoustic_info
+            from ardusub_log_tools.backends.mcap import AcousticLogInfo
+            from ardusub_log_tools.core import util
 
-            for path in args.paths:
-                info = mcap_wl_ugps_acoustic_info.AcousticLogInfo(path)
-                info.read()
-                info.report()
+            files = util.expand_path(args.paths, getattr(args, "recurse", False), ".mcap")
+            print(f"Processing {len(files)} files")
+            for path in files:
+                print("-------------------")
+                info = AcousticLogInfo(path)
+                info.read_and_report()
             return 0
         except Exception as e:
             print(f"Error running 'asl ugps': {e}", file=sys.stderr)
@@ -608,16 +627,12 @@ def main(argv: list[str] | None = None) -> int:
     elif args.verb == "mcap":
         if args.mcap_cmd == "strip-video":
             try:
-                import mcap_strip_video
+                from ardusub_log_tools.backends.mcap import strip_video_from_mcap
+                from ardusub_log_tools.core import util
 
-                cmd_argv = (
-                    ["mcap_strip_video"]
-                    + (["--in-place"] if args.in_place else [])
-                    + (["-r"] if args.recurse else [])
-                    + args.paths
-                )
-                sys.argv = cmd_argv
-                mcap_strip_video.main()
+                files = util.expand_path(args.paths, getattr(args, "recurse", False), ".mcap")
+                for file in files:
+                    strip_video_from_mcap(file, in_place=args.in_place)
                 return 0
             except Exception as e:
                 print(f"Error running 'asl mcap strip-video': {e}", file=sys.stderr)
@@ -625,10 +640,12 @@ def main(argv: list[str] | None = None) -> int:
 
         elif args.mcap_cmd == "channels":
             try:
-                import mcap_channels
+                from ardusub_log_tools.backends.mcap import count_mcap_messages
+                from ardusub_log_tools.core import util
 
-                sys.argv = ["mcap_channels"] + args.paths
-                mcap_channels.main()
+                files = util.expand_path(args.paths, False, ".mcap")
+                for file in files:
+                    count_mcap_messages(file)
                 return 0
             except Exception as e:
                 print(f"Error running 'asl mcap channels': {e}", file=sys.stderr)
@@ -636,11 +653,12 @@ def main(argv: list[str] | None = None) -> int:
 
         elif args.mcap_cmd == "extract-video":
             try:
-                import mcap_extract_video
+                from ardusub_log_tools.backends.mcap import extract_video_from_mcap
+                from ardusub_log_tools.core import util
 
-                cmd_argv = ["mcap_extract_video"] + (["-r"] if args.recurse else []) + args.paths
-                sys.argv = cmd_argv
-                mcap_extract_video.main()
+                files = util.expand_path(args.paths, getattr(args, "recurse", False), ".mcap")
+                for file in files:
+                    extract_video_from_mcap(file)
                 return 0
             except Exception as e:
                 print(f"Error running 'asl mcap extract-video': {e}", file=sys.stderr)
@@ -648,11 +666,12 @@ def main(argv: list[str] | None = None) -> int:
 
         elif args.mcap_cmd == "to-tlog":
             try:
-                import mcap_to_tlog
+                from ardusub_log_tools.backends.mcap import mcap_to_tlog
+                from ardusub_log_tools.core import util
 
-                cmd_argv = ["mcap_to_tlog"] + args.paths
-                sys.argv = cmd_argv
-                mcap_to_tlog.main()
+                files = util.expand_path(args.paths, False, ".mcap")
+                for file in files:
+                    mcap_to_tlog(file)
                 return 0
             except Exception as e:
                 print(f"Error running 'asl mcap to-tlog': {e}", file=sys.stderr)
@@ -660,11 +679,9 @@ def main(argv: list[str] | None = None) -> int:
 
         elif args.mcap_cmd == "diff-tlog":
             try:
-                import mcap_tlog_diff
+                from ardusub_log_tools.backends.mcap import diff_tlog
 
-                cmd_argv = ["mcap_tlog_diff", args.mcap_path, args.tlog_path]
-                sys.argv = cmd_argv
-                mcap_tlog_diff.main()
+                diff_tlog(args.tlog_path, args.mcap_path)
                 return 0
             except Exception as e:
                 print(f"Error running 'asl mcap diff-tlog': {e}", file=sys.stderr)
@@ -673,11 +690,13 @@ def main(argv: list[str] | None = None) -> int:
     elif args.verb == "bin":
         if args.bin_cmd == "extract-files":
             try:
-                import BIN_extract_files
+                from ardusub_log_tools.backends.dataflash import DataflashFileExtractor
+                from ardusub_log_tools.core import util
 
-                cmd_argv = ["BIN_extract_files"] + (["-r"] if args.recurse else []) + args.paths
-                sys.argv = cmd_argv
-                BIN_extract_files.main()
+                files = util.expand_path(args.paths, getattr(args, "recurse", False), ".BIN")
+                for file in files:
+                    extractor = DataflashFileExtractor(file)
+                    extractor.extract()
                 return 0
             except Exception as e:
                 print(f"Error running 'asl bin extract-files': {e}", file=sys.stderr)

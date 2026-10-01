@@ -57,7 +57,7 @@ class TestSplitByMode(unittest.TestCase):
                     pass
 
     def run_script(self, args):
-        cmd = [sys.executable, self.script_path] + args
+        cmd = [sys.executable, "-m", "ardusub_log_tools.core.split"] + args
         result = subprocess.run(cmd, capture_output=True, text=True)
         return result
 

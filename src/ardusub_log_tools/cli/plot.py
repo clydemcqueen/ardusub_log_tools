@@ -8,8 +8,19 @@ import argparse
 import os
 import sys
 
-import util
+from ardusub_log_tools.core import util
+from ardusub_log_tools.core.file_reader import FileReader
 from ardusub_log_tools.core.output import resolve_outfile_name
+from ardusub_log_tools.core.segment_reader import choose_reader_list
+from ardusub_log_tools.plots.altitude import process_reader as process_altitude_reader
+from ardusub_log_tools.plots.local import (
+    BIN_MSG_TYPES,
+    TLOG_MSG_TYPES,
+    plot_bin_local,
+    plot_local_position,
+    plot_mcap_local,
+)
+from ardusub_log_tools.plots.transect import load_data, plot_transect
 
 
 def run_plot(args: argparse.Namespace) -> int:
@@ -39,11 +50,6 @@ def run_plot(args: argparse.Namespace) -> int:
 
             try:
                 if ext_lower == ".bin":
-                    from BIN_plot_local import MSG_TYPES as BIN_MSG_TYPES
-                    from BIN_plot_local import plot_bin_local
-                    from segment_reader import choose_reader_list
-
-                    # has_segments = bool(getattr(args, "keep", None) or getattr(args, "segments", None))
                     sub_args = argparse.Namespace(
                         path=[file_path],
                         recurse=False,
@@ -64,11 +70,6 @@ def run_plot(args: argparse.Namespace) -> int:
                         plot_bin_local(reader, outfile=outfile, dvl=dvl, show=show)
 
                 elif ext_lower == ".tlog":
-                    from segment_reader import choose_reader_list
-                    from tlog_plot_local import MSG_TYPES as TLOG_MSG_TYPES
-                    from tlog_plot_local import plot_local_position
-
-                    # has_segments = bool(getattr(args, "keep", None) or getattr(args, "segments", None))
                     sub_args = argparse.Namespace(
                         path=[file_path],
                         recurse=False,
@@ -91,8 +92,6 @@ def run_plot(args: argparse.Namespace) -> int:
                         plot_local_position(reader, outfile=outfile, dvl=dvl, show=show)
 
                 elif ext_lower == ".mcap":
-                    from mcap_plot_local import plot_mcap_local
-
                     outfile = (
                         None
                         if show
@@ -124,16 +123,13 @@ def run_plot(args: argparse.Namespace) -> int:
             print(f"Plotting altitude for {file_path}")
 
             try:
-                from BIN_graph_alt import process_reader
-                from file_reader import FileReader
-
                 reader = FileReader(file_path, ["AHR2", "XKF1", "BARO", "ORGN", "POS"])
                 outfile = (
                     None
                     if show
                     else resolve_outfile_name(file_path, suffix="_altitude", ext=ext_out, output_dir=args.output_dir)
                 )
-                process_reader(reader, outfile=outfile, show=show)
+                process_altitude_reader(reader, outfile=outfile, show=show)
 
             except Exception as e:
                 print(f"Error plotting altitude for {file_path}: {e}", file=sys.stderr)
@@ -155,9 +151,6 @@ def run_plot(args: argparse.Namespace) -> int:
             print(f"Plotting transect for {file_path}")
 
             try:
-                from BIN_plot_transect import load_data, plot_transect
-                from segment_reader import choose_reader_list
-
                 sub_args = argparse.Namespace(
                     path=[file_path],
                     recurse=False,

@@ -11,7 +11,11 @@ import sys
 
 from pymavlink import mavutil
 
-import util
+from ardusub_log_tools.backends.dataflash import DataFlashParams
+from ardusub_log_tools.backends.dataflash import print_changes as print_bin_changes
+from ardusub_log_tools.backends.telemetry import TelemetryLogParam
+from ardusub_log_tools.backends.telemetry import print_changes as print_tlog_changes
+from ardusub_log_tools.core import util
 from ardusub_log_tools.core.mcap_events import extract_mcap_params
 from ardusub_log_tools.core.output import resolve_outfile_name
 
@@ -23,8 +27,6 @@ def _matches_patterns(param_name: str, patterns: list[str] | None) -> bool:
 
 
 def _process_bin_params(file_path: str, patterns: list[str] | None, changes_mode: bool, outfile: str):
-    from BIN_param import DataFlashParams
-
     mlog = mavutil.mavlink_connection(file_path, robust_parsing=False, dialect="ardupilotmega")
     current_file = DataFlashParams(None)
 
@@ -39,10 +41,7 @@ def _process_bin_params(file_path: str, patterns: list[str] | None, changes_mode
 
 
 def _process_tlog_params(file_path: str, patterns: list[str] | None, changes_mode: bool, outfile: str):
-    from tlog_param import TelemetryLogParam
-
     param_reader = TelemetryLogParam(file_path, print_intra_file_changes=changes_mode, params=patterns)
-    # If patterns are given, filter the resulting params
     if patterns:
         param_reader.params = {k: v for k, v in param_reader.params.items() if _matches_patterns(k, patterns)}
 
@@ -98,17 +97,13 @@ def run_params(args: argparse.Namespace) -> int:
             if ext_lower == ".bin":
                 curr_obj = _process_bin_params(file_path, patterns, changes_mode, outfile)
                 if changes_mode and prev_obj is not None:
-                    from BIN_param import print_changes
-
-                    print_changes(prev_obj, curr_obj)
+                    print_bin_changes(prev_obj, curr_obj)
                 prev_obj = curr_obj
 
             elif ext_lower == ".tlog":
                 curr_obj = _process_tlog_params(file_path, patterns, changes_mode, outfile)
                 if changes_mode and prev_obj is not None:
-                    from tlog_param import print_changes
-
-                    print_changes(prev_obj, curr_obj)
+                    print_tlog_changes(prev_obj, curr_obj)
                 prev_obj = curr_obj
 
             elif ext_lower == ".mcap":

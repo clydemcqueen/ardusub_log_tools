@@ -8,8 +8,23 @@ import argparse
 import os
 import sys
 
-import util
+from ardusub_log_tools.core import util
+from ardusub_log_tools.core.map_maker import (
+    BIN_GPS_MSG_TYPES,
+    build_map_from_BIN,
+    build_map_from_mcap,
+    build_map_from_tlog,
+)
+from ardusub_log_tools.core.map_maker import (
+    GPS_MSG_TYPES as TLOG_GPS_MSG_TYPES,
+)
 from ardusub_log_tools.core.output import resolve_outfile_name
+from ardusub_log_tools.core.segment_reader import (
+    build_segment_name,
+    choose_reader_list,
+    parse_segment,
+    parse_segment_json,
+)
 
 
 def run_map(args: argparse.Namespace) -> int:
@@ -36,10 +51,6 @@ def run_map(args: argparse.Namespace) -> int:
 
         try:
             if ext_lower == ".bin":
-                from BIN_map_maker import GPS_MSG_TYPES, build_map_from_BIN
-                from segment_reader import choose_reader_list
-
-                # Temporary args namespace for choose_reader_list
                 sub_args = argparse.Namespace(
                     path=[file_path],
                     recurse=False,
@@ -47,14 +58,11 @@ def run_map(args: argparse.Namespace) -> int:
                     segments=args.segments,
                     all=True,
                 )
-                readers = choose_reader_list(sub_args, GPS_MSG_TYPES, ext=".BIN")
+                readers = choose_reader_list(sub_args, BIN_GPS_MSG_TYPES, ext=".BIN")
                 for reader in readers:
                     build_map_from_BIN(reader, outfile, args.verbose, center, zoom, hdop_max)
 
             elif ext_lower == ".tlog":
-                from segment_reader import choose_reader_list
-                from tlog_map_maker import GPS_MSG_TYPES, build_map_from_tlog
-
                 sub_args = argparse.Namespace(
                     path=[file_path],
                     recurse=False,
@@ -64,22 +72,43 @@ def run_map(args: argparse.Namespace) -> int:
                     blueos=False,
                     qgc=False,
                 )
-                readers = choose_reader_list(sub_args, GPS_MSG_TYPES, ext=".tlog")
+                readers = choose_reader_list(sub_args, TLOG_GPS_MSG_TYPES, ext=".tlog")
                 for reader in readers:
                     build_map_from_tlog(reader, outfile, args.verbose, center, zoom, hdop_max)
 
             elif ext_lower == ".mcap":
-                from mcap_map_maker import build_map_from_mcap
+                segments = []
+                if getattr(args, "segments", None) is not None:
+                    segments = parse_segment_json(args.segments)
+                elif getattr(args, "keep", None) is not None:
+                    segments = [parse_segment(k) for k in args.keep]
 
-                build_map_from_mcap(
-                    file_path,
-                    outfile,
-                    verbose=args.verbose,
-                    center=center,
-                    zoom=zoom,
-                    hdop_max=hdop_max,
-                    selected_sources=selected_sources,
-                )
+                if segments:
+                    for segment in segments:
+                        seg_prefix = build_segment_name(file_path, segment.name)
+                        seg_outfile = util.get_outfile_name(seg_prefix, suffix="_map", ext=".html")
+                        if args.output_dir:
+                            seg_outfile = os.path.join(args.output_dir, os.path.basename(seg_outfile))
+                        build_map_from_mcap(
+                            file_path,
+                            seg_outfile,
+                            verbose=args.verbose,
+                            center=center,
+                            zoom=zoom,
+                            hdop_max=hdop_max,
+                            selected_sources=selected_sources,
+                            segment=segment,
+                        )
+                else:
+                    build_map_from_mcap(
+                        file_path,
+                        outfile,
+                        verbose=args.verbose,
+                        center=center,
+                        zoom=zoom,
+                        hdop_max=hdop_max,
+                        selected_sources=selected_sources,
+                    )
 
             else:
                 print(f"Unsupported format for map: {ext}")

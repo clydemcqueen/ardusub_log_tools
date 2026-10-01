@@ -13,11 +13,27 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import pymavlink.dialects.v20.ardupilotmega as apm
 
-import table_types
-import util
+from ardusub_log_tools.backends.dataflash import (
+    MSG_TYPES as BIN_MSG_TYPES,
+)
+from ardusub_log_tools.backends.dataflash import (
+    LogEvent,
+    decode_error,
+)
+from ardusub_log_tools.backends.telemetry import (
+    ANSI_CODES,
+    IGNORE_CMDS,
+    ColorMap,
+    mav_cmd_name,
+    mav_result_name,
+)
+from ardusub_log_tools.backends.telemetry import (
+    MSG_TYPES as TLOG_MSG_TYPES,
+)
+from ardusub_log_tools.core import table_types, util
 from ardusub_log_tools.core.mcap_events import resolve_enum_value
 from ardusub_log_tools.core.output import resolve_outfile_name
-from tlog_timeline import ANSI_CODES, IGNORE_CMDS, ColorMap, mav_cmd_name, mav_result_name
+from ardusub_log_tools.core.segment_reader import choose_reader_list
 
 
 class GenericTimelineWriter:
@@ -198,8 +214,6 @@ def _generate_tlog_timeline(reader, writer: GenericTimelineWriter) -> None:
 
 
 def _generate_bin_timeline(reader, writer: GenericTimelineWriter) -> None:
-    from BIN_messages import LogEvent, decode_error
-
     for msg in reader:
         mtype = msg.get_type()
         data = msg.to_dict()
@@ -277,9 +291,6 @@ def run_timeline(args: argparse.Namespace) -> int:
                 print(f"Wrote {outfile}")
 
             elif ext_lower == ".tlog":
-                from segment_reader import choose_reader_list
-                from tlog_timeline import MSG_TYPES as TLOG_MSG_TYPES
-
                 sub_args = argparse.Namespace(
                     path=[file_path],
                     recurse=False,
@@ -301,9 +312,6 @@ def run_timeline(args: argparse.Namespace) -> int:
                     print(f"Wrote {outfile}")
 
             elif ext_lower == ".bin":
-                from BIN_timeline import MSG_TYPES as BIN_MSG_TYPES
-                from segment_reader import choose_reader_list
-
                 sub_args = argparse.Namespace(
                     path=[file_path],
                     recurse=False,

@@ -10,7 +10,11 @@ import sys
 
 from mcap.reader import make_reader
 
-import util
+from ardusub_log_tools.backends.dataflash import DataflashLogInfo
+from ardusub_log_tools.backends.telemetry import INFO_MSG_TYPES as TLOG_MSG_TYPES
+from ardusub_log_tools.backends.telemetry import TelemetryLogInfo
+from ardusub_log_tools.core import util
+from ardusub_log_tools.core.file_reader import FileReader
 from ardusub_log_tools.core.mcap_events import resolve_enum_value
 
 
@@ -39,7 +43,6 @@ class McapLogInfo:
                 print(f"  Total channels: {stats.channel_count}")
                 print(f"  Total schemas:  {stats.schema_count}")
 
-            # Inspect mavlink/out if available
             heartbeat_count = 0
             modes_seen = set()
             critical_events = []
@@ -91,16 +94,10 @@ def run_info(args: argparse.Namespace) -> int:
 
         try:
             if ext_lower == ".bin":
-                from BIN_info import DataflashLogInfo
-
                 info = DataflashLogInfo(file_path)
                 info.read_and_report()
 
             elif ext_lower == ".tlog":
-                from file_reader import FileReader
-                from tlog_info import MSG_TYPES as TLOG_MSG_TYPES
-                from tlog_info import TelemetryLogInfo
-
                 reader = FileReader(file_path, TLOG_MSG_TYPES)
                 info = TelemetryLogInfo(reader)
                 info.read_and_report()

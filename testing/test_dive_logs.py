@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from dive_logs import BinFile, Boot, DiveLogs, McapFile, optimize_depth_shift
+from ardusub_log_tools.core.dive_logs import BinFile, Boot, DiveLogs, McapFile, optimize_depth_shift
 
 
 class TestDiveLogs:

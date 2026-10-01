@@ -11,13 +11,13 @@ import sys
 
 from pymavlink import mavutil
 
-import util
+from ardusub_log_tools.core import util
 from ardusub_log_tools.core.output import resolve_outfile_name
+from ardusub_log_tools.core.segment_reader import parse_segment_args
+from ardusub_log_tools.core.split import get_mode_mapping, process_bin, process_tlog
 
 
 def _split_by_mode(args: argparse.Namespace, files: list[str]) -> int:
-    from split_by_mode import get_mode_mapping, process_bin, process_tlog
-
     mapping = get_mode_mapping()
     requested_modes = None
 
@@ -47,8 +47,6 @@ def _split_by_mode(args: argparse.Namespace, files: list[str]) -> int:
 
 
 def _split_by_segments(args: argparse.Namespace, files: list[str]) -> int:
-    from segment_reader import parse_segment_args
-
     try:
         segments = parse_segment_args(args)
     except Exception as e:
@@ -93,7 +91,6 @@ def _split_by_segments(args: argparse.Namespace, files: list[str]) -> int:
                             outfile.write(msg.get_msgbuf())
                             count += 1
                         elif ts > seg.end:
-                            # In chronological logs, can stop early
                             pass
 
                 print(f"Wrote {count} messages to {outfile_name}")

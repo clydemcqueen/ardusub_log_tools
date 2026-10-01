@@ -8,7 +8,8 @@ import argparse
 import os
 import sys
 
-import util
+from ardusub_log_tools.core import util
+from ardusub_log_tools.core.types_finder import TypeFinder
 
 
 def run_types(args: argparse.Namespace) -> int:
@@ -23,22 +24,16 @@ def run_types(args: argparse.Namespace) -> int:
     for file_path in files:
         _, ext = os.path.splitext(file_path)
         ext_lower = ext.lower()
+        if ext_lower not in (".bin", ".tlog", ".mcap"):
+            print(f"Unsupported format: {ext}")
+            continue
+
         print("------------------------------------------------------------")
         print(f"Reading {file_path}")
 
         try:
-            if ext_lower in (".bin", ".tlog"):
-                import show_types
-
-                scanner = show_types.TypeFinder(file_path)
-                scanner.read()
-            elif ext_lower == ".mcap":
-                import mcap_types
-
-                scanner = mcap_types.TypeFinder(file_path)
-                scanner.read()
-            else:
-                print(f"Unsupported format: {ext}")
+            scanner = TypeFinder(file_path)
+            scanner.read()
         except Exception as e:
             print(f"Error reading types from {file_path}: {e}", file=sys.stderr)
             if args.verbose:

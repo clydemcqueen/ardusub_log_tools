@@ -11,38 +11,41 @@ import os
 
 import pytest
 
-import BIN_ekf_status
-import BIN_extract_files
-import BIN_graph_alt
-import BIN_info
-import BIN_merge
-import BIN_param
-import BIN_plot_local
-import BIN_plot_transect
-import BIN_timeline
-import map_maker
-import mcap_channels
-import mcap_dump_logs
-import mcap_explode_extension_logs
-import mcap_map_maker
-import mcap_merge
-import mcap_plot_local
-import mcap_strip_video
-import mcap_to_tlog
-import mcap_wl_ugps_acoustic_info
-import show_types
-import table_types
-import tlog_bad_data
-import tlog_info
-import tlog_map_maker
-import tlog_merge
-import tlog_param
-import tlog_plot_local
-import tlog_scan
-import tlog_timeline
-import util
-from file_reader import FileReader
-from segment_reader import Segment, SegmentFormatException, SegmentReader, parse_segment
+from ardusub_log_tools.backends import dataflash as BIN_extract_files
+from ardusub_log_tools.backends import dataflash as BIN_info
+from ardusub_log_tools.backends import dataflash as BIN_merge
+from ardusub_log_tools.backends import dataflash as BIN_param
+from ardusub_log_tools.backends import dataflash as BIN_timeline
+from ardusub_log_tools.backends import mcap as mcap_channels
+from ardusub_log_tools.backends import mcap as mcap_dump_logs
+from ardusub_log_tools.backends import mcap as mcap_explode_extension_logs
+from ardusub_log_tools.backends import mcap as mcap_merge
+from ardusub_log_tools.backends import mcap as mcap_strip_video
+from ardusub_log_tools.backends import mcap as mcap_to_tlog
+from ardusub_log_tools.backends import mcap as mcap_wl_ugps_acoustic_info
+from ardusub_log_tools.backends import telemetry as tlog_bad_data
+from ardusub_log_tools.backends import telemetry as tlog_info
+from ardusub_log_tools.backends import telemetry as tlog_merge
+from ardusub_log_tools.backends import telemetry as tlog_param
+from ardusub_log_tools.backends import telemetry as tlog_scan
+from ardusub_log_tools.backends import telemetry as tlog_timeline
+from ardusub_log_tools.core import map_maker, table_types, util
+from ardusub_log_tools.core import map_maker as mcap_map_maker
+from ardusub_log_tools.core import map_maker as tlog_map_maker
+from ardusub_log_tools.core import types_finder as show_types
+from ardusub_log_tools.core.file_reader import FileReader
+from ardusub_log_tools.core.segment_reader import (
+    Segment,
+    SegmentFormatException,
+    SegmentReader,
+    parse_segment,
+)
+from ardusub_log_tools.diagnostics import ekf as BIN_ekf_status
+from ardusub_log_tools.plots import altitude as BIN_graph_alt
+from ardusub_log_tools.plots import local as BIN_plot_local
+from ardusub_log_tools.plots import local as mcap_plot_local
+from ardusub_log_tools.plots import local as tlog_plot_local
+from ardusub_log_tools.plots import transect as BIN_plot_transect
 
 
 class TestTools:
@@ -76,13 +79,13 @@ class TestTools:
 
     def test_tlog_plot_local(self):
         tlog_plot_local.plot_local_position(
-            FileReader("testing/small.tlog", tlog_plot_local.MSG_TYPES), "testing/small.pdf"
+            FileReader("testing/small.tlog", tlog_plot_local.TLOG_MSG_TYPES), "testing/small.pdf"
         )
 
     def test_tlog_plot_local_segment(self):
         segment_reader = SegmentReader(
             Segment(1683220544, 1683220546, "segment1"),
-            FileReader("testing/small.tlog", tlog_plot_local.MSG_TYPES),
+            FileReader("testing/small.tlog", tlog_plot_local.TLOG_MSG_TYPES),
             None,
         )
         tlog_plot_local.plot_local_position(segment_reader, "testing/segment1.pdf")
@@ -100,7 +103,7 @@ class TestTools:
         tool.read()
 
     def test_tlog_info(self):
-        tool = tlog_info.TelemetryLogInfo(FileReader("testing/small.tlog", tlog_info.MSG_TYPES))
+        tool = tlog_info.TelemetryLogInfo(FileReader("testing/small.tlog", tlog_info.INFO_MSG_TYPES))
         tool.read_and_report()
 
     def test_dataflash_info(self):
@@ -435,7 +438,9 @@ class TestTools:
 
         cmd = [
             sys.executable,
-            "mcap_merge.py",
+            "-m",
+            "ardusub_log_tools.cli.main",
+            "merge",
             "--types",
             "HEARTBEAT",
             str(test_mcap),
@@ -448,7 +453,9 @@ class TestTools:
         # Explode CLI should write per-type file and not merged file
         cmd_explode = [
             sys.executable,
-            "mcap_explode.py",
+            "-m",
+            "ardusub_log_tools.cli.main",
+            "explode",
             "--types",
             "HEARTBEAT",
             str(test_mcap),
@@ -495,7 +502,7 @@ class TestTools:
 
     def test_bin_plot_local(self, tmp_path):
         outfile = str(tmp_path / "small2.pdf")
-        BIN_plot_local.plot_bin_local(FileReader("testing/small2.BIN", BIN_plot_local.MSG_TYPES), outfile, dvl=True)
+        BIN_plot_local.plot_bin_local(FileReader("testing/small2.BIN", BIN_plot_local.BIN_MSG_TYPES), outfile, dvl=True)
         assert (tmp_path / "small2.pdf").is_file()
 
     def test_bin_plot_transect(self, tmp_path):
