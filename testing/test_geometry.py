@@ -1,6 +1,6 @@
 import numpy as np
 
-from geometry import Pose
+from ardusub_log_tools.geometry import Pose
 
 
 def test_initialization():

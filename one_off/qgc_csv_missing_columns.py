@@ -11,7 +11,7 @@ import argparse
 import csv
 import os
 
-import util
+from ardusub_log_tools import util
 
 
 def main():

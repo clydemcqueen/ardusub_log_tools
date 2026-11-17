@@ -4,14 +4,10 @@ import subprocess
 import sys
 import unittest
 
-# Add project root to path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 
 class TestSplitByMode(unittest.TestCase):
     def setUp(self):
         self.project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        self.script_path = os.path.join(self.project_root, "split_by_mode.py")
         self.testing_dir = os.path.join(self.project_root, "testing")
 
         # Files to test
@@ -57,7 +53,7 @@ class TestSplitByMode(unittest.TestCase):
                     pass
 
     def run_script(self, args):
-        cmd = [sys.executable, self.script_path] + args
+        cmd = [sys.executable, "-m", "ardusub_log_tools.split_by_mode"] + args
         result = subprocess.run(cmd, capture_output=True, text=True)
         return result
 
