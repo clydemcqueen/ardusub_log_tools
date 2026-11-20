@@ -11,38 +11,40 @@ import os
 
 import pytest
 
-import BIN_ekf_status
-import BIN_extract_files
-import BIN_graph_alt
-import BIN_info
-import BIN_merge
-import BIN_param
-import BIN_plot_local
-import BIN_plot_transect
-import BIN_timeline
-import map_maker
-import mcap_channels
-import mcap_dump_logs
-import mcap_explode_extension_logs
-import mcap_map_maker
-import mcap_merge
-import mcap_plot_local
-import mcap_strip_video
-import mcap_to_tlog
-import mcap_wl_ugps_acoustic_info
-import show_types
-import table_types
-import tlog_bad_data
-import tlog_info
-import tlog_map_maker
-import tlog_merge
-import tlog_param
-import tlog_plot_local
-import tlog_scan
-import tlog_timeline
-import util
-from file_reader import FileReader
-from segment_reader import Segment, SegmentFormatException, SegmentReader, parse_segment
+from ardusub_log_tools import (
+    BIN_ekf_status,
+    BIN_extract_files,
+    BIN_graph_alt,
+    BIN_info,
+    BIN_merge,
+    BIN_param,
+    BIN_plot_local,
+    BIN_plot_transect,
+    BIN_timeline,
+    map_maker,
+    mcap_channels,
+    mcap_dump_logs,
+    mcap_explode_extension_logs,
+    mcap_map_maker,
+    mcap_merge,
+    mcap_plot_local,
+    mcap_strip_video,
+    mcap_to_tlog,
+    mcap_wl_ugps_acoustic_info,
+    show_types,
+    table_types,
+    tlog_bad_data,
+    tlog_info,
+    tlog_map_maker,
+    tlog_merge,
+    tlog_param,
+    tlog_plot_local,
+    tlog_scan,
+    tlog_timeline,
+    util,
+)
+from ardusub_log_tools.file_reader import FileReader
+from ardusub_log_tools.segment_reader import Segment, SegmentFormatException, SegmentReader, parse_segment
 
 
 class TestTools:
@@ -435,7 +437,8 @@ class TestTools:
 
         cmd = [
             sys.executable,
-            "mcap_merge.py",
+            "-m",
+            "ardusub_log_tools.mcap_merge",
             "--types",
             "HEARTBEAT",
             str(test_mcap),
@@ -448,7 +451,8 @@ class TestTools:
         # Explode CLI should write per-type file and not merged file
         cmd_explode = [
             sys.executable,
-            "mcap_explode.py",
+            "-m",
+            "ardusub_log_tools.mcap_explode",
             "--types",
             "HEARTBEAT",
             str(test_mcap),
@@ -912,3 +916,21 @@ class TestTools:
         assert success3
         assert not (tmp_path / "novideo_video.mcap").exists()
         assert no_vid_file.stat().st_size == orig_novid_size
+
+    def test_console_script_entry_points(self):
+        import subprocess
+        import sys
+        from pathlib import Path
+
+        bin_dir = Path(sys.executable).parent
+        for script_name in [
+            "BIN_info.py",
+            "mcap_explode.py",
+            "dive_logs.py",
+            "check_offset_stability.py",
+            "tlog_split_beams.py",
+        ]:
+            script_path = bin_dir / script_name
+            assert script_path.is_file(), f"Missing console script: {script_path}"
+            res = subprocess.run([str(script_path), "--help"], capture_output=True, text=True)
+            assert res.returncode == 0, f"{script_name} --help failed:\n{res.stderr}"

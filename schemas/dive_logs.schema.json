@@ -132,7 +132,7 @@
           },
           "log_disarmed": {
             "type": ["integer", "null"],
-            "enum": [0, 1],
+            "enum": [0, 1, null],
             "description": "Value of LOG_DISARMED parameter (0 = log only while armed, 1 = log always)."
           },
           "ardusub_version": {

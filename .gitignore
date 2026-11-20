@@ -1,6 +1,13 @@
 .idea/
 __pycache__/
+*.py[cod]
+*.egg-info/
+src/*.egg-info/
+build/
+dist/
 .pytest_cache/
+.ruff_cache/
+.coverage
 
 # Test output
 testing/*.csv

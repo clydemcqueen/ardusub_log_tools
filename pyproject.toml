@@ -1,3 +1,107 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ardusub_log_tools"
+version = "0.1.0"
+description = "Log analysis tools for ArduSub and BlueOS"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+dependencies = [
+    "branca",
+    "folium",
+    "matplotlib",
+    "mcap",
+    "numpy",
+    "pandas",
+    "pymavlink",
+    "pynmea2",
+    "transforms3d",
+    "zstandard",
+]
+
+[project.optional-dependencies]
+dev = [
+    "jsonschema",
+    "pytest",
+    "ruff",
+]
+mavexplorer = [
+    "future",
+    "lxml",
+    "MAVProxy",
+    "scipy",
+    "setuptools<80",
+    "wxPython",
+]
+
+[project.scripts]
+"BIN_battery.py" = "ardusub_log_tools.BIN_battery:main"
+"BIN_ekf_status.py" = "ardusub_log_tools.BIN_ekf_status:main"
+"BIN_explode.py" = "ardusub_log_tools.BIN_explode:main"
+"BIN_extract_files.py" = "ardusub_log_tools.BIN_extract_files:main"
+"BIN_filter.py" = "ardusub_log_tools.BIN_filter:main"
+"BIN_graph_alt.py" = "ardusub_log_tools.BIN_graph_alt:main"
+"BIN_gyro_bias_stats.py" = "ardusub_log_tools.BIN_gyro_bias_stats:main"
+"BIN_info.py" = "ardusub_log_tools.BIN_info:main"
+"BIN_mag_3d.py" = "ardusub_log_tools.BIN_mag_3d:main"
+"BIN_mag_stats.py" = "ardusub_log_tools.BIN_mag_stats:main"
+"BIN_map_maker.py" = "ardusub_log_tools.BIN_map_maker:main"
+"BIN_merge.py" = "ardusub_log_tools.BIN_merge:main"
+"BIN_messages.py" = "ardusub_log_tools.BIN_messages:main"
+"BIN_param.py" = "ardusub_log_tools.BIN_param:main"
+"BIN_plot_local.py" = "ardusub_log_tools.BIN_plot_local:main"
+"BIN_plot_transect.py" = "ardusub_log_tools.BIN_plot_transect:main"
+"BIN_plot_viso.py" = "ardusub_log_tools.BIN_plot_viso:main"
+"BIN_timeline.py" = "ardusub_log_tools.BIN_timeline:main"
+"check_offset_stability.py" = "ardusub_log_tools.check_offset_stability:main"
+"check_rtc_time.py" = "ardusub_log_tools.check_rtc_time:main"
+"csv_bad_time.py" = "ardusub_log_tools.csv_bad_time:main"
+"dive_logs.py" = "ardusub_log_tools.dive_logs:main"
+"map_maker.py" = "ardusub_log_tools.map_maker:main"
+"mav_type_echo.py" = "ardusub_log_tools.mav_type_echo:main"
+"mcap_channels.py" = "ardusub_log_tools.mcap_channels:main"
+"mcap_dump_logs.py" = "ardusub_log_tools.mcap_dump_logs:main"
+"mcap_explode.py" = "ardusub_log_tools.mcap_explode:main"
+"mcap_explode_extension_logs.py" = "ardusub_log_tools.mcap_explode_extension_logs:main"
+"mcap_extract_video.py" = "ardusub_log_tools.mcap_extract_video:main"
+"mcap_map_maker.py" = "ardusub_log_tools.mcap_map_maker:main"
+"mcap_merge.py" = "ardusub_log_tools.mcap_merge:main"
+"mcap_plot_local.py" = "ardusub_log_tools.mcap_plot_local:main"
+"mcap_strip_video.py" = "ardusub_log_tools.mcap_strip_video:main"
+"mcap_tlog_diff.py" = "ardusub_log_tools.mcap_tlog_diff:main"
+"mcap_to_tlog.py" = "ardusub_log_tools.mcap_to_tlog:main"
+"mcap_types.py" = "ardusub_log_tools.mcap_types:main"
+"mcap_wl_ugps_acoustic_info.py" = "ardusub_log_tools.mcap_wl_ugps_acoustic_info:main"
+"mission_dump.py" = "ardusub_log_tools.mission_dump:main"
+"show_types.py" = "ardusub_log_tools.show_types:main"
+"split_by_mode.py" = "ardusub_log_tools.split_by_mode:main"
+"tlog_bad_data.py" = "ardusub_log_tools.tlog_bad_data:main"
+"tlog_bad_time.py" = "ardusub_log_tools.tlog_bad_time:main"
+"tlog_battery.py" = "ardusub_log_tools.tlog_battery:main"
+"tlog_explode.py" = "ardusub_log_tools.tlog_explode:main"
+"tlog_filter.py" = "ardusub_log_tools.tlog_filter:main"
+"tlog_gps_input_problems.py" = "ardusub_log_tools.tlog_gps_input_problems:main"
+"tlog_info.py" = "ardusub_log_tools.tlog_info:main"
+"tlog_map_maker.py" = "ardusub_log_tools.tlog_map_maker:main"
+"tlog_merge.py" = "ardusub_log_tools.tlog_merge:main"
+"tlog_messages.py" = "ardusub_log_tools.tlog_messages:main"
+"tlog_param.py" = "ardusub_log_tools.tlog_param:main"
+"tlog_plot_local.py" = "ardusub_log_tools.tlog_plot_local:main"
+"tlog_scan.py" = "ardusub_log_tools.tlog_scan:main"
+"tlog_segment.py" = "ardusub_log_tools.tlog_segment:main"
+"tlog_sources.py" = "ardusub_log_tools.tlog_sources:main"
+"tlog_split_beams.py" = "ardusub_log_tools.tlog_split_beams:main"
+"tlog_timeline.py" = "ardusub_log_tools.tlog_timeline:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["testing"]
+
 [tool.ruff]
 line-length = 120
 target-version = "py312"

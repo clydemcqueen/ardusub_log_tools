@@ -5,9 +5,9 @@ import os
 
 from pymavlink import mavutil
 
-import tlog_filter
-from file_reader import FileReader
-from segment_reader import Segment, SegmentReader
+from ardusub_log_tools import tlog_filter
+from ardusub_log_tools.file_reader import FileReader
+from ardusub_log_tools.segment_reader import Segment, SegmentReader
 
 
 class TestTools:

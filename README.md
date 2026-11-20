@@ -5,7 +5,36 @@ This is a collection of log analysis tools for working with [ArduSub](https://ww
 ## Requirements
 
 ardusub_log_tools requires Python 3.12.
-Other requirements are listed in [requirements.txt](requirements.txt).
+Dependencies are defined in [pyproject.toml](pyproject.toml); [requirements.txt](requirements.txt) installs the package in editable mode with dev tools (`-e .[dev]`).
+
+## Installation & Development
+
+Set up a local development virtual environment:
+
+```bash
+python3.12 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+```
+
+To install `ardusub_log_tools` in editable mode into another project's virtual environment:
+
+```bash
+other_project/.venv/bin/pip install -e path/to/ardusub_log_tools
+```
+
+To install alongside `MAVExplorer.py` (`MAVProxy` and `wxPython`):
+
+```bash
+other_project/.venv/bin/pip install -e "path/to/ardusub_log_tools[mavexplorer]"
+```
+
+Run tests, linting, and formatting checks:
+
+```bash
+.venv/bin/pytest
+.venv/bin/ruff check .
+.venv/bin/ruff format --check .
+```
 
 ## Docs
 
@@ -122,78 +151,79 @@ tlog_plot_local.py $SEGMENTS *.tlog
 
 ## Tools that read tlog files
 
-* [tlog_bad_data.py](tlog_bad_data.py) - Read MAVLink messages from a tlog file (telemetry log) and report on BAD_DATA messages.
-* [tlog_bad_time.py](tlog_bad_time.py) - Read a tlog file (telemetry log) and report on bad timestamps.
-* [tlog_battery.py](tlog_battery.py) - Provide information about the battery type and usage.
-* [tlog_explode.py](tlog_explode.py) - Read MAVLink messages from a tlog file (telemetry log) and write a csv file for each message type.
-* [tlog_filter.py](tlog_filter.py) - Read one or more tlog files, filter messages, and write a single, combined, valid tlog file with the resulting messages.
-* [tlog_gps_input_problems.py](tlog_gps_input_problems.py) - Read GPS_INPUT messages and look for problems.
-* [tlog_info.py](tlog_info.py) - Read MAVLink messages from a tlog file (telemetry log) and report on a few interesting things.
-* [tlog_map_maker.py](tlog_map_maker.py) - Read tlog files and build Leaflet (interactive HTML) maps from GPS coordinates.
-* [tlog_merge.py](tlog_merge.py) - Read MAVLink messages from a tlog file (telemetry log) and merge the messages into a single, wide csv file.
-* [tlog_messages.py](tlog_messages.py) - Read MAVLink messages from a tlog file (telemetry log) and write STATUSTEXT messages.
-* [tlog_param.py](tlog_param.py) - Read MAVLink PARAM_VALUE messages from a tlog file (telemetry log), reconstruct the parameter state of a vehicle, and write them to a params file.
-* [tlog_plot_local.py](tlog_plot_local.py) - Look for LOCAL_POSITION_NED and VISION_POSITION_DELTA messages in tlog files, plot x and y, and write PDF files.
-* [tlog_scan.py](tlog_scan.py) - Read MAVLink messages from a tlog file (telemetry log) and report on any pymavlink crashes.
-* [tlog_segment.py](tlog_segment.py) - Read MAVLink messages from one or more tlog files (telemetry logs), stitch them together in time order, then extract segments.
-* [tlog_sources.py](tlog_sources.py) - Read MAVLink messages and count messages by source.
-* [tlog_split_beams.py](tlog_split_beams.py) - Read DISTANCE_SENSOR messages from a tlog file and write one csv file per (src, comp, orientation) tuple.
-* [tlog_template.py](tlog_template.py) - Template for tlog tools that do not support segments.
-* [tlog_template_segments.py](tlog_template_segments.py) - Template for tlog tools that support segments.
-* [tlog_timeline.py](tlog_timeline.py) - Read MAVLink messages from a tlog file (telemetry log) and generate a timeline.
-* [check_offset_stability.py](check_offset_stability.py) - Analyze the stability of the timestamp offset (unix_time - boot_time) in a tlog file.
-* [mission_dump.py](mission_dump.py) - Read MISSION_* messages from a tlog file (telemetry log) and print the mission(s).
+* [tlog_bad_data.py](src/ardusub_log_tools/tlog_bad_data.py) - Read MAVLink messages from a tlog file (telemetry log) and report on BAD_DATA messages.
+* [tlog_bad_time.py](src/ardusub_log_tools/tlog_bad_time.py) - Read a tlog file (telemetry log) and report on bad timestamps.
+* [tlog_battery.py](src/ardusub_log_tools/tlog_battery.py) - Provide information about the battery type and usage.
+* [tlog_explode.py](src/ardusub_log_tools/tlog_explode.py) - Read MAVLink messages from a tlog file (telemetry log) and write a csv file for each message type.
+* [tlog_filter.py](src/ardusub_log_tools/tlog_filter.py) - Read one or more tlog files, filter messages, and write a single, combined, valid tlog file with the resulting messages.
+* [tlog_gps_input_problems.py](src/ardusub_log_tools/tlog_gps_input_problems.py) - Read GPS_INPUT messages and look for problems.
+* [tlog_info.py](src/ardusub_log_tools/tlog_info.py) - Read MAVLink messages from a tlog file (telemetry log) and report on a few interesting things.
+* [tlog_map_maker.py](src/ardusub_log_tools/tlog_map_maker.py) - Read tlog files and build Leaflet (interactive HTML) maps from GPS coordinates.
+* [tlog_merge.py](src/ardusub_log_tools/tlog_merge.py) - Read MAVLink messages from a tlog file (telemetry log) and merge the messages into a single, wide csv file.
+* [tlog_messages.py](src/ardusub_log_tools/tlog_messages.py) - Read MAVLink messages from a tlog file (telemetry log) and write STATUSTEXT messages.
+* [tlog_param.py](src/ardusub_log_tools/tlog_param.py) - Read MAVLink PARAM_VALUE messages from a tlog file (telemetry log), reconstruct the parameter state of a vehicle, and write them to a params file.
+* [tlog_plot_local.py](src/ardusub_log_tools/tlog_plot_local.py) - Look for LOCAL_POSITION_NED and VISION_POSITION_DELTA messages in tlog files, plot x and y, and write PDF files.
+* [tlog_scan.py](src/ardusub_log_tools/tlog_scan.py) - Read MAVLink messages from a tlog file (telemetry log) and report on any pymavlink crashes.
+* [tlog_segment.py](src/ardusub_log_tools/tlog_segment.py) - Read MAVLink messages from one or more tlog files (telemetry logs), stitch them together in time order, then extract segments.
+* [tlog_sources.py](src/ardusub_log_tools/tlog_sources.py) - Read MAVLink messages and count messages by source.
+* [tlog_split_beams.py](src/ardusub_log_tools/tlog_split_beams.py) - Read DISTANCE_SENSOR messages from a tlog file and write one csv file per (src, comp, orientation) tuple.
+* [tlog_template.py](src/ardusub_log_tools/tlog_template.py) - Template for tlog tools that do not support segments.
+* [tlog_template_segments.py](src/ardusub_log_tools/tlog_template_segments.py) - Template for tlog tools that support segments.
+* [tlog_timeline.py](src/ardusub_log_tools/tlog_timeline.py) - Read MAVLink messages from a tlog file (telemetry log) and generate a timeline.
+* [check_offset_stability.py](src/ardusub_log_tools/check_offset_stability.py) - Analyze the stability of the timestamp offset (unix_time - boot_time) in a tlog file.
+* [mission_dump.py](src/ardusub_log_tools/mission_dump.py) - Read MISSION_* messages from a tlog file (telemetry log) and print the mission(s).
 
 ## Tools that read BIN (dataflash) files
 
-* [BIN_battery.py](BIN_battery.py) - Provide information about the battery type and usage from a dataflash (BIN) file.
-* [BIN_ekf_status.py](BIN_ekf_status.py) - Report on EKF3 status (XKF4.SS and XKFS.SS fields).
-* [BIN_explode.py](BIN_explode.py) - Read ArduSub dataflash messages from a BIN file and write a csv file for each message type.
-* [BIN_extract_files.py](BIN_extract_files.py) - Extract embedded files from a dataflash (BIN) file.
-* [BIN_filter.py](BIN_filter.py) - Read Dataflash (BIN) file(s), filter messages, and write new BIN file(s) with the kept messages.
-* [BIN_graph_alt.py](BIN_graph_alt.py) - Read an ArduSub BIN file and produce a graph of altitude readings.
-* [BIN_gyro_bias_stats.py](BIN_gyro_bias_stats.py) - Read dataflash logs and report on high / low XKF1.G? (gyro_bias) values.
-* [BIN_info.py](BIN_info.py) - Read dataflash messages from a BIN file and report on a few interesting things.
-* [BIN_mag_3d.py](BIN_mag_3d.py) - Note transitions to/from mag 3d fusion.
-* [BIN_mag_stats.py](BIN_mag_stats.py) - Read dataflash logs and report on some MAG stats.
-* [BIN_map_maker.py](BIN_map_maker.py) - Read BIN files and build Leaflet (interactive HTML) maps from GPS coordinates.
-* [BIN_merge.py](BIN_merge.py) - Read ArduSub dataflash messages from a BIN file and merge the messages into a single, wide csv file.
-* [BIN_messages.py](BIN_messages.py) - Read a dataflash (BIN) file and write the entries in the MSG and EV tables to stdout.
-* [BIN_param.py](BIN_param.py) - Read PARM messages from a dataflash file and write them to a params file.
-* [BIN_plot_local.py](BIN_plot_local.py) - Look for XKF1 and VISO messages in BIN files, plot x and y, and write PDF files.
-* [BIN_plot_transect.py](BIN_plot_transect.py) - Read BIN files and plot transect path, vertical motion, rangefinder vs target, and speed across modes.
-* [BIN_plot_viso.py](BIN_plot_viso.py) - Read BIN files and plot VISO (Visual Odometry) data alongside EKF estimated position, EKF innovations, and thruster outputs (RCOU).
-* [BIN_timeline.py](BIN_timeline.py) - Read Dataflash messages from a BIN file and generate a timeline.
+* [BIN_battery.py](src/ardusub_log_tools/BIN_battery.py) - Provide information about the battery type and usage from a dataflash (BIN) file.
+* [BIN_ekf_status.py](src/ardusub_log_tools/BIN_ekf_status.py) - Report on EKF3 status (XKF4.SS and XKFS.SS fields).
+* [BIN_explode.py](src/ardusub_log_tools/BIN_explode.py) - Read ArduSub dataflash messages from a BIN file and write a csv file for each message type.
+* [BIN_extract_files.py](src/ardusub_log_tools/BIN_extract_files.py) - Extract embedded files from a dataflash (BIN) file.
+* [BIN_filter.py](src/ardusub_log_tools/BIN_filter.py) - Read Dataflash (BIN) file(s), filter messages, and write new BIN file(s) with the kept messages.
+* [BIN_graph_alt.py](src/ardusub_log_tools/BIN_graph_alt.py) - Read an ArduSub BIN file and produce a graph of altitude readings.
+* [BIN_gyro_bias_stats.py](src/ardusub_log_tools/BIN_gyro_bias_stats.py) - Read dataflash logs and report on high / low XKF1.G? (gyro_bias) values.
+* [BIN_info.py](src/ardusub_log_tools/BIN_info.py) - Read dataflash messages from a BIN file and report on a few interesting things.
+* [BIN_mag_3d.py](src/ardusub_log_tools/BIN_mag_3d.py) - Note transitions to/from mag 3d fusion.
+* [BIN_mag_stats.py](src/ardusub_log_tools/BIN_mag_stats.py) - Read dataflash logs and report on some MAG stats.
+* [BIN_map_maker.py](src/ardusub_log_tools/BIN_map_maker.py) - Read BIN files and build Leaflet (interactive HTML) maps from GPS coordinates.
+* [BIN_merge.py](src/ardusub_log_tools/BIN_merge.py) - Read ArduSub dataflash messages from a BIN file and merge the messages into a single, wide csv file.
+* [BIN_messages.py](src/ardusub_log_tools/BIN_messages.py) - Read a dataflash (BIN) file and write the entries in the MSG and EV tables to stdout.
+* [BIN_param.py](src/ardusub_log_tools/BIN_param.py) - Read PARM messages from a dataflash file and write them to a params file.
+* [BIN_plot_local.py](src/ardusub_log_tools/BIN_plot_local.py) - Look for XKF1 and VISO messages in BIN files, plot x and y, and write PDF files.
+* [BIN_plot_transect.py](src/ardusub_log_tools/BIN_plot_transect.py) - Read BIN files and plot transect path, vertical motion, rangefinder vs target, and speed across modes.
+* [BIN_plot_viso.py](src/ardusub_log_tools/BIN_plot_viso.py) - Read BIN files and plot VISO (Visual Odometry) data alongside EKF estimated position, EKF innovations, and thruster outputs (RCOU).
+* [BIN_timeline.py](src/ardusub_log_tools/BIN_timeline.py) - Read Dataflash messages from a BIN file and generate a timeline.
 
 ## Tools that read tlog and BIN files
 
-* [check_rtc_time.py](check_rtc_time.py) - Check log files (Dataflash .BIN and MAVLink .tlog) for the presence of GPS or Unix time.
-* [show_types.py](show_types.py) - Read messages from tlog (telemetry) and BIN (dataflash) logs and report on the message types found.
-* [split_by_mode.py](split_by_mode.py) - Split ArduSub log files (tlog and BIN) into separate files based on flight modes.
+* [check_rtc_time.py](src/ardusub_log_tools/check_rtc_time.py) - Check log files (Dataflash .BIN and MAVLink .tlog) for the presence of GPS or Unix time.
+* [show_types.py](src/ardusub_log_tools/show_types.py) - Read messages from tlog (telemetry) and BIN (dataflash) logs and report on the message types found.
+* [split_by_mode.py](src/ardusub_log_tools/split_by_mode.py) - Split ArduSub log files (tlog and BIN) into separate files based on flight modes.
 
 ## Tools that read BlueOS-generated mcap files
 
-* [mcap_channels.py](mcap_channels.py) - Open mcap files and report on the channels.
-* [mcap_dump_logs.py](mcap_dump_logs.py) - Extract log messages (foxglove.Log type) from mcap files and write each log stream to a text file.
-* [mcap_explode.py](mcap_explode.py) - Read MAVLink messages from an mcap file and write a csv file for each message type.
-* [mcap_explode_extension_logs.py](mcap_explode_extension_logs.py) - Extract structured telemetry and diagnostic data from extension logs in mcap files to CSV or JSON files.
-* [mcap_extract_video.py](mcap_extract_video.py) - Extract video stream(s) from mcap files and write to MP4 format.
-* [mcap_merge.py](mcap_merge.py) - Read MAVLink messages and BlueOS extension logs from an MCAP file and merge the messages into a single, wide csv file.
-* [mcap_plot_local.py](mcap_plot_local.py) - Look for LOCAL_POSITION_NED and VISION_POSITION_DELTA messages in mcap files, plot x and y, and write PDF files.
-* [mcap_strip_video.py](mcap_strip_video.py) - Open mcap files and copy all non-video channels to new mcap files (reduces file size by ~97%).
-* [mcap_tlog_diff.py](mcap_tlog_diff.py) - Compare a QGC-generated tlog to an mcap file.
-* [mcap_to_tlog.py](mcap_to_tlog.py) - Convert MCAP files containing MAVLink messages to tlog files readable by pymavlink.
-* [mcap_types.py](mcap_types.py) - Read messages from mcap files and report on the message types found(similar to show_types.py).
-* [mcap_wl_ugps_acoustic_info.py](mcap_wl_ugps_acoustic_info.py) - Read Water Linked UGPS extension logs from an MCAP file and print a summary of acoustic tracking performance.
+* [mcap_channels.py](src/ardusub_log_tools/mcap_channels.py) - Open mcap files and report on the channels.
+* [mcap_dump_logs.py](src/ardusub_log_tools/mcap_dump_logs.py) - Extract log messages (foxglove.Log type) from mcap files and write each log stream to a text file.
+* [mcap_explode.py](src/ardusub_log_tools/mcap_explode.py) - Read MAVLink messages from an mcap file and write a csv file for each message type.
+* [mcap_explode_extension_logs.py](src/ardusub_log_tools/mcap_explode_extension_logs.py) - Extract structured telemetry and diagnostic data from extension logs in mcap files to CSV or JSON files.
+* [mcap_extract_video.py](src/ardusub_log_tools/mcap_extract_video.py) - Extract video stream(s) from mcap files and write to MP4 format.
+* [mcap_map_maker.py](src/ardusub_log_tools/mcap_map_maker.py) - Read MCAP files and build Leaflet (interactive HTML) maps from GPS coordinates.
+* [mcap_merge.py](src/ardusub_log_tools/mcap_merge.py) - Read MAVLink messages and BlueOS extension logs from an MCAP file and merge the messages into a single, wide csv file.
+* [mcap_plot_local.py](src/ardusub_log_tools/mcap_plot_local.py) - Look for LOCAL_POSITION_NED and VISION_POSITION_DELTA messages in mcap files, plot x and y, and write PDF files.
+* [mcap_strip_video.py](src/ardusub_log_tools/mcap_strip_video.py) - Open mcap files and copy all non-video channels to new mcap files (reduces file size by ~97%).
+* [mcap_tlog_diff.py](src/ardusub_log_tools/mcap_tlog_diff.py) - Compare a QGC-generated tlog to an mcap file.
+* [mcap_to_tlog.py](src/ardusub_log_tools/mcap_to_tlog.py) - Convert MCAP files containing MAVLink messages to tlog files readable by pymavlink.
+* [mcap_types.py](src/ardusub_log_tools/mcap_types.py) - Read messages from mcap files and report on the message types found(similar to show_types.py).
+* [mcap_wl_ugps_acoustic_info.py](src/ardusub_log_tools/mcap_wl_ugps_acoustic_info.py) - Read Water Linked UGPS extension logs from an MCAP file and print a summary of acoustic tracking performance.
 
 ## Tools that work on a dive (multiple files of various types)
 
-* [dive_tools.py](dive_logs.py) - Read all BIN and mcap files in a directory and figure out how they line up.
+* [dive_logs.py](src/ardusub_log_tools/dive_logs.py) - Read all BIN and mcap files in a directory and figure out how they line up.
 
 ## Other tools
 
-* [map_maker.py](map_maker.py) - Read csv and txt files and build Leaflet (interactive HTML) maps from GPS coordinates.
-* [mav_type_echo.py](mav_type_echo.py) - Connect to a running MAVLink system and echo a message type.
+* [map_maker.py](src/ardusub_log_tools/map_maker.py) - Read csv and txt files and build Leaflet (interactive HTML) maps from GPS coordinates.
+* [mav_type_echo.py](src/ardusub_log_tools/mav_type_echo.py) - Connect to a running MAVLink system and echo a message type.
 
 ## MAVExplorer.py
 
